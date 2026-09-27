@@ -14,6 +14,7 @@ import {
   getDocs,
   query,
   setDoc,
+  Timestamp,
   updateDoc,
   where,
   writeBatch,
@@ -237,18 +238,84 @@ describe('meal plans', () => {
 })
 
 describe('events', () => {
+  const t = (iso: string) => Timestamp.fromDate(new Date(iso))
+  const manual = {
+    source: 'manual',
+    sourceUserId: BOB.uid,
+    title: 'Dentist',
+    start: t('2026-10-01T15:00:00Z'),
+    end: t('2026-10-01T16:00:00Z'),
+    allDay: false,
+  }
+  const allDay = {
+    ...manual,
+    title: 'School holiday',
+    allDay: true,
+    start: t('2026-10-12T00:00:00Z'),
+    end: t('2026-10-13T00:00:00Z'),
+    startDate: '2026-10-12',
+    endDate: '2026-10-13',
+  }
+
   it('lets members read all events', async () => {
     await assertSucceeds(getDocs(collection(dbFor(BOB), `families/${FAM_A}/events`)))
   })
 
-  it('lets members manage manual events but never google-synced ones', async () => {
+  it('lets members add timed and all-day manual events', async () => {
     const db = dbFor(BOB)
-    await assertSucceeds(setDoc(doc(db, `families/${FAM_A}/events/m2`), { source: 'manual', sourceUserId: BOB.uid, title: 'Dentist', start: 1, end: 2, allDay: false }))
+    await assertSucceeds(setDoc(doc(db, `families/${FAM_A}/events/m2`), manual))
+    await assertSucceeds(setDoc(doc(db, `families/${FAM_A}/events/m3`), allDay))
+    await assertSucceeds(updateDoc(doc(db, `families/${FAM_A}/events/m2`), { title: 'Dentist (moved)' }))
     await assertSucceeds(deleteDoc(doc(db, `families/${FAM_A}/events/m1`)))
-    await assertFails(setDoc(doc(db, `families/${FAM_A}/events/g2`), { source: 'google', sourceUserId: BOB.uid, title: 'Fake', start: 1, end: 2, allDay: false }))
+  })
+
+  it('rejects malformed or misattributed manual events', async () => {
+    const db = dbFor(BOB)
+    const e = (id: string) => doc(db, `families/${FAM_A}/events/${id}`)
+    await assertFails(setDoc(e('x1'), { ...manual, sourceUserId: ALICE.uid }))
+    await assertFails(setDoc(e('x2'), { ...manual, title: '' }))
+    await assertFails(setDoc(e('x3'), { ...manual, start: 1, end: 2 }))
+    await assertFails(setDoc(e('x4'), { ...manual, end: t('2026-10-01T14:00:00Z') }))
+    await assertFails(setDoc(e('x5'), { ...manual, extra: true }))
+    await assertFails(setDoc(e('x6'), { ...allDay, startDate: 'Oct 12' }))
+    await setDoc(e('x7'), manual)
+    await assertFails(updateDoc(e('x7'), { sourceUserId: ALICE.uid }))
+  })
+
+  it('never lets clients write google-synced events', async () => {
+    const db = dbFor(BOB)
+    await assertFails(setDoc(doc(db, `families/${FAM_A}/events/g2`), { ...manual, source: 'google' }))
     await assertFails(updateDoc(doc(db, `families/${FAM_A}/events/g1`), { title: 'Edited' }))
     await assertFails(deleteDoc(doc(db, `families/${FAM_A}/events/g1`)))
     await assertFails(updateDoc(doc(db, `families/${FAM_A}/events/m1`), { source: 'google' }))
+  })
+})
+
+describe('calendar connection status', () => {
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore() as unknown as Firestore
+      await updateDoc(doc(db, `families/${FAM_A}/members/${BOB.uid}`), {
+        calendar: { status: 'connected', email: BOB.email },
+      })
+    })
+  })
+
+  it('still lets members edit their profile once the server has set calendar status', async () => {
+    await assertSucceeds(updateDoc(doc(dbFor(BOB), `families/${FAM_A}/members/${BOB.uid}`), { color: '#222222' }))
+  })
+
+  it('does not let members write calendar status themselves', async () => {
+    const me = doc(dbFor(BOB), `families/${FAM_A}/members/${BOB.uid}`)
+    await assertFails(updateDoc(me, { calendar: { status: 'connected', email: 'x@example.com' } }))
+    await assertFails(
+      setDoc(doc(dbFor(CAROL), `families/${FAM_A}/members/${CAROL.uid}`), {
+        displayName: 'Carol',
+        email: CAROL.email,
+        color: '#abcdef',
+        calendar: { status: 'connected' },
+      }),
+    )
   })
 })
 

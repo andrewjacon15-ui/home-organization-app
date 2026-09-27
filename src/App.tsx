@@ -2,15 +2,17 @@ import type { User } from 'firebase/auth'
 import { useEffect, useState } from 'react'
 import { FamilySetup } from './components/FamilySetup'
 import { SignIn } from './components/SignIn'
+import { CalendarPage } from './features/calendar/CalendarPage'
 import { ChoresPage } from './features/chores/ChoresPage'
 import { FamilyPage } from './features/family/FamilyPage'
 import { MealsPage } from './features/meals/MealsPage'
 import { resolveFamily } from './lib/family'
 import { useAuthUser, useFamily, useNow } from './lib/hooks'
 
-type Tab = 'chores' | 'meals' | 'family'
+type Tab = 'calendar' | 'chores' | 'meals' | 'family'
 
 const TABS: { id: Tab; label: string }[] = [
+  { id: 'calendar', label: 'Calendar' },
   { id: 'chores', label: 'Chores' },
   { id: 'meals', label: 'Meals' },
   { id: 'family', label: 'Family' },
@@ -48,7 +50,7 @@ function SignedIn({ user }: { user: User }) {
 
 function Home({ familyId, userId }: { familyId: string; userId: string }) {
   const { family, members } = useFamily(familyId)
-  const [tab, setTab] = useState<Tab>('chores')
+  const [tab, setTab] = useState<Tab>('calendar')
   const now = useNow()
 
   if (!family) return <Splash />
@@ -69,6 +71,7 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
         </nav>
       </header>
       <main className="content">
+        {tab === 'calendar' && <CalendarPage familyId={familyId} userId={userId} members={members} />}
         {tab === 'chores' && <ChoresPage familyId={familyId} userId={userId} members={members} />}
         {tab === 'meals' && <MealsPage familyId={familyId} userId={userId} />}
         {tab === 'family' && <FamilyPage family={family} members={members} userId={userId} />}

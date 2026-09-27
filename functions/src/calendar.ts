@@ -1,0 +1,157 @@
+import { eventDocId, normalizeEvent } from './normalize.js'
+import type { CalendarStore, GoogleApi, StoredTokens } from './types.js'
+
+export const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly'
+
+/** How far back and ahead we mirror. Older synced events are pruned. */
+export const SYNC_PAST_DAYS = 30
+export const SYNC_FUTURE_DAYS = 120
+
+const DAY_MS = 86_400_000
+
+/** A user-facing error (maps to HttpsError in index.ts). */
+export class CalendarError extends Error {
+  constructor(
+    public code: 'permission-denied' | 'failed-precondition' | 'invalid-argument',
+    message: string,
+  ) {
+    super(message)
+  }
+}
+
+/** Google's "your refresh token is dead" (revoked, expired, or 7-day Testing-mode expiry). */
+export function isInvalidGrant(err: unknown): boolean {
+  const e = err as { message?: string; response?: { data?: { error?: string } } }
+  return e?.response?.data?.error === 'invalid_grant' || /invalid_grant/.test(e?.message ?? '')
+}
+
+export interface SyncResult {
+  upserted: number
+  deleted: number
+  status: 'connected' | 'needs_reconnect'
+}
+
+/** Mirrors one person's primary calendar into the family's events collection. */
+export async function syncMember(
+  deps: { store: CalendarStore; google: GoogleApi; now?: Date },
+  familyId: string,
+  uid: string,
+  tokens: StoredTokens,
+): Promise<SyncResult> {
+  const { store, google } = deps
+  const now = deps.now ?? new Date()
+  const timeMin = new Date(now.getTime() - SYNC_PAST_DAYS * DAY_MS)
+  const timeMax = new Date(now.getTime() + SYNC_FUTURE_DAYS * DAY_MS)
+
+  let googleEvents
+  try {
+    googleEvents = await google.listEvents(tokens.refreshToken, timeMin, timeMax)
+  } catch (err) {
+    if (isInvalidGrant(err)) {
+      // Keep the events that are already there; the UI shows a Reconnect button.
+      await store.setCalendarStatus(familyId, uid, {
+        status: 'needs_reconnect',
+        email: tokens.email,
+        error: 'Google access expired or was revoked.',
+      })
+      return { upserted: 0, deleted: 0, status: 'needs_reconnect' }
+    }
+    throw err
+  }
+
+  const docs = googleEvents
+    .map((e) => normalizeEvent(e, uid))
+    .filter((e) => e !== null)
+    .map((data) => ({ id: eventDocId(uid, data.googleEventId), data }))
+
+  const keep = new Set(docs.map((d) => d.id))
+  const stale = (await store.listGoogleEventIds(familyId, uid)).filter((id) => !keep.has(id))
+
+  await store.upsertEvents(familyId, docs)
+  await store.deleteEvents(familyId, stale)
+  await store.setCalendarStatus(familyId, uid, {
+    status: 'connected',
+    email: tokens.email,
+    lastSyncAt: now,
+    eventCount: docs.length,
+  })
+  return { upserted: docs.length, deleted: stale.length, status: 'connected' }
+}
+
+async function requireMember(store: CalendarStore, familyId: unknown, uid: string | undefined): Promise<string> {
+  if (!uid) throw new CalendarError('permission-denied', 'Sign in first.')
+  if (typeof familyId !== 'string' || !familyId) throw new CalendarError('invalid-argument', 'familyId is required.')
+  if (!(await store.isMember(familyId, uid))) throw new CalendarError('permission-denied', 'Not a member of this family.')
+  return familyId
+}
+
+/** Handles "Connect my calendar": exchange the popup's code, store the refresh token, sync once. */
+export async function connectCalendar(
+  deps: { store: CalendarStore; google: GoogleApi; now?: Date },
+  uid: string | undefined,
+  data: { familyId?: unknown; code?: unknown },
+) {
+  const familyId = await requireMember(deps.store, data.familyId, uid)
+  if (typeof data.code !== 'string' || !data.code) throw new CalendarError('invalid-argument', 'Missing authorization code.')
+
+  const exchanged = await deps.google.exchangeCode(data.code)
+  if (!exchanged.scope.split(' ').includes(CALENDAR_SCOPE)) {
+    throw new CalendarError('failed-precondition', 'Calendar access was not granted. Try again and leave the calendar box checked.')
+  }
+
+  // Google only issues a refresh token on first consent. On a reconnect of the
+  // same account it may omit it, in which case the stored one is still valid.
+  const existing = await deps.store.getTokens(familyId, uid!)
+  const refreshToken = exchanged.refreshToken ?? (existing?.email === exchanged.email ? existing.refreshToken : undefined)
+  if (!refreshToken) {
+    throw new CalendarError(
+      'failed-precondition',
+      'Google did not grant offline access. Remove "Family Organizer" at myaccount.google.com/connections, then connect again.',
+    )
+  }
+
+  const tokens: StoredTokens = { refreshToken, email: exchanged.email, scope: exchanged.scope }
+  await deps.store.saveTokens(familyId, uid!, tokens)
+  const result = await syncMember(deps, familyId, uid!, tokens)
+  return { email: exchanged.email, ...result }
+}
+
+/** Handles "Sync now". */
+export async function syncMine(deps: { store: CalendarStore; google: GoogleApi; now?: Date }, uid: string | undefined, data: { familyId?: unknown }) {
+  const familyId = await requireMember(deps.store, data.familyId, uid)
+  const tokens = await deps.store.getTokens(familyId, uid!)
+  if (!tokens) throw new CalendarError('failed-precondition', 'No calendar connected.')
+  return syncMember(deps, familyId, uid!, tokens)
+}
+
+/** Handles "Disconnect": revoke at Google, forget the token, remove this person's synced events. */
+export async function disconnectCalendar(deps: { store: CalendarStore; google: GoogleApi }, uid: string | undefined, data: { familyId?: unknown }) {
+  const familyId = await requireMember(deps.store, data.familyId, uid)
+  const tokens = await deps.store.getTokens(familyId, uid!)
+  if (tokens) {
+    // Best effort: a token that's already dead can't be revoked, and that's fine.
+    await deps.google.revoke(tokens.refreshToken).catch(() => undefined)
+  }
+  await deps.store.deleteTokens(familyId, uid!)
+  await deps.store.deleteEvents(familyId, await deps.store.listGoogleEventIds(familyId, uid!))
+  await deps.store.setCalendarStatus(familyId, uid!, null)
+  return { ok: true }
+}
+
+/** Scheduled job: sync everyone. One person's failure doesn't stop the rest. */
+export async function syncAll(deps: { store: CalendarStore; google: GoogleApi; now?: Date; log?: (msg: string, extra?: object) => void }) {
+  const log = deps.log ?? (() => undefined)
+  const members = await deps.store.listConnected()
+  const results = { synced: 0, needsReconnect: 0, failed: 0 }
+  for (const m of members) {
+    try {
+      const r = await syncMember(deps, m.familyId, m.uid, m.tokens)
+      if (r.status === 'connected') results.synced++
+      else results.needsReconnect++
+    } catch (err) {
+      results.failed++
+      log('calendar sync failed', { familyId: m.familyId, uid: m.uid, error: String(err) })
+    }
+  }
+  return results
+}

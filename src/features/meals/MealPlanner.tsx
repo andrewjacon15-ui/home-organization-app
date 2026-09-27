@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { WeekNav } from '../../components/WeekNav'
 import { addDays, fromDateKey } from '../../lib/dates'
 import type { MealPlan, MealSlot } from '../../types'
 
@@ -24,26 +25,10 @@ interface Props {
 
 export function MealPlanner({ weekStart, today, plans, onSave, onWeekChange, currentWeekStart }: Props) {
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
-  const rangeLabel = `${fmt(days[0], { month: 'short', day: 'numeric' })} – ${fmt(days[6], { month: 'short', day: 'numeric' })}`
 
   return (
     <section className="meals" aria-labelledby="meals-heading">
-      <div className="week-nav">
-        <button type="button" className="button" onClick={() => onWeekChange(addDays(weekStart, -7))} aria-label="Previous week">
-          ‹
-        </button>
-        <h2 id="meals-heading" className="week-nav__label">
-          {rangeLabel}
-        </h2>
-        <button type="button" className="button" onClick={() => onWeekChange(addDays(weekStart, 7))} aria-label="Next week">
-          ›
-        </button>
-        {weekStart !== currentWeekStart && (
-          <button type="button" className="link" onClick={() => onWeekChange(currentWeekStart)}>
-            This week
-          </button>
-        )}
-      </div>
+      <WeekNav weekStart={weekStart} currentWeekStart={currentWeekStart} onWeekChange={onWeekChange} headingId="meals-heading" />
 
       <ol className="week">
         {days.map((date) => {
