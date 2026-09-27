@@ -1,0 +1,153 @@
+rules_version = '2';
+
+// Everything is denied unless a rule below allows it.
+// Tests live in tests/rules/firestore.rules.test.ts — change those first.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function myEmail() {
+      return request.auth.token.email.lower();
+    }
+
+    function verifiedEmail() {
+      return signedIn()
+        && request.auth.token.email is string
+        && request.auth.token.email_verified == true;
+    }
+
+    function familyPath(familyId) {
+      return /databases/$(database)/documents/families/$(familyId);
+    }
+
+    function isMember(familyId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/families/$(familyId)/members/$(request.auth.uid));
+    }
+
+    function isOwner(familyId) {
+      return signedIn() && get(familyPath(familyId)).data.ownerId == request.auth.uid;
+    }
+
+    // getAfter lets a brand-new family's first batch (family + member + invite) validate.
+    function isOwnerAfter(familyId) {
+      return signedIn() && getAfter(familyPath(familyId)).data.ownerId == request.auth.uid;
+    }
+
+    function isInvitedTo(familyId) {
+      return verifiedEmail()
+        && get(/databases/$(database)/documents/invites/$(myEmail())).data.familyId == familyId;
+    }
+
+    function onlyKeys(keys) {
+      return request.resource.data.keys().hasOnly(keys);
+    }
+
+    function isDateKey(value) {
+      return value is string && value.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+    }
+
+    // Keyed by lowercase email. One family per email.
+    match /invites/{email} {
+      allow get: if (verifiedEmail() && myEmail() == email) || isMember(resource.data.familyId);
+      allow list: if isMember(resource.data.familyId);
+      allow create: if isOwnerAfter(request.resource.data.familyId)
+        && email == email.lower()
+        && onlyKeys(['familyId', 'invitedBy', 'createdAt'])
+        && request.resource.data.invitedBy == request.auth.uid;
+      allow delete: if isOwner(resource.data.familyId);
+    }
+
+    match /families/{familyId} {
+      allow read: if isMember(familyId);
+      allow create: if signedIn()
+        && request.resource.data.ownerId == request.auth.uid
+        && onlyKeys(['name', 'ownerId', 'timezone', 'createdAt']);
+      allow update: if isOwner(familyId)
+        && request.resource.data.ownerId == resource.data.ownerId
+        && onlyKeys(['name', 'ownerId', 'timezone', 'createdAt']);
+
+      match /members/{userId} {
+        allow read: if isMember(familyId);
+        // Lets the app check "have I joined yet?" before it is a member.
+        allow get: if signedIn() && request.auth.uid == userId;
+        allow create: if request.auth.uid == userId
+          && (isOwnerAfter(familyId) || isInvitedTo(familyId))
+          && request.resource.data.email == myEmail()
+          && onlyKeys(['displayName', 'email', 'color', 'photoURL', 'joinedAt']);
+        allow update: if request.auth.uid == userId
+          && request.resource.data.email == resource.data.email
+          && onlyKeys(['displayName', 'email', 'color', 'photoURL', 'joinedAt']);
+        allow delete: if request.auth.uid == userId || isOwner(familyId);
+
+        // OAuth refresh tokens. Admin SDK (Cloud Functions) only.
+        match /private/{doc} {
+          allow read, write: if false;
+        }
+      }
+
+      match /chores/{choreId} {
+        function validChore() {
+          let d = request.resource.data;
+          return onlyKeys(['title', 'assigneeId', 'dueDate', 'done', 'points', 'createdAt', 'createdBy'])
+            && d.title is string && d.title.size() > 0 && d.title.size() <= 200
+            && (d.assigneeId == null || d.assigneeId is string)
+            && (d.dueDate == null || isDateKey(d.dueDate))
+            && d.done is bool
+            && d.points is int && d.points >= 0 && d.points <= 1000;
+        }
+        allow read, delete: if isMember(familyId);
+        allow create, update: if isMember(familyId) && validChore();
+      }
+
+      match /mealPlans/{date} {
+        function validMeal() {
+          let d = request.resource.data;
+          return onlyKeys(['breakfast', 'lunch', 'dinner', 'notes', 'updatedBy'])
+            && d.breakfast is string && d.breakfast.size() <= 500
+            && d.lunch is string && d.lunch.size() <= 500
+            && d.dinner is string && d.dinner.size() <= 500
+            && d.notes is string && d.notes.size() <= 2000;
+        }
+        allow read, delete: if isMember(familyId);
+        allow create, update: if isMember(familyId) && isDateKey(date) && validMeal();
+      }
+
+      // Google events are written by the sync function (Admin SDK) only.
+      match /events/{eventId} {
+        allow read: if isMember(familyId);
+        allow create: if isMember(familyId) && request.resource.data.source == 'manual';
+        allow update: if isMember(familyId)
+          && resource.data.source == 'manual'
+          && request.resource.data.source == 'manual';
+        allow delete: if isMember(familyId) && resource.data.source == 'manual';
+      }
+
+      match /photos/{photoId} {
+        allow read: if isMember(familyId);
+        allow create: if isMember(familyId) && request.resource.data.uploadedBy == request.auth.uid;
+        allow update: if isMember(familyId)
+          && resource.data.uploadedBy == request.auth.uid
+          && request.resource.data.uploadedBy == resource.data.uploadedBy;
+        allow delete: if isMember(familyId)
+          && (resource.data.uploadedBy == request.auth.uid || isOwner(familyId));
+      }
+
+      match /reminderPrefs/{userId} {
+        function validPrefs() {
+          let d = request.resource.data;
+          return onlyKeys(['leadTimeMinutes', 'dailyDigestEnabled', 'digestHourLocal', 'timezone'])
+            && d.leadTimeMinutes is int && d.leadTimeMinutes >= 0 && d.leadTimeMinutes <= 10080
+            && d.dailyDigestEnabled is bool
+            && d.digestHourLocal is int && d.digestHourLocal >= 0 && d.digestHourLocal <= 23
+            && d.timezone is string && d.timezone.size() <= 64;
+        }
+        allow read, delete: if isMember(familyId) && request.auth.uid == userId;
+        allow create, update: if isMember(familyId) && request.auth.uid == userId && validPrefs();
+      }
+    }
+  }
+}
