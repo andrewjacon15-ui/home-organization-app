@@ -36,3 +36,16 @@ export function timezoneOptions(current: string): string[] {
   const zones = typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('timeZone') : []
   return zones.includes(current) ? zones : [current, ...zones]
 }
+
+/** The date key of the week's first day (0 = Sunday, 1 = Monday) on or before `key`. */
+export function startOfWeek(key: string, weekStartsOn = 0): string {
+  const offset = (fromDateKey(key).getDay() - weekStartsOn + 7) % 7
+  return addDays(key, -offset)
+}
+
+/** Whole days from `a` to `b` (positive when b is later). DST-safe. */
+export function daysBetween(a: string, b: string): number {
+  const [ay, am, ad] = a.split('-').map(Number)
+  const [by, bm, bd] = b.split('-').map(Number)
+  return Math.round((Date.UTC(by, bm - 1, bd) - Date.UTC(ay, am - 1, ad)) / 86_400_000)
+}

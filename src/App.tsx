@@ -4,13 +4,15 @@ import { FamilySetup } from './components/FamilySetup'
 import { SignIn } from './components/SignIn'
 import { ChoresPage } from './features/chores/ChoresPage'
 import { FamilyPage } from './features/family/FamilyPage'
+import { MealsPage } from './features/meals/MealsPage'
 import { resolveFamily } from './lib/family'
 import { useAuthUser, useFamily, useNow } from './lib/hooks'
 
-type Tab = 'chores' | 'family'
+type Tab = 'chores' | 'meals' | 'family'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'chores', label: 'Chores' },
+  { id: 'meals', label: 'Meals' },
   { id: 'family', label: 'Family' },
 ]
 
@@ -68,6 +70,7 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
       </header>
       <main className="content">
         {tab === 'chores' && <ChoresPage familyId={familyId} userId={userId} members={members} />}
+        {tab === 'meals' && <MealsPage familyId={familyId} userId={userId} />}
         {tab === 'family' && <FamilyPage family={family} members={members} userId={userId} />}
       </main>
     </div>

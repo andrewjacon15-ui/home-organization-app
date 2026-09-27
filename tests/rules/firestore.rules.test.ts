@@ -8,6 +8,7 @@ import {
 import {
   collection,
   deleteDoc,
+  documentId,
   doc,
   getDoc,
   getDocs,
@@ -210,6 +211,28 @@ describe('meal plans', () => {
     await assertSucceeds(setDoc(doc(db, `families/${FAM_A}/mealPlans/2026-10-01`), { breakfast: 'Eggs', lunch: '', dinner: 'Tacos', notes: '' }))
     await assertFails(setDoc(doc(db, `families/${FAM_A}/mealPlans/not-a-date`), { breakfast: 'Eggs', lunch: '', dinner: '', notes: '' }))
     await assertFails(setDoc(doc(db, `families/${FAM_A}/mealPlans/2026-10-02`), { breakfast: 5, lunch: '', dinner: '', notes: '' }))
+  })
+
+  it('supports what the planner does: stamp the editor, query a week, clear a day', async () => {
+    const db = dbFor(BOB)
+    const day = doc(db, `families/${FAM_A}/mealPlans/2026-10-03`)
+    await assertSucceeds(setDoc(day, { breakfast: '', lunch: '', dinner: 'Pizza', notes: '', updatedBy: BOB.uid }))
+    const week = query(
+      collection(db, `families/${FAM_A}/mealPlans`),
+      where(documentId(), '>=', '2026-09-27'),
+      where(documentId(), '<=', '2026-10-03'),
+    )
+    await assertSucceeds(getDocs(week))
+    await assertSucceeds(deleteDoc(day))
+  })
+
+  it("blocks other families from a week query", async () => {
+    const week = query(
+      collection(dbFor(MALLORY), `families/${FAM_A}/mealPlans`),
+      where(documentId(), '>=', '2026-09-27'),
+      where(documentId(), '<=', '2026-10-03'),
+    )
+    await assertFails(getDocs(week))
   })
 })
 
