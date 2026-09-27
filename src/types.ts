@@ -30,3 +30,12 @@ export interface Chore {
 }
 
 export type NewChore = Omit<Chore, 'id' | 'done'>
+
+export interface MealPlan {
+  breakfast: string
+  lunch: string
+  dinner: string
+  notes: string
+}
+
+export type MealSlot = keyof MealPlan
