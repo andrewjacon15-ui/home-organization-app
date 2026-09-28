@@ -10,10 +10,12 @@ interface BookProps {
   onSave: (draft: RecipeDraft, id?: string) => Promise<string | void> | void
   onDelete: (recipe: Recipe) => void
   onPlan: (recipe: Recipe, date: string, slot: PlanSlot) => void
+  /** Adds the recipe's ingredients to the grocery list; resolves with how many were added. */
+  onAddToGrocery?: (recipe: Recipe) => Promise<number> | number
 }
 
 /** List + detail + editor for the family's recipes. */
-export function RecipeBook({ recipes, today, onSave, onDelete, onPlan }: BookProps) {
+export function RecipeBook({ recipes, today, onSave, onDelete, onPlan, onAddToGrocery }: BookProps) {
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<string | null>(null)
   const [editing, setEditing] = useState<Recipe | 'new' | null>(null)
@@ -67,7 +69,7 @@ export function RecipeBook({ recipes, today, onSave, onDelete, onPlan }: BookPro
 
       <div className="recipe-book__detail">
         {current ? (
-          <RecipeView recipe={current} today={today} onEdit={() => setEditing(current)} onDelete={() => onDelete(current)} onPlan={(date, slot) => onPlan(current, date, slot)} />
+          <RecipeView recipe={current} today={today} onEdit={() => setEditing(current)} onDelete={() => onDelete(current)} onPlan={(date, slot) => onPlan(current, date, slot)} onAddToGrocery={onAddToGrocery ? () => onAddToGrocery(current) : undefined} />
         ) : (
           recipes.length > 0 && <p className="empty">Pick a recipe.</p>
         )}
@@ -82,9 +84,11 @@ interface ViewProps {
   onEdit?: () => void
   onDelete?: () => void
   onPlan?: (date: string, slot: PlanSlot) => void
+  onAddToGrocery?: () => Promise<number> | number
 }
 
-export function RecipeView({ recipe, today, onEdit, onDelete, onPlan }: ViewProps) {
+export function RecipeView({ recipe, today, onEdit, onDelete, onPlan, onAddToGrocery }: ViewProps) {
+  const [grocery, setGrocery] = useState<string | null>(null)
   const [checked, setChecked] = useState<Set<number>>(new Set())
   const [planDate, setPlanDate] = useState(today)
   const [planSlot, setPlanSlot] = useState<PlanSlot>('dinner')
@@ -137,6 +141,25 @@ export function RecipeView({ recipe, today, onEdit, onDelete, onPlan }: ViewProp
       <div className="recipe__body">
         <section aria-label="Ingredients">
           <h3>Ingredients</h3>
+          {onAddToGrocery && ingredients.length > 0 && (
+            <div className="row recipe__grocery">
+              <button
+                type="button"
+                className="button"
+                onClick={async () => {
+                  const n = await onAddToGrocery()
+                  setGrocery(`Added ${n} item${n === 1 ? '' : 's'} to the grocery list.`)
+                }}
+              >
+                Add ingredients to grocery list
+              </button>
+              {grocery && (
+                <span className="muted" role="status">
+                  {grocery}
+                </span>
+              )}
+            </div>
+          )}
           {ingredients.length === 0 ? (
             <p className="muted">None listed.</p>
           ) : (

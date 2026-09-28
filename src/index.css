@@ -2129,3 +2129,199 @@ textarea:hover {
   gap: 8px;
   font-weight: 600;
 }
+
+/* --------------------------------------------------------------------------
+   Lists
+   -------------------------------------------------------------------------- */
+
+.lists__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.lists__columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 0 32px;
+  align-items: start;
+}
+
+.list-col {
+  border-top: 3px solid var(--rule-strong);
+  padding-top: 6px;
+  min-width: 0;
+}
+
+.list-col--grocery {
+  border-top-color: #15803d;
+}
+
+.list-col__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+}
+
+.list-col__title {
+  font-size: 1.6rem;
+  margin: 0;
+  flex: 1;
+}
+
+.list-col__count {
+  min-width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  background: var(--paper-2);
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.list-col__menu {
+  position: relative;
+}
+
+.menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 20;
+  min-width: 210px;
+  display: grid;
+  background: var(--surface);
+  border: 1px solid var(--rule-strong);
+  box-shadow: 6px 6px 0 color-mix(in srgb, var(--ink) 12%, transparent);
+}
+
+.menu button {
+  text-align: left;
+  padding: 12px 14px;
+  border: none;
+  border-bottom: 1px solid var(--rule);
+  background: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.menu button:hover:not(:disabled) {
+  background: var(--paper-2);
+}
+
+.menu button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.menu__danger {
+  color: var(--danger);
+}
+
+.add-item input {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--rule);
+  border-radius: 0;
+  background: transparent;
+  padding: 0 2px;
+}
+
+.add-item input:focus {
+  outline: none;
+  border-bottom: 2px solid var(--accent);
+}
+
+.list-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.list-item {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--rule);
+}
+
+.list-item__check {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-height: 52px;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.list-item__check input {
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  min-height: 0;
+  padding: 0;
+  border: 1.5px solid var(--ink-2);
+  border-radius: var(--r);
+  background: transparent;
+  flex: none;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.list-item__check input:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.list-item__check input:checked::after {
+  content: '';
+  width: 6px;
+  height: 11px;
+  border: solid var(--accent-ink);
+  border-width: 0 2px 2px 0;
+  transform: translateY(-1px) rotate(45deg);
+}
+
+.list-item__text {
+  overflow-wrap: anywhere;
+}
+
+.list-item--done .list-item__text {
+  text-decoration: line-through;
+  color: var(--ink-2);
+}
+
+.list-item__delete {
+  width: 40px;
+  height: 40px;
+  opacity: 0.5;
+}
+
+.list-item__delete:hover {
+  opacity: 1;
+}
+
+.list-section {
+  margin-top: 18px;
+}
+
+.list-section__title {
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin: 0 0 4px;
+  padding-left: 8px;
+  border-left: 3px solid var(--pill);
+}
+
+.recipe__grocery {
+  margin-bottom: 8px;
+}

@@ -1,11 +1,12 @@
 import type { User } from 'firebase/auth'
 import { useEffect, useState, type ReactElement, type SVGProps } from 'react'
 import { FamilySetup } from './components/FamilySetup'
-import { CalendarIcon, ChoresIcon, MealsIcon, RecipesIcon, RewardsIcon, SettingsIcon } from './components/Icons'
+import { CalendarIcon, ChoresIcon, ListsIcon, MealsIcon, RecipesIcon, RewardsIcon, SettingsIcon } from './components/Icons'
 import { SignIn } from './components/SignIn'
 import { CalendarPage } from './features/calendar/CalendarPage'
 import { ChoresPage } from './features/chores/ChoresPage'
 import { MealsPage } from './features/meals/MealsPage'
+import { ListsPage } from './features/lists/ListsPage'
 import { LockProvider } from './features/lock/LockContext'
 import { SleepProvider } from './features/sleep/SleepContext'
 import { RecipesPage } from './features/recipes/RecipesPage'
@@ -20,10 +21,11 @@ import { resolveFamily } from './lib/family'
 import { useAuthUser, useFamily, useNow } from './lib/hooks'
 import { reloadToLatest, useUpdateCheck } from './lib/version'
 
-type Tab = 'calendar' | 'chores' | 'rewards' | 'meals' | 'recipes' | 'settings'
+type Tab = 'calendar' | 'lists' | 'chores' | 'rewards' | 'meals' | 'recipes' | 'settings'
 
 const TABS: { id: Tab; label: string; Icon: (p: SVGProps<SVGSVGElement>) => ReactElement }[] = [
   { id: 'calendar', label: 'Calendar', Icon: CalendarIcon },
+  { id: 'lists', label: 'Lists', Icon: ListsIcon },
   { id: 'chores', label: 'Chores', Icon: ChoresIcon },
   { id: 'rewards', label: 'Rewards', Icon: RewardsIcon },
   { id: 'meals', label: 'Meals', Icon: MealsIcon },
@@ -147,6 +149,7 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
         </header>
         <main className="content">
           {tab === 'calendar' && <CalendarPage familyId={familyId} userId={userId} members={members} />}
+          {tab === 'lists' && <ListsPage familyId={familyId} userId={userId} members={members} />}
           {tab === 'chores' && <ChoresPage familyId={familyId} userId={userId} members={members} />}
           {tab === 'rewards' && <RewardsPage familyId={familyId} userId={userId} members={members} />}
           {tab === 'meals' && <MealsPage familyId={familyId} userId={userId} />}

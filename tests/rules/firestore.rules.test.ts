@@ -585,3 +585,34 @@ describe('sleep mode settings', () => {
     await assertFails(setDoc(display, { sleepEnabled: 'yes' }))
   })
 })
+
+describe('lists', () => {
+  const list = { title: 'Grocery List', kind: 'grocery', sections: false, order: 0, createdBy: BOB.uid }
+  const item = { text: 'Milk', done: false, memberId: null, order: 1, createdBy: BOB.uid }
+
+  it('lets members manage lists and their items', async () => {
+    const db = dbFor(BOB)
+    await assertSucceeds(setDoc(doc(db, `families/${FAM_A}/lists/l1`), list))
+    await assertSucceeds(setDoc(doc(db, `families/${FAM_A}/lists/l1/items/i1`), item))
+    await assertSucceeds(setDoc(doc(db, `families/${FAM_A}/lists/l1/items/i2`), { ...item, text: 'Hem dress', memberId: ALICE.uid }))
+    await assertSucceeds(updateDoc(doc(db, `families/${FAM_A}/lists/l1/items/i1`), { done: true, doneAt: Timestamp.now() }))
+    await assertSucceeds(updateDoc(doc(db, `families/${FAM_A}/lists/l1`), { title: 'Groceries', sections: true }))
+    await assertSucceeds(getDocs(collection(dbFor(ALICE), `families/${FAM_A}/lists/l1/items`)))
+    await assertSucceeds(deleteDoc(doc(db, `families/${FAM_A}/lists/l1/items/i1`)))
+    await assertSucceeds(deleteDoc(doc(db, `families/${FAM_A}/lists/l1`)))
+  })
+
+  it('validates lists and items and keeps them in the family', async () => {
+    const db = dbFor(BOB)
+    await assertFails(setDoc(doc(db, `families/${FAM_A}/lists/x1`), { ...list, title: '' }))
+    await assertFails(setDoc(doc(db, `families/${FAM_A}/lists/x2`), { ...list, kind: 'secret' }))
+    await setDoc(doc(db, `families/${FAM_A}/lists/l2`), list)
+    await assertFails(setDoc(doc(db, `families/${FAM_A}/lists/l2/items/x3`), { ...item, text: '' }))
+    await assertFails(setDoc(doc(db, `families/${FAM_A}/lists/l2/items/x4`), { ...item, text: 'x'.repeat(301) }))
+    await assertFails(setDoc(doc(db, `families/${FAM_A}/lists/l2/items/x5`), { ...item, done: 'yes' }))
+    await assertFails(setDoc(doc(db, `families/${FAM_A}/lists/l2/items/x6`), { ...item, extra: 1 }))
+    await assertFails(getDocs(collection(dbFor(MALLORY), `families/${FAM_A}/lists`)))
+    await assertFails(getDocs(collection(dbFor(MALLORY), `families/${FAM_A}/lists/l2/items`)))
+    await assertFails(setDoc(doc(dbFor(MALLORY), `families/${FAM_A}/lists/l2/items/x7`), { ...item, createdBy: MALLORY.uid }))
+  })
+})
