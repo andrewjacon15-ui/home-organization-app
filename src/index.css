@@ -972,3 +972,73 @@ summary:focus-visible {
     grid-template-columns: 1fr;
   }
 }
+
+/* Text size & density (set on <html> from display settings) */
+:root[data-text-size='small'] {
+  font-size: 16px;
+}
+:root[data-text-size='large'] {
+  font-size: 21px;
+}
+:root[data-density='compact'] {
+  --tap: 40px;
+  --radius: 10px;
+}
+:root[data-density='compact'] .content,
+:root[data-density='compact'] .week,
+:root[data-density='compact'] .events {
+  gap: 4px;
+}
+:root[data-density='comfortable'] {
+  --tap: 56px;
+  --radius: 18px;
+}
+:root[data-density='comfortable'] .content {
+  gap: 24px;
+}
+
+/* Weather */
+.current-weather {
+  font-size: 0.55em;
+  font-weight: 600;
+  vertical-align: middle;
+  margin-left: 8px;
+  white-space: nowrap;
+}
+
+.day-weather {
+  margin-left: auto;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.month-cell__date {
+  display: flex;
+  align-items: center;
+}
+
+.month-cell .day-weather {
+  font-size: 0.65rem;
+}
+
+.day__today + .day-weather {
+  margin-left: 6px;
+}
+
+.setting-row--stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.setting-row--stack .row input {
+  max-width: none;
+}
+
+.place-results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}

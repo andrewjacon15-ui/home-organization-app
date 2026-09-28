@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { fromDateKey } from '../../lib/dates'
 import type { CalendarEvent, Member } from '../../types'
 import { useSettings } from '../settings/SettingsContext'
+import { DayWeather } from '../weather/WeatherBadges'
 import { EventChip } from './EventChip'
 import { groupByDay } from './events'
 import { isWeekend, weekdayHeaders, withOwners, type CalendarViewKind, type OwnedEvent, type ViewRange } from './views'
@@ -51,7 +52,10 @@ export function CalendarBoard({ kind, range, today, now, events, members, onDele
             const date = fromDateKey(key)
             return (
               <div key={key} role="gridcell" className={dayClass(key, 'month-cell')} aria-label={longLabel(key)} aria-current={key === today ? 'date' : undefined}>
-                <span className="month-cell__date">{date.getDate() === 1 ? date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : date.getDate()}</span>
+                <span className="month-cell__date">
+                  {date.getDate() === 1 ? date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : date.getDate()}
+                  <DayWeather date={key} />
+                </span>
                 <ul className="events">{list.slice(0, MONTH_CELL_LIMIT).map((e) => chip(e, true))}</ul>
                 {list.length > MONTH_CELL_LIMIT && <span className="month-cell__more">+{list.length - MONTH_CELL_LIMIT} more</span>}
               </div>
@@ -71,6 +75,7 @@ export function CalendarBoard({ kind, range, today, now, events, members, onDele
               <span className="day__weekday">{fromDateKey(key).toLocaleDateString(undefined, { weekday: 'short' })}</span>
               <span className="day__date">{fromDateKey(key).getDate()}</span>
               {key === today && <span className="day__today">Today</span>}
+              <DayWeather date={key} />
             </div>
             {byDay[key].length === 0 ? <p className="day__empty">Nothing planned</p> : <ul className="events">{byDay[key].map((e) => chip(e))}</ul>}
           </li>
@@ -89,6 +94,7 @@ export function CalendarBoard({ kind, range, today, now, events, members, onDele
               <span className="day__weekday">{fromDateKey(key).toLocaleDateString(undefined, { weekday: 'short' })}</span>
               <span className="day__date">{fromDateKey(key).getDate()}</span>
               {key === today && <span className="day__today">Today</span>}
+              <DayWeather date={key} />
             </div>
             <span className="day__count">{count === 0 ? '—' : `${count} event${count === 1 ? '' : 's'}`}</span>
             {count > 0 && <ul className="events">{byDay[key].map((e) => chip(e))}</ul>}
