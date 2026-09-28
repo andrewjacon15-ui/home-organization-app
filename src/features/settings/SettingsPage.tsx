@@ -10,6 +10,7 @@ import { GeneralSettings } from './GeneralSettings'
 import { GoogleCalendarSettings } from './GoogleCalendarSettings'
 import { LockSettings } from './LockSettings'
 import { ReminderSettings } from './ReminderSettings'
+import { SleepSettings } from './SleepSettings'
 
 interface Props {
   family: Family
@@ -25,6 +26,7 @@ const SECTIONS = [
   { id: 'google', label: 'Google Calendar' },
   { id: 'calendar', label: 'Calendar' },
   { id: 'reminders', label: 'Reminders' },
+  { id: 'sleep', label: 'Sleep mode' },
   { id: 'lock', label: 'Parental lock' },
   { id: 'about', label: 'About' },
 ]
@@ -70,6 +72,7 @@ export function SettingsPage({ family, members, userId }: Props) {
         <GoogleCalendarSettings familyId={family.id} me={members.find((m) => m.id === userId)} members={members} />
         <CalendarSettings familyName={family.name} />
         <ReminderSettings />
+        <SleepSettings />
         <LockSettings save={(c) => saveLock(family.id, c)} />
         <AboutSettings />
       </div>
