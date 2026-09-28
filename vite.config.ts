@@ -26,8 +26,8 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // Firebase's auth handler must always hit the network.
-        navigateFallbackDenylist: [/^\/__\//],
+        // Firebase's auth handler and the static legal pages must not fall back to the app.
+        navigateFallbackDenylist: [/^\/__\//, /^\/(privacy|terms)\.html$/],
       },
     }),
   ],
