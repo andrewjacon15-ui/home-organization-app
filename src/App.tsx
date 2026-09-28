@@ -5,6 +5,7 @@ import { SignIn } from './components/SignIn'
 import { CalendarPage } from './features/calendar/CalendarPage'
 import { ChoresPage } from './features/chores/ChoresPage'
 import { MealsPage } from './features/meals/MealsPage'
+import { ReminderCenter } from './features/reminders/ReminderCenter'
 import { SettingsProvider, useSettings } from './features/settings/SettingsContext'
 import { SettingsPage } from './features/settings/SettingsPage'
 import { CurrentWeather } from './features/weather/WeatherBadges'
@@ -95,6 +96,7 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
         {tab === 'meals' && <MealsPage familyId={familyId} userId={userId} />}
         {tab === 'settings' && <SettingsPage family={family} members={members} userId={userId} />}
       </main>
+      <ReminderCenter familyId={familyId} members={members} />
     </div>
   )
 }
