@@ -31,10 +31,12 @@ const VIEW_KEY = 'calendar-view'
 function initialView(): CalendarViewKind {
   try {
     const v = localStorage.getItem(VIEW_KEY)
-    return VIEWS.some((x) => x.id === v) ? (v as CalendarViewKind) : 'week'
+    if (VIEWS.some((x) => x.id === v)) return v as CalendarViewKind
   } catch {
-    return 'week'
+    // fall through to the default
   }
+  // A phone is too narrow for a week of columns; a running list reads better there.
+  return window.matchMedia?.('(max-width: 720px)').matches ? 'schedule' : 'week'
 }
 
 function rememberView(v: CalendarViewKind) {

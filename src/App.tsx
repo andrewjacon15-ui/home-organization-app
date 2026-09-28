@@ -1,7 +1,8 @@
 import type { User } from 'firebase/auth'
-import { useEffect, useState, type ReactElement, type SVGProps } from 'react'
+import { useEffect, useState } from 'react'
 import { FamilySetup } from './components/FamilySetup'
 import { CalendarIcon, ChoresIcon, HomeIcon, ListsIcon, MealsIcon, PhotosIcon, RecipesIcon, RewardsIcon, SettingsIcon } from './components/Icons'
+import { NavRail, type NavTab } from './components/NavRail'
 import { SignIn } from './components/SignIn'
 import { CalendarPage } from './features/calendar/CalendarPage'
 import { ChoresPage } from './features/chores/ChoresPage'
@@ -26,11 +27,11 @@ import { reloadToLatest, useUpdateCheck } from './lib/version'
 
 type Tab = 'home' | 'calendar' | 'lists' | 'chores' | 'rewards' | 'meals' | 'recipes' | 'photos' | 'settings'
 
-const TABS: { id: Tab; label: string; Icon: (p: SVGProps<SVGSVGElement>) => ReactElement }[] = [
-  { id: 'home', label: 'Home', Icon: HomeIcon },
-  { id: 'calendar', label: 'Calendar', Icon: CalendarIcon },
-  { id: 'lists', label: 'Lists', Icon: ListsIcon },
-  { id: 'chores', label: 'Chores', Icon: ChoresIcon },
+const TABS: NavTab<Tab>[] = [
+  { id: 'home', label: 'Home', Icon: HomeIcon, phone: true },
+  { id: 'calendar', label: 'Calendar', Icon: CalendarIcon, phone: true },
+  { id: 'lists', label: 'Lists', Icon: ListsIcon, phone: true },
+  { id: 'chores', label: 'Chores', Icon: ChoresIcon, phone: true },
   { id: 'rewards', label: 'Rewards', Icon: RewardsIcon },
   { id: 'meals', label: 'Meals', Icon: MealsIcon },
   { id: 'recipes', label: 'Recipes', Icon: RecipesIcon },
@@ -100,6 +101,7 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
 
   const setTab = (t: Tab) => {
     setTabState(t)
+    window.scrollTo(0, 0)
     try {
       localStorage.setItem(TAB_KEY, t)
     } catch {
@@ -120,19 +122,11 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
 
   if (!family) return <Splash />
 
+  const visibleTabs = TABS.filter((t) => t.id !== 'photos' || settings.showPhotosTab)
+
   return (
     <div className="shell">
-      <nav className="rail" aria-label="Sections">
-        <span className="rail__mark" aria-hidden>
-          {(settings.calendarName || family.name).replace(/^the\s+/i, '').charAt(0)}
-        </span>
-        {TABS.filter((t) => t.id !== 'photos' || settings.showPhotosTab).map(({ id, label, Icon }) => (
-          <button key={id} type="button" className={`rail__item${tab === id ? ' rail__item--active' : ''}`} aria-current={tab === id ? 'page' : undefined} onClick={() => setTab(id)}>
-            <Icon />
-            <span>{label}</span>
-          </button>
-        ))}
-      </nav>
+      <NavRail tabs={visibleTabs} current={tab} title={settings.calendarName || family.name} onSelect={setTab} />
 
       <div className="app">
         {update.state === 'available' && (
@@ -146,6 +140,7 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
         <header className="masthead">
           <div className="masthead__date">
             <span className="masthead__day">{now.toLocaleDateString(undefined, { weekday: 'long' })}</span>
+            <span className="masthead__short">{now.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
             <span className="masthead__full">{now.toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}</span>
           </div>
           <div className="masthead__meta">

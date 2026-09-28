@@ -48,7 +48,7 @@ export function MealPlanner({ weekStart, today, plans, onSave, onWeekChange, cur
           const plan = plans[date] ?? EMPTY_PLAN
           const isToday = date === today
           return (
-            <li key={date} className={`day card${isToday ? ' day--today' : ''}`} aria-current={isToday ? 'date' : undefined} aria-label={fmt(date, { weekday: 'long', month: 'long', day: 'numeric' })}>
+            <li key={date} className={`day card${isToday ? ' day--today' : ''}${date < today ? ' day--past' : ''}`} aria-current={isToday ? 'date' : undefined} aria-label={fmt(date, { weekday: 'long', month: 'long', day: 'numeric' })}>
               <div className="day__header">
                 <span className="day__weekday">{fmt(date, { weekday: 'short' })}</span>
                 <span className="day__date">{fromDateKey(date).getDate()}</span>
