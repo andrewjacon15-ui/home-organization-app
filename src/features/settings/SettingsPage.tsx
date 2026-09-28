@@ -6,6 +6,7 @@ import { PinPad } from '../lock/PinPad'
 import { AboutSettings } from './AboutSettings'
 import { AppearanceSettings } from './AppearanceSettings'
 import { CalendarSettings } from './CalendarSettings'
+import { EmailReminderSettings } from './EmailReminderSettings'
 import { GeneralSettings } from './GeneralSettings'
 import { GoogleCalendarSettings } from './GoogleCalendarSettings'
 import { LockSettings } from './LockSettings'
@@ -27,6 +28,7 @@ const SECTIONS = [
   { id: 'google', label: 'Google Calendar' },
   { id: 'calendar', label: 'Calendar' },
   { id: 'reminders', label: 'Reminders' },
+  { id: 'email', label: 'Email reminders' },
   { id: 'photos', label: 'Photos & screensaver' },
   { id: 'sleep', label: 'Sleep mode' },
   { id: 'lock', label: 'Parental lock' },
@@ -74,6 +76,7 @@ export function SettingsPage({ family, members, userId }: Props) {
         <GoogleCalendarSettings familyId={family.id} me={members.find((m) => m.id === userId)} members={members} />
         <CalendarSettings familyName={family.name} />
         <ReminderSettings />
+        <EmailReminderSettings familyId={family.id} userId={userId} email={members.find((m) => m.id === userId)?.email ?? ''} timezone={family.timezone} />
         <ScreensaverSettings />
         <SleepSettings />
         <LockSettings save={(c) => saveLock(family.id, c)} />

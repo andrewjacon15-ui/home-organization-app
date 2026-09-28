@@ -333,7 +333,8 @@ service cloud.firestore {
       match /reminderPrefs/{userId} {
         function validPrefs() {
           let d = request.resource.data;
-          return onlyKeys(['leadTimeMinutes', 'dailyDigestEnabled', 'digestHourLocal', 'timezone'])
+          return onlyKeys(['eventEmailsEnabled', 'leadTimeMinutes', 'dailyDigestEnabled', 'digestHourLocal', 'timezone'])
+            && (!('eventEmailsEnabled' in d) || d.eventEmailsEnabled is bool)
             && d.leadTimeMinutes is int && d.leadTimeMinutes >= 0 && d.leadTimeMinutes <= 10080
             && d.dailyDigestEnabled is bool
             && d.digestHourLocal is int && d.digestHourLocal >= 0 && d.digestHourLocal <= 23
