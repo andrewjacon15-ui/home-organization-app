@@ -21,7 +21,10 @@ const deps = () => ({
 
 /** Turns our errors into the callable protocol's errors; logs anything unexpected. */
 function callable<T>(handler: (req: CallableRequest) => Promise<T>) {
-  return onCall({ secrets: [clientSecret] }, async (req) => {
+  // invoker: 'public' makes every deploy (not just the first create) let browsers reach
+  // the function; the handlers do their own auth checks. Without it, a retried deploy
+  // left connectCalendar returning Google's 403 page, which the SDK reports as "internal [0]".
+  return onCall({ secrets: [clientSecret], invoker: 'public' }, async (req) => {
     try {
       return await handler(req)
     } catch (err) {
