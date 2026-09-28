@@ -1,4 +1,4 @@
-﻿import { FirebaseError } from 'firebase/app'
+import { FirebaseError } from 'firebase/app'
 import { getRedirectResult, signInWithPopup, signInWithRedirect } from 'firebase/auth'
 import { useEffect, useState } from 'react'
 import { auth, googleProvider } from '../firebase'

@@ -1,4 +1,4 @@
-﻿const KIOSK_KEY = 'kioskMode'
+const KIOSK_KEY = 'kioskMode'
 
 /**
  * Kiosk browsers (Fully Kiosk on the wall tablet) swallow popups without an
