@@ -58,7 +58,15 @@ export const RecipesIcon = (p: SVGProps<SVGSVGElement>) => (
   </svg>
 )
 
-export const SettingsIcon =(p: SVGProps<SVGSVGElement>) => (
+export const PhotosIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <rect x="3.5" y="5" width="17" height="14" />
+    <circle cx="9" cy="10" r="1.6" />
+    <path d="M3.5 17l5-4.5 3.5 3 3-2.5 5.5 4.5" />
+  </svg>
+)
+
+export const SettingsIcon = (p: SVGProps<SVGSVGElement>) => (
   <svg {...base(p)}>
     <circle cx="12" cy="12" r="3" />
     <path d="M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1M18.7 18.7l-2.1-2.1M7.4 7.4L5.3 5.3" />

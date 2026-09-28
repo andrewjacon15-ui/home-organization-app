@@ -59,6 +59,19 @@ export default defineConfig({
       workbox: {
         // Firebase's auth handler and the static legal pages must not fall back to the app.
         navigateFallbackDenylist: [/^\/__\//, /^\/(privacy|terms)\.html$/],
+        // Slideshow photos never change once uploaded; keep them on the device so
+        // the wall display doesn't re-download the library every loop.
+        runtimeCaching: [
+          {
+            urlPattern: ({ url, request }) => url.hostname === 'firebasestorage.googleapis.com' && request.destination === 'image',
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'family-photos',
+              expiration: { maxEntries: 300, maxAgeSeconds: 60 * 60 * 24 * 60 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
       },
     }),
   ],
