@@ -176,6 +176,19 @@ service cloud.firestore {
         allow create: if isMember(familyId) && validEntry();
       }
 
+      // Each person's Google calendars, mirrored by the sync function (Admin SDK creates/removes them).
+      // The owner may show/hide, recolor, rename, and say who a calendar belongs to.
+      match /calendars/{calendarKey} {
+        allow read: if isMember(familyId);
+        allow update: if isMember(familyId)
+          && resource.data.ownerId == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['enabled', 'color', 'alias', 'memberIds'])
+          && request.resource.data.enabled is bool
+          && isHexColor(request.resource.data.color)
+          && (!('alias' in request.resource.data) || (request.resource.data.alias is string && request.resource.data.alias.size() <= 60))
+          && request.resource.data.memberIds is list && request.resource.data.memberIds.size() >= 1 && request.resource.data.memberIds.size() <= 20;
+      }
+
       match /recipes/{recipeId} {
         function validRecipe() {
           let d = request.resource.data;
@@ -230,7 +243,7 @@ service cloud.firestore {
               'dimPastEvents', 'weekStartToday', 'monthStartCurrentWeek', 'scheduleDays', 'scheduleStartToday',
               'temperatureUnit', 'weatherLocation', 'textSize', 'density',
               'remindAtStart', 'remindBeforeEnabled', 'remindBeforeMinutes', 'remindChoresDue', 'reminderSound',
-              'showPhotosTab', 'theme', 'accentColor'])
+              'showPhotosTab', 'theme', 'accentColor', 'colorEventsBy'])
             && (!('calendarName' in d) || (d.calendarName is string && d.calendarName.size() <= 80))
             && optIntIn(d, 'weekStartsOn', 0, 6)
             && optOneOf(d, 'showCountdowns', ['always', 'never'])
@@ -245,6 +258,7 @@ service cloud.firestore {
             && optIntIn(d, 'remindBeforeMinutes', 1, 1440)
             && optBool(d, 'remindChoresDue') && optBool(d, 'reminderSound') && optBool(d, 'showPhotosTab')
             && optOneOf(d, 'theme', ['system', 'light', 'dark'])
+            && optOneOf(d, 'colorEventsBy', ['person', 'calendar'])
             && (!('accentColor' in d) || isHexColor(d.accentColor));
         }
         function validLock() {

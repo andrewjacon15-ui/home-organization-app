@@ -5,6 +5,8 @@ export interface GoogleEvent {
   summary?: string | null
   location?: string | null
   htmlLink?: string | null
+  /** 'default' | 'outOfOffice' | 'focusTime' | 'workingLocation' | 'birthday' | … */
+  eventType?: string | null
   start?: { date?: string | null; dateTime?: string | null } | null
   end?: { date?: string | null; dateTime?: string | null } | null
 }
@@ -14,6 +16,8 @@ export interface EventDoc {
   source: 'google'
   sourceUserId: string
   googleEventId: string
+  /** Which synced calendar it came from (families/{id}/calendars/{calendarKey}). */
+  calendarKey: string
   title: string
   start: Date
   end: Date
@@ -26,7 +30,7 @@ export interface EventDoc {
 }
 
 export type CalendarStatus =
-  | { status: 'connected'; email: string; lastSyncAt: Date; eventCount: number }
+  | { status: 'connected'; email: string; lastSyncAt: Date; eventCount: number; calendarCount: number }
   | { status: 'needs_reconnect'; email: string; error: string }
 
 export interface StoredTokens {
@@ -41,6 +45,31 @@ export interface ConnectedMember {
   tokens: StoredTokens
 }
 
+/** One entry of a person's Google calendar list. */
+export interface GoogleCalendarEntry {
+  id: string
+  summary: string
+  backgroundColor?: string | null
+  primary?: boolean | null
+  /** Checked in the Google Calendar UI. */
+  selected?: boolean | null
+  accessRole?: string | null
+}
+
+/** families/{familyId}/calendars/{key}. name/googleColor/primary follow Google; the rest is the family's choice. */
+export interface StoredCalendar {
+  key: string
+  ownerId: string
+  calendarId: string
+  name: string
+  googleColor: string
+  primary: boolean
+  enabled: boolean
+  color: string
+  memberIds: string[]
+  alias?: string
+}
+
 /** Everything the calendar code needs from Firestore. Real impl: store.ts. Tests: an in-memory fake. */
 export interface CalendarStore {
   isMember(familyId: string, uid: string): Promise<boolean>
@@ -52,12 +81,16 @@ export interface CalendarStore {
   upsertEvents(familyId: string, events: { id: string; data: EventDoc }[]): Promise<void>
   deleteEvents(familyId: string, ids: string[]): Promise<void>
   setCalendarStatus(familyId: string, uid: string, status: CalendarStatus | null): Promise<void>
+  listCalendars(familyId: string, uid: string): Promise<StoredCalendar[]>
+  upsertCalendars(familyId: string, calendars: StoredCalendar[]): Promise<void>
+  deleteCalendars(familyId: string, keys: string[]): Promise<void>
 }
 
 /** Everything the calendar code needs from Google. Real impl: google.ts. Tests: a stub. */
 export interface GoogleApi {
   /** Exchanges a GIS popup auth code. refreshToken is absent if Google didn't issue a new one. */
   exchangeCode(code: string): Promise<{ refreshToken?: string; email: string; scope: string }>
-  listEvents(refreshToken: string, timeMin: Date, timeMax: Date): Promise<GoogleEvent[]>
+  listCalendars(refreshToken: string): Promise<GoogleCalendarEntry[]>
+  listEvents(refreshToken: string, calendarId: string, timeMin: Date, timeMax: Date): Promise<GoogleEvent[]>
   revoke(refreshToken: string): Promise<void>
 }

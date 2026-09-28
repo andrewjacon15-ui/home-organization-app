@@ -1,5 +1,5 @@
 import { FieldValue, type Firestore } from 'firebase-admin/firestore'
-import type { CalendarStore, StoredTokens } from './types.js'
+import type { CalendarStore, StoredCalendar, StoredTokens } from './types.js'
 
 const BATCH_LIMIT = 400
 
@@ -16,6 +16,7 @@ export function firestoreStore(db: Firestore): CalendarStore {
   const memberRef = (familyId: string, uid: string) => db.doc(`families/${familyId}/members/${uid}`)
   const tokensRef = (familyId: string, uid: string) => db.doc(`families/${familyId}/members/${uid}/private/tokens`)
   const eventsCol = (familyId: string) => db.collection(`families/${familyId}/events`)
+  const calendarsCol = (familyId: string) => db.collection(`families/${familyId}/calendars`)
 
   return {
     async isMember(familyId, uid) {
@@ -62,6 +63,19 @@ export function firestoreStore(db: Firestore): CalendarStore {
 
     async deleteEvents(familyId, ids) {
       await inBatches(db, ids, (batch, id) => batch.delete(eventsCol(familyId).doc(id)))
+    },
+
+    async listCalendars(familyId, uid) {
+      const snap = await calendarsCol(familyId).where('ownerId', '==', uid).get()
+      return snap.docs.map((d) => ({ ...(d.data() as Omit<StoredCalendar, 'key'>), key: d.id }))
+    },
+
+    async upsertCalendars(familyId, calendars) {
+      await inBatches(db, calendars, (batch, { key, ...data }) => batch.set(calendarsCol(familyId).doc(key), data))
+    },
+
+    async deleteCalendars(familyId, keys) {
+      await inBatches(db, keys, (batch, key) => batch.delete(calendarsCol(familyId).doc(key)))
     },
 
     async setCalendarStatus(familyId, uid, status) {

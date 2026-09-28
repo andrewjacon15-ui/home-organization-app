@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { CALENDAR_SCOPE, CalendarError, connectCalendar, disconnectCalendar, googleErrorDetail, syncAll, syncMember, syncMine } from './calendar.js'
-import type { CalendarStatus, CalendarStore, EventDoc, GoogleApi, GoogleEvent, StoredTokens } from './types.js'
+import { CALENDAR_SCOPE, CalendarError, connectCalendar, disconnectCalendar, googleErrorDetail, mergeCalendars, syncAll, syncMember, syncMine } from './calendar.js'
+import { calendarKey, eventDocId } from './normalize.js'
+import type { CalendarStatus, CalendarStore, EventDoc, GoogleApi, GoogleCalendarEntry, GoogleEvent, StoredCalendar, StoredTokens } from './types.js'
 
 const NOW = new Date('2026-10-01T12:00:00Z')
 const FAM = 'fam1'
@@ -12,6 +13,7 @@ class FakeStore implements CalendarStore {
   tokens = new Map<string, StoredTokens>()
   events = new Map<string, EventDoc>()
   status = new Map<string, CalendarStatus | null>()
+  calendars = new Map<string, StoredCalendar>()
   key = (f: string, u: string) => `${f}/${u}`
 
   async isMember(f: string, u: string) {
@@ -44,11 +46,25 @@ class FakeStore implements CalendarStore {
   async setCalendarStatus(f: string, u: string, s: CalendarStatus | null) {
     this.status.set(this.key(f, u), s)
   }
+  async listCalendars(_f: string, u: string) {
+    return [...this.calendars.values()].filter((c) => c.ownerId === u)
+  }
+  async upsertCalendars(_f: string, list: StoredCalendar[]) {
+    for (const c of list) this.calendars.set(c.key, c)
+  }
+  async deleteCalendars(_f: string, keys: string[]) {
+    for (const k of keys) this.calendars.delete(k)
+  }
 }
+
+const PRIMARY: GoogleCalendarEntry = { id: 'bob@example.com', summary: 'Bob', backgroundColor: '#039BE5', primary: true, selected: true }
+const WORK: GoogleCalendarEntry = { id: 'work123@group.calendar.google.com', summary: 'Work', backgroundColor: '#9e69af', selected: true }
+const HOLIDAYS: GoogleCalendarEntry = { id: 'en.usa#holiday@group.v.calendar.google.com', summary: 'Holidays in United States', backgroundColor: '#0b8043', selected: false }
 
 function stubGoogle(overrides: Partial<GoogleApi> = {}) {
   return {
     exchangeCode: vi.fn<GoogleApi['exchangeCode']>(async () => ({ refreshToken: 'rt-new', email: 'bob@example.com', scope: SCOPES })),
+    listCalendars: vi.fn<GoogleApi['listCalendars']>(async () => [PRIMARY]),
     listEvents: vi.fn<GoogleApi['listEvents']>(async () => [] as GoogleEvent[]),
     revoke: vi.fn<GoogleApi['revoke']>(async () => undefined),
     ...overrides,
@@ -62,6 +78,8 @@ const timed = (id: string, summary = id): GoogleEvent => ({
   end: { dateTime: '2026-10-02T16:00:00Z' },
 })
 
+const allDay = (id: string, summary: string): GoogleEvent => ({ id, summary, start: { date: '2026-10-03' }, end: { date: '2026-10-04' } })
+
 const invalidGrant = () => Object.assign(new Error('invalid_grant'), { response: { data: { error: 'invalid_grant' } } })
 
 let store: FakeStore
@@ -72,6 +90,8 @@ beforeEach(() => {
 
 describe('syncMember', () => {
   const tokens = { refreshToken: 'rt', email: 'bob@example.com', scope: SCOPES }
+  const primaryKey = calendarKey('bob', PRIMARY.id)
+  const workKey = calendarKey('bob', WORK.id)
 
   it('mirrors events, removes ones deleted in Google, and records status', async () => {
     store.events.set('g_bob_gone', { ...({} as EventDoc), source: 'google', sourceUserId: 'bob' })
@@ -81,19 +101,59 @@ describe('syncMember', () => {
     const result = await syncMember({ store, google, now: NOW }, FAM, 'bob', tokens)
 
     expect(result).toEqual({ upserted: 2, deleted: 1, status: 'connected' })
-    expect([...store.events.keys()].sort()).toEqual(['g_alice_keep', 'g_bob_e1', 'g_bob_e2'])
-    expect(store.status.get(`${FAM}/bob`)).toEqual({ status: 'connected', email: 'bob@example.com', lastSyncAt: NOW, eventCount: 2 })
+    expect([...store.events.keys()].sort()).toEqual(['g_alice_keep', eventDocId(primaryKey, 'e1'), eventDocId(primaryKey, 'e2')].sort())
+    expect(store.events.get(eventDocId(primaryKey, 'e1'))?.calendarKey).toBe(primaryKey)
+    expect(store.status.get(`${FAM}/bob`)).toEqual({ status: 'connected', email: 'bob@example.com', lastSyncAt: NOW, eventCount: 2, calendarCount: 1 })
   })
 
-  it('asks Google for 30 days back through 120 days ahead with the stored refresh token', async () => {
+  it('asks Google for 30 days back through 120 days ahead, per calendar', async () => {
     const google = stubGoogle()
     await syncMember({ store, google, now: NOW }, FAM, 'bob', tokens)
-    expect(google.listEvents).toHaveBeenCalledWith('rt', new Date('2026-09-01T12:00:00Z'), new Date('2027-01-29T12:00:00Z'))
+    expect(google.listCalendars).toHaveBeenCalledWith('rt')
+    expect(google.listEvents).toHaveBeenCalledWith('rt', PRIMARY.id, new Date('2026-09-01T12:00:00Z'), new Date('2027-01-29T12:00:00Z'))
+  })
+
+  it('syncs every calendar that is checked in Google, and records each one', async () => {
+    const google = stubGoogle({
+      listCalendars: vi.fn(async () => [PRIMARY, WORK, HOLIDAYS]),
+      listEvents: vi.fn(async (_rt: string, calId: string) => (calId === WORK.id ? [allDay('w1', 'PAS-X Regional')] : calId === PRIMARY.id ? [timed('p1')] : [allDay('h1', 'Holiday')])),
+    })
+    await syncMember({ store, google, now: NOW }, FAM, 'bob', tokens)
+
+    // Holidays isn't checked in Google, so it starts hidden and isn't fetched.
+    expect(google.listEvents).toHaveBeenCalledTimes(2)
+    expect(store.events.get(eventDocId(workKey, 'w1'))).toMatchObject({ title: 'PAS-X Regional', allDay: true, calendarKey: workKey })
+    const cals = await store.listCalendars(FAM, 'bob')
+    expect(cals.map((c) => [c.name, c.enabled, c.color])).toEqual([
+      ['Bob', true, '#039be5'],
+      ['Work', true, '#9e69af'],
+      ['Holidays in United States', false, '#0b8043'],
+    ])
+  })
+
+  it('keeps the family’s choices when the calendar list is refreshed, and drops removed calendars', async () => {
+    await store.upsertCalendars(FAM, [
+      { key: workKey, ownerId: 'bob', calendarId: WORK.id, name: 'Old name', googleColor: '#000000', primary: false, enabled: false, color: '#0f766e', memberIds: ['bob', 'alice'], alias: 'Office' },
+      { key: calendarKey('bob', 'gone@group'), ownerId: 'bob', calendarId: 'gone@group', name: 'Gone', googleColor: '#000000', primary: false, enabled: true, color: '#000000', memberIds: ['bob'] },
+    ])
+    const google = stubGoogle({ listCalendars: vi.fn(async () => [PRIMARY, WORK]) })
+    await syncMember({ store, google, now: NOW }, FAM, 'bob', tokens)
+
+    const work = (await store.listCalendars(FAM, 'bob')).find((c) => c.key === workKey)
+    expect(work).toMatchObject({ name: 'Work', googleColor: '#9e69af', enabled: false, color: '#0f766e', memberIds: ['bob', 'alice'], alias: 'Office' })
+    expect(google.listEvents).not.toHaveBeenCalledWith('rt', WORK.id, expect.anything(), expect.anything())
+    expect(store.calendars.has(calendarKey('bob', 'gone@group'))).toBe(false)
+  })
+
+  it('skips working-location markers', async () => {
+    const google = stubGoogle({ listEvents: vi.fn(async () => [{ ...allDay('wl', 'Home'), eventType: 'workingLocation' }, timed('real')]) })
+    const result = await syncMember({ store, google, now: NOW }, FAM, 'bob', tokens)
+    expect(result.upserted).toBe(1)
   })
 
   it('marks the person as needing to reconnect when the token is dead, keeping existing events', async () => {
     store.events.set('g_bob_e1', { source: 'google', sourceUserId: 'bob' } as EventDoc)
-    const google = stubGoogle({ listEvents: vi.fn(async () => Promise.reject(invalidGrant())) })
+    const google = stubGoogle({ listCalendars: vi.fn(async () => Promise.reject(invalidGrant())) })
 
     const result = await syncMember({ store, google, now: NOW }, FAM, 'bob', tokens)
 
@@ -105,6 +165,13 @@ describe('syncMember', () => {
   it('rethrows other errors', async () => {
     const google = stubGoogle({ listEvents: vi.fn(async () => Promise.reject(new Error('500 backend error'))) })
     await expect(syncMember({ store, google, now: NOW }, FAM, 'bob', tokens)).rejects.toThrow('500')
+  })
+})
+
+describe('mergeCalendars', () => {
+  it('falls back to a neutral color when Google sends none', () => {
+    const { keep } = mergeCalendars('bob', [{ id: 'x', summary: 'X', selected: true }], [])
+    expect(keep[0]).toMatchObject({ enabled: true, color: '#57534e', memberIds: ['bob'] })
   })
 })
 
@@ -137,7 +204,7 @@ describe('connectCalendar', () => {
     const google = stubGoogle({ exchangeCode: vi.fn(async () => ({ email: 'bob@example.com', scope: SCOPES })) })
     await connectCalendar({ store, google, now: NOW }, 'bob', { familyId: FAM, code: 'c' })
     expect(store.tokens.get(`${FAM}/bob`)?.refreshToken).toBe('rt-old')
-    expect(google.listEvents).toHaveBeenCalledWith('rt-old', expect.any(Date), expect.any(Date))
+    expect(google.listEvents).toHaveBeenCalledWith('rt-old', PRIMARY.id, expect.any(Date), expect.any(Date))
   })
 
   it('explains how to fix it when there is no refresh token at all', async () => {
@@ -180,11 +247,12 @@ describe('syncAll', () => {
     store.tokens.set(`${FAM}/alice`, { refreshToken: 'rt-alice', email: 'a@x.com', scope: SCOPES })
     store.tokens.set(`fam2/carol`, { refreshToken: 'rt-carol', email: 'c@x.com', scope: SCOPES })
     const google = stubGoogle({
-      listEvents: vi.fn(async (rt: string) => {
+      listCalendars: vi.fn(async (rt: string) => {
         if (rt === 'rt-alice') throw invalidGrant()
         if (rt === 'rt-carol') throw new Error('boom')
-        return [timed('e1')]
+        return [PRIMARY]
       }),
+      listEvents: vi.fn(async () => [timed('e1')]),
     })
     const log = vi.fn()
 

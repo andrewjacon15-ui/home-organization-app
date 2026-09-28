@@ -6,6 +6,7 @@ const verifyIdToken = vi.fn()
 const revokeToken = vi.fn()
 const setCredentials = vi.fn()
 const eventsList = vi.fn()
+const calendarListList = vi.fn()
 
 vi.mock('google-auth-library', () => ({
   OAuth2Client: vi.fn(function (this: object) {
@@ -13,7 +14,7 @@ vi.mock('google-auth-library', () => ({
   }),
 }))
 vi.mock('@googleapis/calendar', () => ({
-  calendar: vi.fn(() => ({ events: { list: eventsList } })),
+  calendar: vi.fn(() => ({ events: { list: eventsList }, calendarList: { list: calendarListList } })),
 }))
 
 // --- firebase-admin FieldValue, mocked; Firestore itself is a hand-rolled fake below ---
@@ -51,10 +52,26 @@ describe('googleApi', () => {
     const min = new Date('2026-09-01T00:00:00Z')
     const max = new Date('2027-01-01T00:00:00Z')
 
-    await expect(api.listEvents('rt', min, max)).resolves.toEqual([{ id: '1' }, { id: '2' }])
+    await expect(api.listEvents('rt', 'work@group', min, max)).resolves.toEqual([{ id: '1' }, { id: '2' }])
     expect(setCredentials).toHaveBeenCalledWith({ refresh_token: 'rt' })
-    expect(eventsList).toHaveBeenNthCalledWith(1, expect.objectContaining({ calendarId: 'primary', singleEvents: true, timeMin: min.toISOString(), pageToken: undefined }))
+    expect(eventsList).toHaveBeenNthCalledWith(1, expect.objectContaining({ calendarId: 'work@group', singleEvents: true, timeMin: min.toISOString(), pageToken: undefined }))
     expect(eventsList).toHaveBeenNthCalledWith(2, expect.objectContaining({ pageToken: 'p2' }))
+  })
+
+  it('lists calendars, skipping deleted and hidden ones and preferring the user\'s own name', async () => {
+    calendarListList.mockResolvedValueOnce({
+      data: {
+        items: [
+          { id: 'me@x.com', summary: 'me@x.com', summaryOverride: 'Andrew', backgroundColor: '#039be5', primary: true, selected: true },
+          { id: 'work@group', summary: 'Work', backgroundColor: '#9e69af', selected: true },
+          { id: 'old@group', summary: 'Old', deleted: true },
+          { id: 'hid@group', summary: 'Hidden', hidden: true },
+        ],
+      },
+    })
+    const cals = await api.listCalendars('rt')
+    expect(cals.map((c) => c.summary)).toEqual(['Andrew', 'Work'])
+    expect(cals[0]).toMatchObject({ id: 'me@x.com', primary: true, selected: true })
   })
 
   it('revokes', async () => {

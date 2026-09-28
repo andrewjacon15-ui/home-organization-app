@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { addDays, fromDateKey } from '../../lib/dates'
 import { useNow, useToday } from '../../lib/hooks'
-import type { CalendarEvent, Member } from '../../types'
+import type { CalendarEvent, Member, SyncedCalendar } from '../../types'
 import { useSettings } from '../settings/SettingsContext'
 import { AddEventForm } from './AddEventForm'
-import { addManualEvent, deleteManualEvent, watchEvents } from './calendarApi'
+import { addManualEvent, deleteManualEvent, watchCalendars, watchEvents } from './calendarApi'
+import { CalendarFilter } from './CalendarFilter'
+import { applyFilter, loadHidden, saveHidden, type HiddenSets } from './filter'
 import { CalendarBoard } from './CalendarBoard'
 import { CalendarConnect } from './CalendarConnect'
 import { useCalendarConnection } from './useCalendarConnection'
@@ -54,6 +56,10 @@ export function CalendarPage({ familyId, userId, members }: Props) {
   const first = range.days[0]
   const last = range.days[range.days.length - 1]
   const [events, setEvents] = useState<CalendarEvent[]>([])
+  const [calendars, setCalendars] = useState<SyncedCalendar[]>([])
+  const [hidden, setHidden] = useState<HiddenSets>(loadHidden)
+  const calendarByKey = useMemo(() => new Map(calendars.map((c) => [c.key, c])), [calendars])
+  const visible = useMemo(() => applyFilter(events, hidden, calendarByKey), [events, hidden, calendarByKey])
   const me = members.find((m) => m.id === userId)
   const conn = useCalendarConnection(familyId, me)
   const [error, setError] = useState<string | null>(null)
@@ -62,6 +68,7 @@ export function CalendarPage({ familyId, userId, members }: Props) {
   // (Wait for the member record so it doesn't flash while loading.)
   const showConnect = !!me && (!conn.status || conn.status.status === 'needs_reconnect')
 
+  useEffect(() => watchCalendars(familyId, setCalendars), [familyId])
   useEffect(() => watchEvents(familyId, fromDateKey(first), fromDateKey(addDays(last, 1)), setEvents), [familyId, first, last])
 
   return (
@@ -117,6 +124,15 @@ export function CalendarPage({ familyId, userId, members }: Props) {
               </button>
             ))}
           </div>
+          <CalendarFilter
+            members={members}
+            calendars={calendars}
+            hidden={hidden}
+            onChange={(h) => {
+              setHidden(h)
+              saveHidden(h)
+            }}
+          />
           <AddEventForm
             defaultDate={range.days.includes(today) ? today : first}
             members={members}
@@ -130,8 +146,9 @@ export function CalendarPage({ familyId, userId, members }: Props) {
           range={range}
           today={today}
           now={now}
-          events={events}
+          events={visible}
           members={members}
+          calendars={calendars}
           onDelete={(e) => deleteManualEvent(familyId, e.id).catch(report)}
         />
       </section>

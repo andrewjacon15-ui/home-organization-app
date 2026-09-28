@@ -67,7 +67,7 @@ export function SettingsPage({ family, members, userId }: Props) {
         </section>
         <AppearanceSettings />
         <GeneralSettings />
-        <GoogleCalendarSettings familyId={family.id} me={members.find((m) => m.id === userId)} />
+        <GoogleCalendarSettings familyId={family.id} me={members.find((m) => m.id === userId)} members={members} />
         <CalendarSettings familyName={family.name} />
         <ReminderSettings />
         <LockSettings save={(c) => saveLock(family.id, c)} />

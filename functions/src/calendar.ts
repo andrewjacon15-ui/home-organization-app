@@ -1,5 +1,5 @@
-import { eventDocId, normalizeEvent } from './normalize.js'
-import type { CalendarStore, GoogleApi, StoredTokens } from './types.js'
+import { calendarKey, eventDocId, normalizeEvent } from './normalize.js'
+import type { CalendarStore, EventDoc, GoogleApi, GoogleCalendarEntry, StoredCalendar, StoredTokens } from './types.js'
 
 export const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly'
 
@@ -52,6 +52,24 @@ export interface SyncResult {
 }
 
 /** Mirrors one person's primary calendar into the family's events collection. */
+const HEX = /^#[0-9a-f]{6}$/i
+
+/** Merges Google's calendar list with what the family already chose (show/hide, color, nickname, people). */
+export function mergeCalendars(uid: string, entries: GoogleCalendarEntry[], existing: StoredCalendar[]): { keep: StoredCalendar[]; removed: string[] } {
+  const byKey = new Map(existing.map((c) => [c.key, c]))
+  const keep = entries.map((e) => {
+    const key = calendarKey(uid, e.id)
+    const googleColor = e.backgroundColor && HEX.test(e.backgroundColor) ? e.backgroundColor.toLowerCase() : '#57534e'
+    const prev = byKey.get(key)
+    if (prev) return { ...prev, name: e.summary || prev.name, googleColor, primary: !!e.primary }
+    // New calendar: shown if it's the primary or it's checked in Google Calendar.
+    return { key, ownerId: uid, calendarId: e.id, name: e.summary || 'Calendar', googleColor, primary: !!e.primary, enabled: !!e.primary || e.selected === true, color: googleColor, memberIds: [uid] }
+  })
+  const kept = new Set(keep.map((c) => c.key))
+  return { keep, removed: existing.filter((c) => !kept.has(c.key)).map((c) => c.key) }
+}
+
+/** Mirrors every enabled calendar of one person into the family's events collection. */
 export async function syncMember(
   deps: { store: CalendarStore; google: GoogleApi; now?: Date },
   familyId: string,
@@ -63,9 +81,20 @@ export async function syncMember(
   const timeMin = new Date(now.getTime() - SYNC_PAST_DAYS * DAY_MS)
   const timeMax = new Date(now.getTime() + SYNC_FUTURE_DAYS * DAY_MS)
 
-  let googleEvents
+  let calendars: StoredCalendar[]
+  const docs: { id: string; data: EventDoc }[] = []
   try {
-    googleEvents = await google.listEvents(tokens.refreshToken, timeMin, timeMax)
+    const merged = mergeCalendars(uid, await google.listCalendars(tokens.refreshToken), await store.listCalendars(familyId, uid))
+    calendars = merged.keep
+    await store.upsertCalendars(familyId, calendars)
+    await store.deleteCalendars(familyId, merged.removed)
+
+    for (const c of calendars.filter((x) => x.enabled)) {
+      for (const e of await google.listEvents(tokens.refreshToken, c.calendarId, timeMin, timeMax)) {
+        const data = normalizeEvent(e, uid, c.key)
+        if (data) docs.push({ id: eventDocId(c.key, data.googleEventId), data })
+      }
+    }
   } catch (err) {
     if (isInvalidGrant(err)) {
       // Keep the events that are already there; the UI shows a Reconnect button.
@@ -79,11 +108,6 @@ export async function syncMember(
     throw err
   }
 
-  const docs = googleEvents
-    .map((e) => normalizeEvent(e, uid))
-    .filter((e) => e !== null)
-    .map((data) => ({ id: eventDocId(uid, data.googleEventId), data }))
-
   const keep = new Set(docs.map((d) => d.id))
   const stale = (await store.listGoogleEventIds(familyId, uid)).filter((id) => !keep.has(id))
 
@@ -94,6 +118,7 @@ export async function syncMember(
     email: tokens.email,
     lastSyncAt: now,
     eventCount: docs.length,
+    calendarCount: calendars.filter((c) => c.enabled).length,
   })
   return { upserted: docs.length, deleted: stale.length, status: 'connected' }
 }
@@ -154,6 +179,7 @@ export async function disconnectCalendar(deps: { store: CalendarStore; google: G
   }
   await deps.store.deleteTokens(familyId, uid!)
   await deps.store.deleteEvents(familyId, await deps.store.listGoogleEventIds(familyId, uid!))
+  await deps.store.deleteCalendars(familyId, (await deps.store.listCalendars(familyId, uid!)).map((c) => c.key))
   await deps.store.setCalendarStatus(familyId, uid!, null)
   return { ok: true }
 }
