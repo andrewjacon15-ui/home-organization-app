@@ -6,6 +6,8 @@ import { defineSecret } from 'firebase-functions/params'
 import { onSchedule } from 'firebase-functions/scheduler'
 import * as calendar from './calendar.js'
 import { googleApi } from './google.js'
+import * as reminders from './reminders.js'
+import { firestoreReminderStore, gmailMailer } from './reminderStore.js'
 import { firestoreStore } from './store.js'
 
 initializeApp()
@@ -46,5 +48,21 @@ export const syncCalendars = onSchedule(
   async () => {
     const result = await calendar.syncAll({ ...deps(), log: (msg, extra) => logger.warn(msg, extra) })
     logger.info('calendar sync done', result)
+  },
+)
+
+/** Gmail account the reminder emails come from, and an app password for it (both in Secret Manager). */
+const gmailAddress = defineSecret('GMAIL_ADDRESS')
+const gmailAppPassword = defineSecret('GMAIL_APP_PASSWORD')
+
+export const sendReminderEmails = onSchedule(
+  { schedule: 'every 5 minutes', secrets: [gmailAddress, gmailAppPassword], timeoutSeconds: 120, retryCount: 0 },
+  async () => {
+    const result = await reminders.sendDueEmails({
+      store: firestoreReminderStore(getFirestore()),
+      mailer: await gmailMailer(gmailAddress.value(), gmailAppPassword.value()),
+      log: (msg, extra) => logger.warn(msg, extra),
+    })
+    if (result.eventEmails || result.digests || result.failures) logger.info('reminder emails sent', result)
   },
 )

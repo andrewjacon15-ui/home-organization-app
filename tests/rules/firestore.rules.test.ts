@@ -328,6 +328,17 @@ describe('reminder prefs', () => {
     await assertFails(setDoc(doc(dbFor(ALICE), `families/${FAM_A}/reminderPrefs/${BOB.uid}`), prefs))
     await assertFails(setDoc(doc(dbFor(BOB), `families/${FAM_A}/reminderPrefs/${BOB.uid}`), { ...prefs, digestHourLocal: 24 }))
   })
+
+  it('accept the event-email switch, and only as a boolean', async () => {
+    const prefs = { eventEmailsEnabled: true, leadTimeMinutes: 30, dailyDigestEnabled: false, digestHourLocal: 7, timezone: 'America/New_York' }
+    await assertSucceeds(setDoc(doc(dbFor(BOB), `families/${FAM_A}/reminderPrefs/${BOB.uid}`), prefs))
+    await assertFails(setDoc(doc(dbFor(BOB), `families/${FAM_A}/reminderPrefs/${BOB.uid}`), { ...prefs, eventEmailsEnabled: 'yes' }))
+  })
+
+  it('keep the sent-email log server-only', async () => {
+    await assertFails(getDocs(collection(dbFor(ALICE), `families/${FAM_A}/emailLog`)))
+    await assertFails(setDoc(doc(dbFor(ALICE), `families/${FAM_A}/emailLog/x`), { sentAt: 1 }))
+  })
 })
 
 describe('photos', () => {
