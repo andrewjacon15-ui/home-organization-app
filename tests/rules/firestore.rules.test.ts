@@ -438,3 +438,47 @@ describe('chore due times', () => {
     await assertFails(setDoc(doc(dbFor(BOB), `families/${FAM_A}/chores/t4`), { ...chore, dueTime: '25:00' }))
   })
 })
+
+describe('star ledger', () => {
+  const entry = (over = {}) => ({ memberId: BOB.uid, delta: 3, reason: 'Chore: Dishes', choreId: 'c1', createdBy: BOB.uid, ...over })
+
+  it('lets members credit and debit stars as themselves, and undo', async () => {
+    const db = dbFor(BOB)
+    await assertSucceeds(setDoc(doc(db, `families/${FAM_A}/stars/chore_c1`), entry()))
+    await assertSucceeds(setDoc(doc(db, `families/${FAM_A}/stars/r1`), entry({ delta: -5, reason: 'Reward: Ice cream', choreId: null, rewardId: 'rw1' })))
+    await assertSucceeds(getDocs(collection(db, `families/${FAM_A}/stars`)))
+    await assertSucceeds(deleteDoc(doc(db, `families/${FAM_A}/stars/chore_c1`)))
+  })
+
+  it('rejects edits, forged authors, bad values, and other families', async () => {
+    const db = dbFor(BOB)
+    await setDoc(doc(db, `families/${FAM_A}/stars/s1`), entry())
+    await assertFails(updateDoc(doc(db, `families/${FAM_A}/stars/s1`), { delta: 100 }))
+    await assertFails(setDoc(doc(db, `families/${FAM_A}/stars/s2`), entry({ createdBy: ALICE.uid })))
+    await assertFails(setDoc(doc(db, `families/${FAM_A}/stars/s3`), entry({ delta: 2.5 })))
+    await assertFails(setDoc(doc(db, `families/${FAM_A}/stars/s4`), entry({ delta: 1_000_000 })))
+    await assertFails(setDoc(doc(db, `families/${FAM_A}/stars/s5`), entry({ extra: 1 })))
+    await assertFails(getDocs(collection(dbFor(MALLORY), `families/${FAM_A}/stars`)))
+    await assertFails(setDoc(doc(dbFor(MALLORY), `families/${FAM_A}/stars/s6`), entry({ createdBy: MALLORY.uid })))
+  })
+})
+
+describe('rewards', () => {
+  const reward = { title: 'Ice cream trip', cost: 20, memberId: BOB.uid, emoji: '🍦' }
+
+  it('lets members create, redeem, and delete rewards', async () => {
+    const db = dbFor(BOB)
+    await assertSucceeds(setDoc(doc(db, `families/${FAM_A}/rewards/rw1`), reward))
+    await assertSucceeds(setDoc(doc(db, `families/${FAM_A}/rewards/rw2`), { ...reward, memberId: null }))
+    await assertSucceeds(updateDoc(doc(db, `families/${FAM_A}/rewards/rw1`), { redeemedBy: BOB.uid, redeemedAt: Timestamp.now() }))
+    await assertSucceeds(deleteDoc(doc(db, `families/${FAM_A}/rewards/rw2`)))
+  })
+
+  it('validates rewards and keeps them in the family', async () => {
+    const db = dbFor(BOB)
+    await assertFails(setDoc(doc(db, `families/${FAM_A}/rewards/x1`), { ...reward, cost: 0 }))
+    await assertFails(setDoc(doc(db, `families/${FAM_A}/rewards/x2`), { ...reward, title: '' }))
+    await assertFails(setDoc(doc(db, `families/${FAM_A}/rewards/x3`), { ...reward, hack: true }))
+    await assertFails(setDoc(doc(dbFor(MALLORY), `families/${FAM_A}/rewards/x4`), reward))
+  })
+})

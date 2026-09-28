@@ -6,6 +6,7 @@ import { CalendarPage } from './features/calendar/CalendarPage'
 import { ChoresPage } from './features/chores/ChoresPage'
 import { MealsPage } from './features/meals/MealsPage'
 import { ReminderCenter } from './features/reminders/ReminderCenter'
+import { RewardsPage } from './features/rewards/RewardsPage'
 import { SettingsProvider, useSettings } from './features/settings/SettingsContext'
 import { SettingsPage } from './features/settings/SettingsPage'
 import { CurrentWeather } from './features/weather/WeatherBadges'
@@ -13,11 +14,12 @@ import { WeatherProvider } from './features/weather/WeatherContext'
 import { resolveFamily } from './lib/family'
 import { useAuthUser, useFamily, useNow } from './lib/hooks'
 
-type Tab = 'calendar' | 'chores' | 'meals' | 'settings'
+type Tab = 'calendar' | 'chores' | 'rewards' | 'meals' | 'settings'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'calendar', label: 'Calendar' },
   { id: 'chores', label: 'Chores' },
+  { id: 'rewards', label: 'Rewards' },
   { id: 'meals', label: 'Meals' },
   { id: 'settings', label: 'Settings' },
 ]
@@ -93,6 +95,7 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
       <main className="content">
         {tab === 'calendar' && <CalendarPage familyId={familyId} userId={userId} members={members} />}
         {tab === 'chores' && <ChoresPage familyId={familyId} userId={userId} members={members} />}
+        {tab === 'rewards' && <RewardsPage familyId={familyId} userId={userId} members={members} />}
         {tab === 'meals' && <MealsPage familyId={familyId} userId={userId} />}
         {tab === 'settings' && <SettingsPage family={family} members={members} userId={userId} />}
       </main>

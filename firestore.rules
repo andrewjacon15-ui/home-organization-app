@@ -153,6 +153,36 @@ service cloud.firestore {
           && (resource.data.uploadedBy == request.auth.uid || isOwner(familyId));
       }
 
+      // Star ledger: +stars when a chore is completed, -stars when a reward is redeemed.
+      // Entries are immutable; undoing a chore deletes its entry.
+      match /stars/{entryId} {
+        function validEntry() {
+          let d = request.resource.data;
+          return onlyKeys(['memberId', 'delta', 'reason', 'choreId', 'rewardId', 'createdBy', 'createdAt'])
+            && d.memberId is string
+            && d.delta is int && d.delta >= -100000 && d.delta <= 100000
+            && d.reason is string && d.reason.size() <= 200
+            && (!('choreId' in d) || d.choreId == null || d.choreId is string)
+            && (!('rewardId' in d) || d.rewardId == null || d.rewardId is string)
+            && d.createdBy == request.auth.uid;
+        }
+        allow read, delete: if isMember(familyId);
+        allow create: if isMember(familyId) && validEntry();
+      }
+
+      match /rewards/{rewardId} {
+        function validReward() {
+          let d = request.resource.data;
+          return onlyKeys(['title', 'cost', 'memberId', 'emoji', 'createdAt', 'createdBy', 'redeemedAt', 'redeemedBy'])
+            && d.title is string && d.title.size() > 0 && d.title.size() <= 100
+            && d.cost is int && d.cost >= 1 && d.cost <= 100000
+            && (d.memberId == null || d.memberId is string)
+            && (!('emoji' in d) || (d.emoji is string && d.emoji.size() <= 16));
+        }
+        allow read, delete: if isMember(familyId);
+        allow create, update: if isMember(familyId) && validReward();
+      }
+
       // Family-wide display settings (settings/display) and the parental lock (settings/lock).
       // Every field is optional; the app fills in defaults.
       match /settings/{docId} {

@@ -94,7 +94,7 @@ describe('ChoreList', () => {
   it('filters by person and shows points earned from done chores', async () => {
     const { user } = setup()
     const bea = screen.getByRole('button', { name: /Bea/ })
-    expect(within(bea).getByLabelText('5 points')).toBeInTheDocument()
+    expect(within(bea).getByLabelText('5 stars')).toBeInTheDocument()
 
     await user.click(bea)
     expect(todoTitles()).toEqual(['Feed the cat'])
