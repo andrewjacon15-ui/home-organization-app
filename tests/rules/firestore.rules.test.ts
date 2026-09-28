@@ -482,3 +482,20 @@ describe('rewards', () => {
     await assertFails(setDoc(doc(dbFor(MALLORY), `families/${FAM_A}/rewards/x4`), reward))
   })
 })
+
+describe('appearance', () => {
+  it('accepts a theme and a hex highlight color', async () => {
+    const display = doc(dbFor(BOB), `families/${FAM_A}/settings/display`)
+    await assertSucceeds(setDoc(display, { theme: 'dark', accentColor: '#2a6f97' }))
+    await assertSucceeds(setDoc(display, { theme: 'system' }))
+    await assertFails(setDoc(display, { theme: 'sepia' }))
+    await assertFails(setDoc(display, { accentColor: 'blue' }))
+  })
+
+  it('requires person colors to be hex', async () => {
+    const me = doc(dbFor(BOB), `families/${FAM_A}/members/${BOB.uid}`)
+    await assertSucceeds(updateDoc(me, { color: '#A1B2C3' }))
+    await assertFails(updateDoc(me, { color: 'red' }))
+    await assertFails(updateDoc(me, { color: 'url(javascript:alert(1))' }))
+  })
+})

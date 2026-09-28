@@ -14,9 +14,10 @@ import {
 } from 'firebase/firestore'
 import { db } from '../firebase'
 import type { Family, Invite, Member } from '../types'
+import { PERSON_COLORS } from './colors'
 import { detectTimezone } from './dates'
 
-export const MEMBER_COLORS = ['#e76f51', '#2a9d8f', '#8e5bd6', '#e9a23b', '#3a86ff', '#d6457a', '#52a447', '#6c757d']
+export const MEMBER_COLORS = PERSON_COLORS.map((c) => c.hex.toLowerCase())
 
 export function pickColor(taken: string[]): string {
   return MEMBER_COLORS.find((c) => !taken.includes(c)) ?? MEMBER_COLORS[taken.length % MEMBER_COLORS.length]
