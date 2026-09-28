@@ -39,20 +39,21 @@ export default defineConfig({
     versionFile(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
+      includeAssets: ['favicon-64.png', 'apple-touch-icon.png'],
       manifest: {
         name: 'Family Organizer',
         short_name: 'Family',
         description: 'Chores, meals, calendar, and photos for the family.',
-        theme_color: '#2a6f97',
-        background_color: '#f6f4ef',
+        theme_color: '#f6f4ee',
+        background_color: '#f6f4ee',
         display: 'standalone',
         orientation: 'any',
         start_url: '/',
         icons: [
           { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
           { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
-          { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          // Android crops to a circle; this version keeps the mark inside the safe zone.
+          { src: 'pwa-maskable-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {
