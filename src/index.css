@@ -2643,3 +2643,248 @@ textarea:hover {
     grid-auto-columns: auto;
   }
 }
+
+/* --------------------------------------------------------------------------
+   Home dashboard
+   -------------------------------------------------------------------------- */
+
+.home-fit {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.home {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px 28px;
+}
+
+.home-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-top: 2px solid var(--rule-strong);
+}
+
+.home-panel--calendar {
+  grid-row: 1 / span 2;
+}
+
+.home-panel__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 6px 0;
+}
+
+.home-panel__head h2 {
+  font-family: var(--sans);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  margin: 0;
+}
+
+.home-week {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  border-left: 1px solid var(--rule);
+  border-top: 1px solid var(--rule);
+}
+
+.home-day {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 0;
+  overflow: hidden;
+  padding: 8px;
+  border-right: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  background: none;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
+.home-day--today {
+  box-shadow: inset 0 3px 0 var(--accent);
+}
+
+.home-day--weekend {
+  background: var(--paper-2);
+}
+
+.home-day__head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.home-day__name {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.home-day__name b {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 1.7rem;
+  letter-spacing: 0;
+  color: var(--ink);
+  margin-left: 2px;
+}
+
+.home-day--today .home-day__name b {
+  color: var(--accent-text);
+}
+
+.home-day .events {
+  overflow-y: auto;
+  min-height: 0;
+  scrollbar-width: thin;
+  overscroll-behavior: contain;
+}
+
+.home-day--next {
+  cursor: pointer;
+}
+
+.home-day__next-title {
+  font-family: var(--serif);
+  font-size: 1.5rem;
+}
+
+.home-next {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  font-size: 0.85rem;
+  color: var(--ink-2);
+}
+
+.home-next li {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 2px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.home-tasks,
+.home-lists {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 16px;
+  overflow: hidden;
+}
+
+.home-person,
+.home-list {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-top: 3px solid var(--pill, var(--rule-strong));
+  padding-top: 6px;
+}
+
+.home-list {
+  border-top-color: var(--rule-strong);
+}
+
+.home-list.list-col--grocery {
+  border-top-color: #15803d;
+}
+
+.home-person__head,
+.home-list__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 6px;
+}
+
+.home-person__head .avatar {
+  width: 30px;
+  height: 30px;
+  font-size: 0.95rem;
+}
+
+.home-person__name,
+.home-list__head h3 {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 1.25rem;
+  flex: 1;
+  margin: 0;
+}
+
+.home-person__count {
+  font-size: 0.78rem;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.home-person__clear {
+  font-family: var(--serif);
+  font-style: italic;
+}
+
+.home-person .chore-cards,
+.home-list .list-items {
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.home-person .chore-card__delete {
+  display: none;
+}
+
+.home-person .check-circle {
+  width: 32px;
+  height: 32px;
+}
+
+.home-person .check-circle--on::after {
+  left: 10px;
+  top: 5px;
+  width: 7px;
+  height: 14px;
+}
+
+.home-list .list-item__check {
+  min-height: 42px;
+}
+
+@media (max-width: 999px) {
+  .home {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+  }
+  .home-panel--calendar {
+    grid-row: auto;
+  }
+  .home-week {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: none;
+  }
+  .home-tasks,
+  .home-lists {
+    grid-auto-flow: row;
+  }
+}

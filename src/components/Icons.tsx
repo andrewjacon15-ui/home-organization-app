@@ -14,6 +14,12 @@ const base = (props: SVGProps<SVGSVGElement>) => ({
   ...props,
 })
 
+export const HomeIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <path d="M3.5 11L12 4l8.5 7M5.5 9.5V20h13V9.5M10 20v-5.5h4V20" />
+  </svg>
+)
+
 export const CalendarIcon = (p: SVGProps<SVGSVGElement>) => (
   <svg {...base(p)}>
     <rect x="3.5" y="5" width="17" height="15" />

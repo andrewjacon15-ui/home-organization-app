@@ -132,7 +132,7 @@ export function ChoreBoard({ chores, members, stars, today, now, weekStartsOn, o
   )
 }
 
-function ChoreCard({ o, members, now, today, onToggle, onDelete }: { o: Occurrence; members: Member[]; now: Date; today: string; onToggle: Props['onToggle']; onDelete: Props['onDelete'] }) {
+export function ChoreCard({ o, members, now, today, onToggle, onDelete }: { o: Occurrence; members: Member[]; now: Date; today: string; onToggle: Props['onToggle']; onDelete: Props['onDelete'] }) {
   const [asking, setAsking] = useState(false)
   const label = dueLabel(o, now, today)
   const repeats = repeatLabel(o.chore.repeat)
