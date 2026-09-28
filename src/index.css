@@ -1829,3 +1829,72 @@ textarea:hover {
   top: 8px;
   right: 8px;
 }
+
+/* --------------------------------------------------------------------------
+   Parental lock
+   -------------------------------------------------------------------------- */
+
+.lock-screen {
+  display: grid;
+  place-items: center;
+  min-height: 60vh;
+}
+
+.pinpad {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  padding: 24px 0;
+  width: 100%;
+}
+
+.pinpad__title {
+  font-size: 1.8rem;
+  margin: 0;
+}
+
+.pinpad__dots {
+  display: flex;
+  gap: 16px;
+  margin: 6px 0;
+}
+
+.pinpad__dot {
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--ink);
+}
+
+.pinpad__dot--on {
+  background: var(--ink);
+}
+
+.pinpad__dots--error .pinpad__dot {
+  border-color: var(--danger);
+}
+
+.pinpad__keys {
+  display: grid;
+  grid-template-columns: repeat(3, 76px);
+  gap: 10px;
+}
+
+.pinpad__key {
+  height: 64px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  background: transparent;
+  font-family: var(--serif);
+  font-size: 1.7rem;
+  cursor: pointer;
+}
+
+.pinpad__key:hover {
+  background: var(--paper-2);
+}
+
+.pinpad__key:active {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
