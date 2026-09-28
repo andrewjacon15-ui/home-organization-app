@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useFitHeight } from '../../lib/useFitHeight'
 import { fromDateKey } from '../../lib/dates'
 import type { CalendarEvent, Member } from '../../types'
 import { useSettings } from '../settings/SettingsContext'
@@ -23,6 +24,8 @@ const longLabel = (key: string) => fromDateKey(key).toLocaleDateString(undefined
 
 export function CalendarBoard({ kind, range, today, now, events, members, onDelete }: Props) {
   const { settings } = useSettings()
+  const columns = kind === 'week' || kind === 'threeDay'
+  const [fitRef, fitStyle] = useFitHeight<HTMLOListElement>(columns)
   const memberById = useMemo(() => new Map(members.map((m) => [m.id, m])), [members])
   const byDay = useMemo(() => groupByDay(withOwners(events), range.days) as Record<string, OwnedEvent[]>, [events, range.days])
 
@@ -32,7 +35,7 @@ export function CalendarBoard({ kind, range, today, now, events, members, onDele
       .filter(Boolean)
       .join(' ')
 
-  const chip = (e: OwnedEvent, compact = false) => (
+  const chip = (e: OwnedEvent, compact: boolean | 'column' = false) => (
     <li key={e.id}>
       <EventChip event={e} members={memberById} now={now} today={today} compact={compact} onDelete={onDelete} />
     </li>
@@ -85,7 +88,7 @@ export function CalendarBoard({ kind, range, today, now, events, members, onDele
   }
 
   return (
-    <ol className="week">
+    <ol ref={fitRef} style={fitStyle} className={`week week--fit${kind === 'threeDay' ? ' week--3' : ''}`}>
       {range.days.map((key) => {
         const count = byDay[key].length
         return (
@@ -96,7 +99,7 @@ export function CalendarBoard({ kind, range, today, now, events, members, onDele
               <DayWeather date={key} />
             </div>
             <span className="day__count">{count === 0 ? '—' : `${count} event${count === 1 ? '' : 's'}`}</span>
-            {count > 0 && <ul className="events">{byDay[key].map((e) => chip(e))}</ul>}
+            {count > 0 && <ul className="events">{byDay[key].map((e) => chip(e, kind === 'week' ? 'column' : false))}</ul>}
           </li>
         )
       })}

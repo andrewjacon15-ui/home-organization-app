@@ -1,14 +1,15 @@
 import type { CSSProperties } from 'react'
 import type { Member } from '../../types'
 import { useSettings } from '../settings/SettingsContext'
-import { countdownLabel, isPast, type OwnedEvent } from './views'
+import { countdownLabel, isPast, shortRange, type OwnedEvent } from './views'
 
 interface Props {
   event: OwnedEvent
   members: Map<string, Member>
   now: Date
   today: string
-  compact?: boolean
+  /** true = month cell (one line); 'column' = narrow week column (short times, no location) */
+  compact?: boolean | 'column'
   onDelete?: (event: OwnedEvent) => void
 }
 
@@ -32,10 +33,10 @@ export function EventChip({ event, members, now, today, compact, onDelete }: Pro
     '--owner-bar': ownerBackground(colors, settings.colorCodeMultiProfile),
   } as CSSProperties
 
-  const when = event.allDay ? 'All day' : `${time(event.start)}${compact ? '' : ` – ${time(event.end)}`}`
+  const when = event.allDay ? 'All day' : compact === true ? time(event.start) : compact === 'column' ? shortRange(event.start, event.end) : `${time(event.start)} – ${time(event.end)}`
 
   return (
-    <div className={`event${event.allDay ? ' event--allday' : ''}${past ? ' event--past' : ''}${compact ? ' event--compact' : ''}`} style={style}>
+    <div className={`event${event.allDay ? ' event--allday' : ''}${past ? ' event--past' : ''}${compact === true ? ' event--compact' : ''}${compact === 'column' ? ' event--column' : ''}`} style={style}>
       <div className="event__body">
         <span className="event__title">{event.title}</span>
         <span className="event__time">

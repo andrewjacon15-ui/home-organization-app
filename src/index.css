@@ -1898,3 +1898,73 @@ textarea:hover {
   color: var(--accent-ink);
   border-color: var(--accent);
 }
+
+/* --------------------------------------------------------------------------
+   Wall-display fit: day columns fill the screen and scroll inside themselves
+   -------------------------------------------------------------------------- */
+
+.week--fit > .day,
+.week--fit > .card {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  align-content: start;
+}
+
+.week--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.week--3 > .day,
+.week--3 > .card {
+  padding: 12px 14px 16px;
+}
+
+.week--3 .day__date {
+  font-size: 2.4rem;
+}
+
+.week--3 .event {
+  font-size: 1rem;
+  padding: 8px 8px 8px 14px;
+}
+
+.week--3 .event__time,
+.week--3 .event__location {
+  font-size: 0.85rem;
+}
+
+/* Narrow week columns: two-line titles, short times, no location */
+.event--column .event__title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.event--column .event__time {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 999px) {
+  .week--3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.calendar__toolbar > .add-event-toggle {
+  margin: 0;
+  min-height: 40px;
+}
+
+.calendar__toolbar > .event-form {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.calendar__toolbar .segmented {
+  margin-left: auto;
+}
