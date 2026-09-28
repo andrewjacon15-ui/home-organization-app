@@ -2087,3 +2087,45 @@ textarea:hover {
 .calendar-item__details {
   padding: 4px 0 16px 42px;
 }
+
+/* --------------------------------------------------------------------------
+   Sleep mode
+   -------------------------------------------------------------------------- */
+
+.sleep {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: #000;
+  cursor: pointer;
+  display: grid;
+  place-items: end center;
+  padding-bottom: 32px;
+}
+
+/* A barely-visible hint that fades out, so the screen reads as off. */
+.sleep__hint {
+  color: #fff;
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0;
+  animation: sleep-hint 6s ease-out;
+}
+
+@keyframes sleep-hint {
+  0%,
+  60% {
+    opacity: 0.25;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.sleep-time {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}

@@ -575,3 +575,13 @@ describe('synced calendars', () => {
     await assertFails(setDoc(display, { colorEventsBy: 'mood' }))
   })
 })
+
+describe('sleep mode settings', () => {
+  it('accepts an on/off switch and HH:MM times', async () => {
+    const display = doc(dbFor(BOB), `families/${FAM_A}/settings/display`)
+    await assertSucceeds(setDoc(display, { sleepEnabled: true, sleepFrom: '21:00', sleepTo: '06:00' }))
+    await assertFails(setDoc(display, { sleepFrom: '9pm' }))
+    await assertFails(setDoc(display, { sleepTo: '24:00' }))
+    await assertFails(setDoc(display, { sleepEnabled: 'yes' }))
+  })
+})

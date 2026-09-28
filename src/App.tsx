@@ -7,6 +7,7 @@ import { CalendarPage } from './features/calendar/CalendarPage'
 import { ChoresPage } from './features/chores/ChoresPage'
 import { MealsPage } from './features/meals/MealsPage'
 import { LockProvider } from './features/lock/LockContext'
+import { SleepProvider } from './features/sleep/SleepContext'
 import { RecipesPage } from './features/recipes/RecipesPage'
 import { ReminderCenter } from './features/reminders/ReminderCenter'
 import { RewardsPage } from './features/rewards/RewardsPage'
@@ -72,7 +73,9 @@ function SignedIn({ user }: { user: User }) {
     <SettingsProvider familyId={familyId}>
       <WeatherProvider>
         <LockProvider familyId={familyId}>
-          <Home familyId={familyId} userId={user.uid} />
+          <SleepProvider>
+            <Home familyId={familyId} userId={user.uid} />
+          </SleepProvider>
         </LockProvider>
       </WeatherProvider>
     </SettingsProvider>

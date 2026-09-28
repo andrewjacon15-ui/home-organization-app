@@ -29,6 +29,10 @@ export interface DisplaySettings {
   accentColor: string
   /** Color synced events by their Google calendar's color, or by the person's color. */
   colorEventsBy: 'person' | 'calendar'
+  /** Wall display only. */
+  sleepEnabled: boolean
+  sleepFrom: string
+  sleepTo: string
 }
 
 /** Mirrors the Skylight defaults from the user's tablet. */
@@ -56,6 +60,9 @@ export const DEFAULT_SETTINGS: DisplaySettings = {
   theme: 'system',
   accentColor: DEFAULT_ACCENT,
   colorEventsBy: 'calendar',
+  sleepEnabled: true,
+  sleepFrom: '21:00',
+  sleepTo: '06:00',
 }
 
 const displayRef = (familyId: string) => doc(db, 'families', familyId, 'settings', 'display')
