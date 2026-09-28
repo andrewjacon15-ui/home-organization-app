@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { CALENDAR_SCOPE, CalendarError, connectCalendar, disconnectCalendar, syncAll, syncMember, syncMine } from './calendar.js'
+import { CALENDAR_SCOPE, CalendarError, connectCalendar, disconnectCalendar, googleErrorDetail, syncAll, syncMember, syncMine } from './calendar.js'
 import type { CalendarStatus, CalendarStore, EventDoc, GoogleApi, GoogleEvent, StoredTokens } from './types.js'
 
 const NOW = new Date('2026-10-01T12:00:00Z')
@@ -190,5 +190,22 @@ describe('syncAll', () => {
 
     expect(await syncAll({ store, google, now: NOW, log })).toEqual({ synced: 1, needsReconnect: 1, failed: 1 })
     expect(log).toHaveBeenCalledWith('calendar sync failed', expect.objectContaining({ uid: 'carol' }))
+  })
+})
+
+describe('googleErrorDetail', () => {
+  it('reads OAuth token-endpoint errors', () => {
+    const err = Object.assign(new Error('Request failed'), { response: { data: { error: 'unauthorized_client', error_description: 'Unauthorized' } } })
+    expect(googleErrorDetail(err)).toBe('unauthorized_client: Unauthorized')
+  })
+
+  it('reads Google API errors', () => {
+    const err = Object.assign(new Error('403'), { response: { data: { error: { message: 'Google Calendar API has not been used in project 1 before or it is disabled.' } } } })
+    expect(googleErrorDetail(err)).toBe('Google Calendar API has not been used in project 1 before or it is disabled.')
+  })
+
+  it('falls back to the message and truncates long ones', () => {
+    expect(googleErrorDetail(new Error('boom'))).toBe('boom')
+    expect(googleErrorDetail(new Error('x'.repeat(400)))).toHaveLength(300)
   })
 })

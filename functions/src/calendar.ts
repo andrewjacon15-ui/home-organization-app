@@ -20,6 +20,26 @@ export class CalendarError extends Error {
 }
 
 /** Google's "your refresh token is dead" (revoked, expired, or 7-day Testing-mode expiry). */
+/**
+ * The human-readable part of an error from Google's OAuth or Calendar APIs, e.g.
+ * "unauthorized_client: Unauthorized" or "Google Calendar API has not been used in project…".
+ * Never includes request data, so it's safe to show the user.
+ */
+export function googleErrorDetail(err: unknown): string {
+  const e = err as {
+    message?: string
+    response?: { data?: { error?: string | { message?: string }; error_description?: string } }
+  }
+  const data = e?.response?.data
+  const oauthError = typeof data?.error === 'string' ? data.error : undefined
+  const detail =
+    (oauthError && [oauthError, data?.error_description].filter(Boolean).join(': ')) ||
+    (typeof data?.error === 'object' ? data.error.message : undefined) ||
+    e?.message ||
+    String(err)
+  return detail.length > 300 ? `${detail.slice(0, 297)}...` : detail
+}
+
 export function isInvalidGrant(err: unknown): boolean {
   const e = err as { message?: string; response?: { data?: { error?: string } } }
   return e?.response?.data?.error === 'invalid_grant' || /invalid_grant/.test(e?.message ?? '')

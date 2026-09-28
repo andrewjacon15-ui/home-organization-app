@@ -30,8 +30,9 @@ function callable<T>(handler: (req: CallableRequest) => Promise<T>) {
     } catch (err) {
       if (err instanceof calendar.CalendarError) throw new HttpsError(err.code, err.message)
       if (calendar.isInvalidGrant(err)) throw new HttpsError('failed-precondition', 'Google rejected the sign-in. Please try connecting again.')
-      logger.error('calendar callable failed', { error: String(err), uid: req.auth?.uid })
-      throw new HttpsError('internal', 'Something went wrong talking to Google Calendar.')
+      const detail = calendar.googleErrorDetail(err)
+      logger.error('calendar callable failed', { error: detail, uid: req.auth?.uid })
+      throw new HttpsError('internal', `Google Calendar error: ${detail}`)
     }
   })
 }
