@@ -7,6 +7,8 @@ import { ChoresPage } from './features/chores/ChoresPage'
 import { MealsPage } from './features/meals/MealsPage'
 import { SettingsProvider, useSettings } from './features/settings/SettingsContext'
 import { SettingsPage } from './features/settings/SettingsPage'
+import { CurrentWeather } from './features/weather/WeatherBadges'
+import { WeatherProvider } from './features/weather/WeatherContext'
 import { resolveFamily } from './lib/family'
 import { useAuthUser, useFamily, useNow } from './lib/hooks'
 
@@ -48,7 +50,9 @@ function SignedIn({ user }: { user: User }) {
   if (familyId === null) return <FamilySetup user={user} onCreated={setFamilyId} />
   return (
     <SettingsProvider familyId={familyId}>
-      <Home familyId={familyId} userId={user.uid} />
+      <WeatherProvider>
+        <Home familyId={familyId} userId={user.uid} />
+      </WeatherProvider>
     </SettingsProvider>
   )
 }
@@ -59,13 +63,21 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
   const now = useNow()
   const { settings } = useSettings()
 
+  // Text size and density are whole-page CSS variables (see index.css).
+  useEffect(() => {
+    document.documentElement.dataset.textSize = settings.textSize
+    document.documentElement.dataset.density = settings.density
+  }, [settings.textSize, settings.density])
+
   if (!family) return <Splash />
 
   return (
     <div className="app">
       <header className="topbar">
         <div>
-          <div className="clock">{now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</div>
+          <div className="clock">
+            {now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })} <CurrentWeather />
+          </div>
           <div className="muted">{now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</div>
           <div className="topbar__name">{settings.calendarName || family.name}</div>
         </div>
