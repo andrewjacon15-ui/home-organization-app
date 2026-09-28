@@ -1,0 +1,19 @@
+{
+  "startURL": "https://home-organization-app-dkcbl.web.app/?kiosk=1",
+  "userAgent": "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.81 Mobile Safari/537.36",
+  "launchOnBoot": true,
+  "keepScreenOn": true,
+  "showStatusBar": false,
+  "showNavigationBar": false,
+  "showActionBar": false,
+  "showMenuHint": false,
+  "enablePullToRefresh": false,
+  "enableTapSound": false,
+  "setWifiWakelock": true,
+  "waitInternetOnReload": true,
+  "reloadOnWifiOn": true,
+  "reloadOnInternet": true,
+  "reloadPageFailure": "30",
+  "reloadEachSeconds": "1800",
+  "autoImportSettings": true
+}
