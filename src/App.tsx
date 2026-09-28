@@ -1,11 +1,12 @@
 import type { User } from 'firebase/auth'
 import { useEffect, useState, type ReactElement, type SVGProps } from 'react'
 import { FamilySetup } from './components/FamilySetup'
-import { CalendarIcon, ChoresIcon, MealsIcon, RewardsIcon, SettingsIcon } from './components/Icons'
+import { CalendarIcon, ChoresIcon, MealsIcon, RecipesIcon, RewardsIcon, SettingsIcon } from './components/Icons'
 import { SignIn } from './components/SignIn'
 import { CalendarPage } from './features/calendar/CalendarPage'
 import { ChoresPage } from './features/chores/ChoresPage'
 import { MealsPage } from './features/meals/MealsPage'
+import { RecipesPage } from './features/recipes/RecipesPage'
 import { ReminderCenter } from './features/reminders/ReminderCenter'
 import { RewardsPage } from './features/rewards/RewardsPage'
 import { SettingsProvider, useSettings } from './features/settings/SettingsContext'
@@ -17,13 +18,14 @@ import { resolveFamily } from './lib/family'
 import { useAuthUser, useFamily, useNow } from './lib/hooks'
 import { reloadToLatest, useUpdateCheck } from './lib/version'
 
-type Tab = 'calendar' | 'chores' | 'rewards' | 'meals' | 'settings'
+type Tab = 'calendar' | 'chores' | 'rewards' | 'meals' | 'recipes' | 'settings'
 
 const TABS: { id: Tab; label: string; Icon: (p: SVGProps<SVGSVGElement>) => ReactElement }[] = [
   { id: 'calendar', label: 'Calendar', Icon: CalendarIcon },
   { id: 'chores', label: 'Chores', Icon: ChoresIcon },
   { id: 'rewards', label: 'Rewards', Icon: RewardsIcon },
   { id: 'meals', label: 'Meals', Icon: MealsIcon },
+  { id: 'recipes', label: 'Recipes', Icon: RecipesIcon },
   { id: 'settings', label: 'Settings', Icon: SettingsIcon },
 ]
 
@@ -142,6 +144,7 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
           {tab === 'chores' && <ChoresPage familyId={familyId} userId={userId} members={members} />}
           {tab === 'rewards' && <RewardsPage familyId={familyId} userId={userId} members={members} />}
           {tab === 'meals' && <MealsPage familyId={familyId} userId={userId} />}
+          {tab === 'recipes' && <RecipesPage familyId={familyId} userId={userId} />}
           {tab === 'settings' && <SettingsPage family={family} members={members} userId={userId} />}
         </main>
       </div>
