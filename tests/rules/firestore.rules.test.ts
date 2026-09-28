@@ -499,3 +499,33 @@ describe('appearance', () => {
     await assertFails(updateDoc(me, { color: 'url(javascript:alert(1))' }))
   })
 })
+
+describe('recipes', () => {
+  const recipe = {
+    title: 'Chicken tacos',
+    servings: 4,
+    minutes: 30,
+    ingredients: '1 lb chicken\n8 tortillas\n1 lime',
+    steps: 'Season chicken.\nCook 12 minutes.\nServe.',
+    url: 'https://example.com/tacos',
+    createdBy: BOB.uid,
+  }
+
+  it('lets members save, edit, and delete recipes', async () => {
+    const db = dbFor(BOB)
+    await assertSucceeds(setDoc(doc(db, `families/${FAM_A}/recipes/r1`), recipe))
+    await assertSucceeds(updateDoc(doc(db, `families/${FAM_A}/recipes/r1`), { servings: 6 }))
+    await assertSucceeds(setDoc(doc(db, `families/${FAM_A}/recipes/r2`), { title: 'Toast', ingredients: '', steps: '', createdBy: BOB.uid }))
+    await assertSucceeds(getDocs(collection(db, `families/${FAM_A}/recipes`)))
+    await assertSucceeds(deleteDoc(doc(db, `families/${FAM_A}/recipes/r2`)))
+  })
+
+  it('validates recipes and keeps them in the family', async () => {
+    const db = dbFor(BOB)
+    await assertFails(setDoc(doc(db, `families/${FAM_A}/recipes/x1`), { ...recipe, title: '' }))
+    await assertFails(setDoc(doc(db, `families/${FAM_A}/recipes/x2`), { ...recipe, url: 'javascript:alert(1)' }))
+    await assertFails(setDoc(doc(db, `families/${FAM_A}/recipes/x3`), { ...recipe, servings: -2 }))
+    await assertFails(setDoc(doc(db, `families/${FAM_A}/recipes/x4`), { ...recipe, extra: 1 }))
+    await assertFails(getDocs(collection(dbFor(MALLORY), `families/${FAM_A}/recipes`)))
+  })
+})

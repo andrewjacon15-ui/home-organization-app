@@ -5,6 +5,8 @@ import { useSettings } from '../settings/SettingsContext'
 import type { MealPlan } from '../../types'
 import { MealPlanner } from './MealPlanner'
 import { saveMealPlan, watchMealPlans } from './mealsApi'
+import { findRecipe, watchRecipes, type Recipe } from '../recipes/recipesApi'
+import { RecipeView } from '../recipes/RecipeBook'
 
 interface Props {
   familyId: string
@@ -20,6 +22,10 @@ export function MealsPage({ familyId, userId }: Props) {
   const weekStart = addDays(currentWeekStart, weekOffset * 7)
   const [plans, setPlans] = useState<Record<string, MealPlan>>({})
   const [error, setError] = useState<string | null>(null)
+  const [recipes, setRecipes] = useState<Recipe[]>([])
+  const [open, setOpen] = useState<Recipe | null>(null)
+
+  useEffect(() => watchRecipes(familyId, setRecipes), [familyId])
 
   useEffect(() => watchMealPlans(familyId, weekStart, addDays(weekStart, 6), setPlans), [familyId, weekStart])
 
@@ -35,11 +41,24 @@ export function MealsPage({ familyId, userId }: Props) {
         currentWeekStart={currentWeekStart}
         today={today}
         plans={plans}
+        recipeTitles={recipes.map((r) => r.title)}
+        hasRecipe={(text) => !!findRecipe(recipes, text)}
+        onOpenRecipe={(text) => setOpen(findRecipe(recipes, text) ?? null)}
         onWeekChange={(start) => setWeekOffset(Math.round(daysBetween(currentWeekStart, start) / 7))}
         onSave={(date, plan) =>
           saveMealPlan(familyId, date, plan, userId).catch((e) => setError(e instanceof Error ? e.message : String(e)))
         }
       />
+      {open && (
+        <div className="overlay" role="dialog" aria-modal="true" aria-label={open.title} onClick={() => setOpen(null)}>
+          <div className="overlay__panel" onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="icon-button overlay__close" onClick={() => setOpen(null)} aria-label="Close recipe">
+              ✕
+            </button>
+            <RecipeView recipe={open} today={today} />
+          </div>
+        </div>
+      )}
     </>
   )
 }

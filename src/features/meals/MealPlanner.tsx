@@ -21,14 +21,27 @@ interface Props {
   onWeekChange: (weekStart: string) => void
   /** Where "This week" jumps to. */
   currentWeekStart: string
+  /** Recipe titles to suggest while typing a meal. */
+  recipeTitles?: string[]
+  /** When a meal names a saved recipe, this opens it. */
+  onOpenRecipe?: (mealText: string) => void
+  hasRecipe?: (mealText: string) => boolean
 }
 
-export function MealPlanner({ weekStart, today, plans, onSave, onWeekChange, currentWeekStart }: Props) {
+export function MealPlanner({ weekStart, today, plans, onSave, onWeekChange, currentWeekStart, recipeTitles = [], onOpenRecipe, hasRecipe }: Props) {
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
 
   return (
     <section className="meals" aria-labelledby="meals-heading">
       <WeekNav weekStart={weekStart} currentWeekStart={currentWeekStart} onWeekChange={onWeekChange} headingId="meals-heading" />
+
+      {recipeTitles.length > 0 && (
+        <datalist id="recipe-titles">
+          {recipeTitles.map((t) => (
+            <option key={t} value={t} />
+          ))}
+        </datalist>
+      )}
 
       <ol className="week">
         {days.map((date) => {
@@ -48,6 +61,8 @@ export function MealPlanner({ weekStart, today, plans, onSave, onWeekChange, cur
                   dayLabel={fmt(date, { weekday: 'long' })}
                   value={plan[slot]}
                   multiline={slot === 'notes'}
+                  suggest={slot !== 'notes' && recipeTitles.length > 0}
+                  onOpenRecipe={slot !== 'notes' && onOpenRecipe && hasRecipe?.(plan[slot]) ? () => onOpenRecipe(plan[slot]) : undefined}
                   onCommit={(value) => onSave(date, { ...plan, [slot]: value })}
                 />
               ))}
@@ -68,11 +83,13 @@ interface FieldProps {
   dayLabel: string
   value: string
   multiline: boolean
+  suggest?: boolean
+  onOpenRecipe?: () => void
   onCommit: (value: string) => void
 }
 
 /** Edits locally and commits on blur (or Enter), so typing doesn't write to Firestore on every keystroke. */
-function MealField({ label, dayLabel, value, multiline, onCommit }: FieldProps) {
+function MealField({ label, dayLabel, value, multiline, suggest, onOpenRecipe, onCommit }: FieldProps) {
   const [draft, setDraft] = useState(value)
   const [editing, setEditing] = useState(false)
 
@@ -99,19 +116,27 @@ function MealField({ label, dayLabel, value, multiline, onCommit }: FieldProps) 
   }
 
   return (
-    <label className="meal">
-      <span className="meal__label">{label}</span>
+    <div className="meal">
+      <span className="meal__label">
+        {label}
+        {onOpenRecipe && !editing && (
+          <button type="button" className="meal__recipe" onClick={onOpenRecipe} aria-label={`Open recipe for ${dayLabel} ${label.toLowerCase()}`}>
+            Recipe →
+          </button>
+        )}
+      </span>
       {multiline ? (
         <textarea {...common} rows={2} onChange={(e) => setDraft(e.target.value)} />
       ) : (
         <input
           {...common}
+          list={suggest ? 'recipe-titles' : undefined}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') e.currentTarget.blur()
           }}
         />
       )}
-    </label>
+    </div>
   )
 }

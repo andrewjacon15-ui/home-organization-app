@@ -176,6 +176,22 @@ service cloud.firestore {
         allow create: if isMember(familyId) && validEntry();
       }
 
+      match /recipes/{recipeId} {
+        function validRecipe() {
+          let d = request.resource.data;
+          return onlyKeys(['title', 'servings', 'minutes', 'ingredients', 'steps', 'url', 'createdBy', 'createdAt', 'updatedAt'])
+            && d.title is string && d.title.size() > 0 && d.title.size() <= 120
+            && d.ingredients is string && d.ingredients.size() <= 5000
+            && d.steps is string && d.steps.size() <= 10000
+            && (!('servings' in d) || d.servings == null || (d.servings is int && d.servings >= 1 && d.servings <= 100))
+            && (!('minutes' in d) || d.minutes == null || (d.minutes is int && d.minutes >= 0 && d.minutes <= 10000))
+            && (!('url' in d) || d.url == null
+                || (d.url is string && d.url.size() <= 500 && d.url.matches('^https?://.+')));
+        }
+        allow read, delete: if isMember(familyId);
+        allow create, update: if isMember(familyId) && validRecipe();
+      }
+
       match /rewards/{rewardId} {
         function validReward() {
           let d = request.resource.data;
