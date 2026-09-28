@@ -1,9 +1,13 @@
 import type { Family, Member } from '../../types'
 import { FamilyPage } from '../family/FamilyPage'
+import { saveLock } from '../lock/lockApi'
+import { useLock } from '../lock/LockContext'
+import { PinPad } from '../lock/PinPad'
 import { AboutSettings } from './AboutSettings'
 import { AppearanceSettings } from './AppearanceSettings'
 import { CalendarSettings } from './CalendarSettings'
 import { GeneralSettings } from './GeneralSettings'
+import { LockSettings } from './LockSettings'
 import { ReminderSettings } from './ReminderSettings'
 
 interface Props {
@@ -19,10 +23,21 @@ const SECTIONS = [
   { id: 'display', label: 'Display' },
   { id: 'calendar', label: 'Calendar' },
   { id: 'reminders', label: 'Reminders' },
+  { id: 'lock', label: 'Parental lock' },
   { id: 'about', label: 'About' },
 ]
 
 export function SettingsPage({ family, members, userId }: Props) {
+  const { locked, unlock } = useLock()
+
+  if (locked) {
+    return (
+      <div className="lock-screen">
+        <PinPad title="Settings are locked" hint="Enter the parental PIN to make changes." onSubmit={unlock} />
+      </div>
+    )
+  }
+
   return (
     <div className="settings-layout">
       <nav className="settings-index" aria-label="Settings sections">
@@ -52,6 +67,7 @@ export function SettingsPage({ family, members, userId }: Props) {
         <GeneralSettings />
         <CalendarSettings familyName={family.name} />
         <ReminderSettings />
+        <LockSettings save={(c) => saveLock(family.id, c)} />
         <AboutSettings />
       </div>
     </div>
