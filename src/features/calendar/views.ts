@@ -2,7 +2,7 @@ import { addDays, fromDateKey, startOfWeek, toDateKey } from '../../lib/dates'
 import type { CalendarEvent } from '../../types'
 import type { DisplaySettings } from '../settings/settingsApi'
 
-export type CalendarViewKind = 'week' | 'month' | 'schedule'
+export type CalendarViewKind = 'threeDay' | 'week' | 'month' | 'schedule'
 
 export interface ViewRange {
   /** Date keys shown, in order. */
@@ -19,6 +19,11 @@ const range = (start: string, count: number) => Array.from({ length: count }, (_
 
 /** The days a view shows, `offset` pages away from the one containing today. */
 export function viewRange(kind: CalendarViewKind, today: string, offset: number, s: ViewSettings): ViewRange {
+  if (kind === 'threeDay') {
+    const days = range(addDays(today, offset * 3), 3)
+    return { days, label: `${short(days[0])} – ${short(days[2])}`, focusMonth: null }
+  }
+
   if (kind === 'week') {
     const base = s.weekStartToday ? today : startOfWeek(today, s.weekStartsOn)
     const days = range(addDays(base, offset * 7), 7)
@@ -91,6 +96,21 @@ export function withOwners(events: CalendarEvent[]): OwnedEvent[] {
     }
   }
   return out
+}
+
+/**
+ * Compact time range the way Skylight writes it: "7 – 11 AM", "8:41 – 10:04 AM",
+ * "11:30 AM – 1 PM". Minutes are dropped when they're :00.
+ */
+export function shortRange(start: Date, end: Date): string {
+  const part = (d: Date) => {
+    const h = d.getHours() % 12 || 12
+    const m = d.getMinutes()
+    return m ? `${h}:${String(m).padStart(2, '0')}` : String(h)
+  }
+  const ap = (d: Date) => (d.getHours() < 12 ? 'AM' : 'PM')
+  if (end <= start) return `${part(start)} ${ap(start)}`
+  return ap(start) === ap(end) ? `${part(start)} – ${part(end)} ${ap(end)}` : `${part(start)} ${ap(start)} – ${part(end)} ${ap(end)}`
 }
 
 /** "in 45 min" / "in 2 hr" for events later today; null otherwise. */
