@@ -49,6 +49,8 @@ export interface CalendarEvent {
   sourceUserId: string
   /** Manual events: who the event is for (defaults to the creator). */
   memberIds?: string[]
+  /** Synced events: which of the person's Google calendars it came from. */
+  calendarKey?: string
   title: string
   start: Date
   end: Date
@@ -65,3 +67,20 @@ export type NewManualEvent = Pick<CalendarEvent, 'title' | 'start' | 'end' | 'al
 export type MemberCalendarStatus =
   | { status: 'connected'; email: string; lastSyncAt?: { toDate(): Date }; eventCount?: number }
   | { status: 'needs_reconnect'; email: string; error?: string }
+
+/** One of a person's Google calendars (families/{id}/calendars/{key}), mirrored by the sync function. */
+export interface SyncedCalendar {
+  key: string
+  ownerId: string
+  calendarId: string
+  /** Google's name for it. */
+  name: string
+  /** The family's nickname, if set. */
+  alias?: string
+  googleColor: string
+  color: string
+  enabled: boolean
+  primary: boolean
+  /** Whose calendar this is on the family board (a shared "Family" calendar can be several people's). */
+  memberIds: string[]
+}

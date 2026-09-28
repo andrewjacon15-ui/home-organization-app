@@ -1968,3 +1968,122 @@ textarea:hover {
 .calendar__toolbar .segmented {
   margin-left: auto;
 }
+
+/* --------------------------------------------------------------------------
+   Calendar filter & your calendars
+   -------------------------------------------------------------------------- */
+
+.filter {
+  position: relative;
+}
+
+.filter__button {
+  min-height: 40px;
+}
+
+.filter__button--on {
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.filter__menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 30;
+  width: min(320px, 90vw);
+  max-height: 70vh;
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--rule-strong);
+  box-shadow: 6px 6px 0 color-mix(in srgb, var(--ink) 12%, transparent);
+  padding: 12px 14px;
+}
+
+.filter__menu fieldset {
+  border: none;
+  padding: 0;
+  margin: 0 0 12px;
+}
+
+.filter__menu legend {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  padding: 0 0 6px;
+}
+
+.filter__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  border-bottom: 1px solid var(--rule);
+  cursor: pointer;
+}
+
+.filter__row input {
+  width: 20px;
+  height: 20px;
+  min-height: 0;
+  accent-color: var(--accent);
+}
+
+.filter__swatch {
+  width: 14px;
+  height: 14px;
+  background: var(--pill);
+  flex: none;
+}
+
+.filter__swatch--round {
+  border-radius: 50%;
+}
+
+.my-calendars {
+  padding-top: 16px;
+}
+
+.my-calendars h3 {
+  font-size: 1.2rem;
+  margin-bottom: 2px;
+}
+
+.calendar-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  border-top: 1px solid var(--rule-strong);
+}
+
+.calendar-item {
+  border-bottom: 1px solid var(--rule);
+}
+
+.calendar-item__row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 60px;
+}
+
+.calendar-item__swatch {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--r);
+  background: var(--pill);
+  cursor: pointer;
+  flex: none;
+}
+
+.calendar-item__name {
+  flex: 1;
+  font-weight: 600;
+}
+
+.calendar-item__details {
+  padding: 4px 0 16px 42px;
+}

@@ -1,5 +1,5 @@
 import { addDays, fromDateKey, startOfWeek, toDateKey } from '../../lib/dates'
-import type { CalendarEvent } from '../../types'
+import type { CalendarEvent, SyncedCalendar } from '../../types'
 import type { DisplaySettings } from '../settings/settingsApi'
 
 export type CalendarViewKind = 'threeDay' | 'week' | 'month' | 'schedule'
@@ -70,27 +70,38 @@ export function isWeekend(key: string) {
 /** An event plus everyone it belongs to (after merging copies from several people's calendars). */
 export interface OwnedEvent extends CalendarEvent {
   ownerIds: string[]
+  /** Every synced calendar this event appears on (merged copies). */
+  calendarKeys: string[]
+}
+
+/** Who a single event belongs to: its chosen people, else its calendar's people, else whoever synced it. */
+export function ownersOf(e: CalendarEvent, calendars?: Map<string, SyncedCalendar>): string[] {
+  if (e.memberIds?.length) return e.memberIds
+  const cal = e.calendarKey ? calendars?.get(e.calendarKey) : undefined
+  return cal?.memberIds?.length ? cal.memberIds : [e.sourceUserId]
 }
 
 /**
  * Who each event is for, merging the same Google event that shows up in several
  * people's calendars (a shared invite) into one entry with all of them as owners.
  */
-export function withOwners(events: CalendarEvent[]): OwnedEvent[] {
+export function withOwners(events: CalendarEvent[], calendars?: Map<string, SyncedCalendar>): OwnedEvent[] {
   const merged = new Map<string, OwnedEvent>()
   const out: OwnedEvent[] = []
   for (const e of events) {
-    const owners = e.memberIds?.length ? e.memberIds : [e.sourceUserId]
+    const owners = ownersOf(e, calendars)
+    const cals = e.calendarKey ? [e.calendarKey] : []
     if (e.source !== 'google') {
-      out.push({ ...e, ownerIds: owners })
+      out.push({ ...e, ownerIds: owners, calendarKeys: cals })
       continue
     }
     const key = `${e.title}|${e.start.getTime()}|${e.end.getTime()}|${e.allDay}`
     const existing = merged.get(key)
     if (existing) {
       for (const o of owners) if (!existing.ownerIds.includes(o)) existing.ownerIds.push(o)
+      for (const c of cals) if (!existing.calendarKeys.includes(c)) existing.calendarKeys.push(c)
     } else {
-      const owned = { ...e, ownerIds: [...owners] }
+      const owned = { ...e, ownerIds: [...owners], calendarKeys: [...cals] }
       merged.set(key, owned)
       out.push(owned)
     }

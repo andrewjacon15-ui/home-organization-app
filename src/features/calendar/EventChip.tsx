@@ -1,11 +1,12 @@
 import type { CSSProperties } from 'react'
-import type { Member } from '../../types'
+import type { Member, SyncedCalendar } from '../../types'
 import { useSettings } from '../settings/SettingsContext'
 import { countdownLabel, isPast, shortRange, type OwnedEvent } from './views'
 
 interface Props {
   event: OwnedEvent
   members: Map<string, Member>
+  calendars?: Map<string, SyncedCalendar>
   now: Date
   today: string
   /** true = month cell (one line); 'column' = narrow week column (short times, no location) */
@@ -22,10 +23,14 @@ function ownerBackground(colors: string[], multi: boolean): string {
   return `linear-gradient(180deg, ${colors.map((c, i) => `${c} ${i * step}% ${(i + 1) * step}%`).join(', ')})`
 }
 
-export function EventChip({ event, members, now, today, compact, onDelete }: Props) {
+export function EventChip({ event, members, calendars, now, today, compact, onDelete }: Props) {
   const { settings } = useSettings()
   const owners = event.ownerIds.map((id) => members.get(id)).filter((m) => m !== undefined)
-  const colors = owners.length ? owners.map((m) => m.color) : ['var(--muted)']
+  const personColors = owners.length ? owners.map((m) => m.color) : ['var(--muted)']
+  // "By calendar" uses each source calendar's color (e.g. a purple Work calendar); hand-entered events keep the person's color.
+  const calendarColors = [...new Set(event.calendarKeys.map((k) => calendars?.get(k)?.color).filter((c): c is string => !!c))]
+  const colors = settings.colorEventsBy === 'calendar' && calendarColors.length ? calendarColors : personColors
+  const calendarNames = event.calendarKeys.map((k) => calendars?.get(k)).filter((c) => c !== undefined).map((c) => c.alias || c.name)
   const past = settings.dimPastEvents && isPast(event, now, today)
   const countdown = settings.showCountdowns === 'always' ? countdownLabel(event, now) : null
   const style = {
@@ -44,6 +49,7 @@ export function EventChip({ event, members, now, today, compact, onDelete }: Pro
           {countdown && <span className="event__countdown"> · {countdown}</span>}
         </span>
         {!compact && event.location && <span className="event__location">{event.location}</span>}
+        {calendarNames.length > 0 && <span className="visually-hidden"> (calendar: {calendarNames.join(', ')})</span>}
       </div>
       <div className="event__owners" role="group" aria-label={`For ${owners.map((m) => m.displayName).join(', ') || 'someone'}`}>
         {owners.map((m) => (

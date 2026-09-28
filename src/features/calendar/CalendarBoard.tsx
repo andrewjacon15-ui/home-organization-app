@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useFitHeight } from '../../lib/useFitHeight'
 import { fromDateKey } from '../../lib/dates'
-import type { CalendarEvent, Member } from '../../types'
+import type { CalendarEvent, Member, SyncedCalendar } from '../../types'
 import { useSettings } from '../settings/SettingsContext'
 import { DayWeather } from '../weather/WeatherBadges'
 import { EventChip } from './EventChip'
@@ -15,6 +15,7 @@ interface Props {
   now: Date
   events: CalendarEvent[]
   members: Member[]
+  calendars?: SyncedCalendar[]
   onDelete: (event: CalendarEvent) => void
 }
 
@@ -22,12 +23,13 @@ const MONTH_CELL_LIMIT = 3
 
 const longLabel = (key: string) => fromDateKey(key).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
 
-export function CalendarBoard({ kind, range, today, now, events, members, onDelete }: Props) {
+export function CalendarBoard({ kind, range, today, now, events, members, calendars = [], onDelete }: Props) {
   const { settings } = useSettings()
   const columns = kind === 'week' || kind === 'threeDay'
   const [fitRef, fitStyle] = useFitHeight<HTMLOListElement>(columns)
   const memberById = useMemo(() => new Map(members.map((m) => [m.id, m])), [members])
-  const byDay = useMemo(() => groupByDay(withOwners(events), range.days) as Record<string, OwnedEvent[]>, [events, range.days])
+  const calendarByKey = useMemo(() => new Map(calendars.map((c) => [c.key, c])), [calendars])
+  const byDay = useMemo(() => groupByDay(withOwners(events, calendarByKey), range.days) as Record<string, OwnedEvent[]>, [events, calendarByKey, range.days])
 
   const dayClass = (key: string, base: string) =>
     [base, key === today && `${base}--today`, settings.shadeWeekends && isWeekend(key) && `${base}--weekend`,
@@ -37,7 +39,7 @@ export function CalendarBoard({ kind, range, today, now, events, members, onDele
 
   const chip = (e: OwnedEvent, compact: boolean | 'column' = false) => (
     <li key={e.id}>
-      <EventChip event={e} members={memberById} now={now} today={today} compact={compact} onDelete={onDelete} />
+      <EventChip event={e} members={memberById} calendars={calendarByKey} now={now} today={today} compact={compact} onDelete={onDelete} />
     </li>
   )
 

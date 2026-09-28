@@ -26,6 +26,15 @@ export function CalendarSettings({ familyName }: { familyName: string }) {
           ]}
           onChange={(v) => save({ showCountdowns: v })}
         />
+        <SelectRow
+          label="Color events by"
+          value={settings.colorEventsBy}
+          options={[
+            { value: 'calendar', label: 'Calendar' },
+            { value: 'person', label: 'Person' },
+          ]}
+          onChange={(v) => save({ colorEventsBy: v })}
+        />
         <ToggleRow label="Color code multi-profile events" checked={settings.colorCodeMultiProfile} onChange={(v) => save({ colorCodeMultiProfile: v })} />
         <ToggleRow label="Shade weekends" checked={settings.shadeWeekends} onChange={(v) => save({ shadeWeekends: v })} />
         <ToggleRow label="Dim past events" checked={settings.dimPastEvents} onChange={(v) => save({ dimPastEvents: v })} />

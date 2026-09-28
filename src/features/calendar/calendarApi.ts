@@ -1,7 +1,7 @@
-import { addDoc, collection, deleteDoc, doc, onSnapshot, query, serverTimestamp, Timestamp, where } from 'firebase/firestore'
+import { addDoc, collection, deleteDoc, doc, onSnapshot, query, serverTimestamp, Timestamp, updateDoc, where } from 'firebase/firestore'
 import { httpsCallable } from 'firebase/functions'
 import { db, functions } from '../../firebase'
-import type { CalendarEvent, NewManualEvent } from '../../types'
+import type { CalendarEvent, NewManualEvent, SyncedCalendar } from '../../types'
 
 const eventsCol = (familyId: string) => collection(db, 'families', familyId, 'events')
 
@@ -18,6 +18,7 @@ export function watchEvents(familyId: string, from: Date, to: Date, onChange: (e
           source: data.source,
           sourceUserId: data.sourceUserId,
           ...(Array.isArray(data.memberIds) ? { memberIds: data.memberIds } : {}),
+          ...(data.calendarKey ? { calendarKey: data.calendarKey } : {}),
           title: data.title,
           start: (data.start as Timestamp).toDate(),
           end: (data.end as Timestamp).toDate(),
@@ -54,3 +55,19 @@ export const connectCalendar = (familyId: string, code: string) =>
 export const syncMyCalendar = (familyId: string) => httpsCallable(functions, 'syncMyCalendar')({ familyId })
 
 export const disconnectCalendar = (familyId: string) => httpsCallable(functions, 'disconnectCalendar')({ familyId })
+
+const calendarsCol = (familyId: string) => collection(db, 'families', familyId, 'calendars')
+
+/** Everyone's synced Google calendars, primary first then by name. */
+export function watchCalendars(familyId: string, onChange: (calendars: SyncedCalendar[]) => void) {
+  return onSnapshot(calendarsCol(familyId), (snap) => {
+    const list = snap.docs.map((d) => ({ ...(d.data() as Omit<SyncedCalendar, 'key'>), key: d.id }))
+    list.sort((a, b) => Number(b.primary) - Number(a.primary) || (a.alias || a.name).localeCompare(b.alias || b.name))
+    onChange(list)
+  })
+}
+
+/** Show/hide, recolor, rename, or reassign one of your own calendars. */
+export function updateCalendar(familyId: string, key: string, changes: Partial<Pick<SyncedCalendar, 'enabled' | 'color' | 'alias' | 'memberIds'>>) {
+  return updateDoc(doc(calendarsCol(familyId), key), changes)
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { eventDocId, normalizeEvent } from './normalize.js'
+import { calendarKey, eventDocId, normalizeEvent } from './normalize.js'
 
 describe('normalizeEvent', () => {
   it('converts a timed event', () => {
@@ -11,13 +11,12 @@ describe('normalizeEvent', () => {
         htmlLink: 'https://calendar.google.com/x',
         start: { dateTime: '2026-10-01T17:00:00-04:00' },
         end: { dateTime: '2026-10-01T18:30:00-04:00' },
-      },
-      'u1',
-    )
+      }, 'u1', 'cal1')
     expect(e).toEqual({
       source: 'google',
       sourceUserId: 'u1',
       googleEventId: 'abc',
+      calendarKey: 'cal1',
       title: 'Soccer practice',
       location: 'Field 3',
       htmlLink: 'https://calendar.google.com/x',
@@ -28,7 +27,7 @@ describe('normalizeEvent', () => {
   })
 
   it('converts an all-day event, keeping Google’s exclusive end date', () => {
-    const e = normalizeEvent({ id: 'd1', summary: 'Trip', start: { date: '2026-10-10' }, end: { date: '2026-10-13' } }, 'u1')
+    const e = normalizeEvent({ id: 'd1', summary: 'Trip', start: { date: '2026-10-10' }, end: { date: '2026-10-13' } }, 'u1', 'cal1')
     expect(e).toMatchObject({
       allDay: true,
       startDate: '2026-10-10',
@@ -39,21 +38,30 @@ describe('normalizeEvent', () => {
   })
 
   it('skips cancelled, id-less, and date-less events', () => {
-    expect(normalizeEvent({ id: 'x', status: 'cancelled', start: { date: '2026-10-10' } }, 'u')).toBeNull()
-    expect(normalizeEvent({ start: { date: '2026-10-10' } }, 'u')).toBeNull()
-    expect(normalizeEvent({ id: 'x' }, 'u')).toBeNull()
+    expect(normalizeEvent({ id: 'x', status: 'cancelled', start: { date: '2026-10-10' } }, 'u', 'cal1')).toBeNull()
+    expect(normalizeEvent({ start: { date: '2026-10-10' } }, 'u', 'cal1')).toBeNull()
+    expect(normalizeEvent({ id: 'x' }, 'u', 'cal1')).toBeNull()
   })
 
   it('fills in a title and repairs an end before the start', () => {
-    const e = normalizeEvent({ id: 'x', start: { dateTime: '2026-10-01T10:00:00Z' }, end: { dateTime: '2026-10-01T09:00:00Z' } }, 'u')
+    const e = normalizeEvent({ id: 'x', start: { dateTime: '2026-10-01T10:00:00Z' }, end: { dateTime: '2026-10-01T09:00:00Z' } }, 'u', 'cal1')
     expect(e?.title).toBe('(No title)')
     expect(e?.end).toEqual(e?.start)
   })
 })
 
-describe('eventDocId', () => {
-  it('is stable and Firestore-safe', () => {
-    expect(eventDocId('uid1', 'abc_20261001T150000Z')).toBe('g_uid1_abc_20261001T150000Z')
-    expect(eventDocId('u', 'a/b.c')).toBe('g_u_a_b_c')
+describe('keys', () => {
+  it('makes stable, Firestore-safe calendar keys and event IDs', () => {
+    const k = calendarKey('uid1', 'work123@group.calendar.google.com')
+    expect(k).toMatch(/^uid1_[a-z0-9]+$/)
+    expect(calendarKey('uid1', 'work123@group.calendar.google.com')).toBe(k)
+    expect(calendarKey('uid1', 'other@group.calendar.google.com')).not.toBe(k)
+    expect(eventDocId(k, 'abc_20261001T150000Z')).toBe(`g_${k}_abc_20261001T150000Z`)
+    expect(eventDocId('c', 'a/b.c')).toBe('g_c_a_b_c')
+  })
+
+  it('skips working-location markers', () => {
+    expect(normalizeEvent({ id: 'w', eventType: 'workingLocation', start: { date: '2026-10-01' } }, 'u', 'cal1')).toBeNull()
+    expect(normalizeEvent({ id: 'o', eventType: 'outOfOffice', start: { date: '2026-10-01' } }, 'u', 'cal1')).not.toBeNull()
   })
 })

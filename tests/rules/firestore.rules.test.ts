@@ -529,3 +529,49 @@ describe('recipes', () => {
     await assertFails(getDocs(collection(dbFor(MALLORY), `families/${FAM_A}/recipes`)))
   })
 })
+
+describe('synced calendars', () => {
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore() as unknown as Firestore
+      await setDoc(doc(db, `families/${FAM_A}/calendars/bob_work`), {
+        ownerId: BOB.uid,
+        calendarId: 'work123@group.calendar.google.com',
+        name: 'Work',
+        googleColor: '#9e69af',
+        color: '#9e69af',
+        enabled: true,
+        primary: false,
+        memberIds: [BOB.uid],
+      })
+    })
+  })
+
+  it('lets family members see everyone’s calendar list', async () => {
+    await assertSucceeds(getDocs(collection(dbFor(ALICE), `families/${FAM_A}/calendars`)))
+    await assertFails(getDocs(collection(dbFor(MALLORY), `families/${FAM_A}/calendars`)))
+  })
+
+  it('lets the owner hide, recolor, rename, and share their calendar', async () => {
+    const ref = doc(dbFor(BOB), `families/${FAM_A}/calendars/bob_work`)
+    await assertSucceeds(updateDoc(ref, { enabled: false }))
+    await assertSucceeds(updateDoc(ref, { color: '#0f766e', alias: 'Office' }))
+    await assertSucceeds(updateDoc(ref, { memberIds: [BOB.uid, ALICE.uid] }))
+  })
+
+  it('blocks everything else', async () => {
+    const mine = doc(dbFor(BOB), `families/${FAM_A}/calendars/bob_work`)
+    await assertFails(updateDoc(mine, { calendarId: 'other' }))
+    await assertFails(updateDoc(mine, { color: 'purple' }))
+    await assertFails(updateDoc(mine, { memberIds: 'everyone' }))
+    await assertFails(updateDoc(doc(dbFor(ALICE), `families/${FAM_A}/calendars/bob_work`), { enabled: false }))
+    await assertFails(setDoc(doc(dbFor(BOB), `families/${FAM_A}/calendars/fake`), { ownerId: BOB.uid, calendarId: 'x', name: 'x', enabled: true }))
+    await assertFails(deleteDoc(mine))
+  })
+
+  it('accepts the colorEventsBy display setting', async () => {
+    const display = doc(dbFor(BOB), `families/${FAM_A}/settings/display`)
+    await assertSucceeds(setDoc(display, { colorEventsBy: 'calendar' }))
+    await assertFails(setDoc(display, { colorEventsBy: 'mood' }))
+  })
+})

@@ -27,6 +27,8 @@ export interface DisplaySettings {
   showPhotosTab: boolean
   theme: 'system' | 'light' | 'dark'
   accentColor: string
+  /** Color synced events by their Google calendar's color, or by the person's color. */
+  colorEventsBy: 'person' | 'calendar'
 }
 
 /** Mirrors the Skylight defaults from the user's tablet. */
@@ -53,6 +55,7 @@ export const DEFAULT_SETTINGS: DisplaySettings = {
   showPhotosTab: true,
   theme: 'system',
   accentColor: DEFAULT_ACCENT,
+  colorEventsBy: 'calendar',
 }
 
 const displayRef = (familyId: string) => doc(db, 'families', familyId, 'settings', 'display')
