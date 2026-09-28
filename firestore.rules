@@ -96,9 +96,18 @@ service cloud.firestore {
       }
 
       match /chores/{choreId} {
+        function validRepeat(r) {
+          return r is map && r.keys().hasOnly(['freq', 'interval', 'days'])
+            && r.freq in ['daily', 'weekly', 'monthly']
+            && r.interval is int && r.interval >= 1 && r.interval <= 52
+            && (!('days' in r) || (r.days is list && r.days.size() <= 7));
+        }
         function validChore() {
           let d = request.resource.data;
-          return onlyKeys(['title', 'assigneeId', 'dueDate', 'dueTime', 'done', 'points', 'createdAt', 'createdBy'])
+          return onlyKeys(['title', 'assigneeId', 'dueDate', 'dueTime', 'done', 'points', 'createdAt', 'createdBy', 'repeat', 'completions', 'doneBy'])
+            && (!('repeat' in d) || d.repeat == null || validRepeat(d.repeat))
+            && (!('completions' in d) || (d.completions is map && d.completions.size() <= 200))
+            && (!('doneBy' in d) || d.doneBy == null || d.doneBy is string)
             && d.title is string && d.title.size() > 0 && d.title.size() <= 200
             && (d.assigneeId == null || d.assigneeId is string)
             && (d.dueDate == null || isDateKey(d.dueDate))

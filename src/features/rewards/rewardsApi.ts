@@ -56,23 +56,6 @@ export function watchRewards(familyId: string, onChange: (rewards: Reward[]) => 
   )
 }
 
-/**
- * Marks a chore done/undone and credits or removes its stars in one write.
- * Unassigned chores (and 0-point chores) don't earn anyone stars.
- */
-export async function setChoreDoneWithStars(familyId: string, chore: Chore, done: boolean, userId: string) {
-  const batch = writeBatch(db)
-  batch.update(doc(db, 'families', familyId, 'chores', chore.id), { done })
-  const entry = doc(starsCol(familyId), choreEntryId(chore.id))
-  if (chore.assigneeId && chore.points > 0) {
-    if (done) {
-      batch.set(entry, { memberId: chore.assigneeId, delta: chore.points, reason: `Chore: ${chore.title}`.slice(0, 200), choreId: chore.id, createdBy: userId, createdAt: serverTimestamp() })
-    } else {
-      batch.delete(entry)
-    }
-  }
-  await batch.commit()
-}
 
 /** Chores finished before the ledger existed: credit them once (the fixed entry ID makes this idempotent). */
 export async function backfillChoreStars(familyId: string, chores: Chore[], entries: StarEntry[], userId: string) {

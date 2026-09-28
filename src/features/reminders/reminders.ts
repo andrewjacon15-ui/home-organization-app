@@ -1,5 +1,7 @@
 import type { CalendarEvent, Chore } from '../../types'
+import { toDateKey } from '../../lib/dates'
 import { withOwners } from '../calendar/views'
+import { isDoneOn, occursOn } from '../chores/schedule'
 import type { DisplaySettings } from '../settings/settingsApi'
 
 export interface Reminder {
@@ -49,10 +51,16 @@ export function remindersBetween(events: CalendarEvent[], chores: Chore[], s: Re
   }
 
   if (s.remindChoresDue) {
+    // Check each day the window touches, so repeating chores remind on every due date.
+    const days = [...new Set([toDateKey(from), toDateKey(to)])]
     for (const c of chores) {
-      const at = c.done ? null : choreDueAt(c)
-      if (at && inWindow(at)) {
-        out.push({ key: `c:${c.id}:${c.dueDate}T${c.dueTime}`, at, kind: 'chore', title: c.title, detail: `Chore due · ${time(at)}`, ownerIds: c.assigneeId ? [c.assigneeId] : [] })
+      if (!c.dueTime) continue
+      for (const day of days) {
+        if (!occursOn(c, day) || isDoneOn(c, day)) continue
+        const at = choreDueAt({ ...c, dueDate: day })
+        if (at && inWindow(at)) {
+          out.push({ key: `c:${c.id}:${day}T${c.dueTime}`, at, kind: 'chore', title: c.title, detail: `Chore due · ${time(at)}`, ownerIds: c.assigneeId ? [c.assigneeId] : [] })
+        }
       }
     }
   }

@@ -28,6 +28,12 @@ export interface Chore {
   dueDate: string | null
   /** HH:MM, optional. Chores with a time can trigger "when due" reminders. */
   dueTime?: string | null
+  /** Repeating chores: each due date is tracked separately in `completions`. */
+  repeat?: ChoreRepeat | null
+  /** Repeating chores: date key -> who did it ('' if unknown). */
+  completions?: Record<string, string>
+  /** One-off chores: who did it (for Up for Grabs). */
+  doneBy?: string | null
   done: boolean
   points: number
 }
@@ -83,4 +89,11 @@ export interface SyncedCalendar {
   primary: boolean
   /** Whose calendar this is on the family board (a shared "Family" calendar can be several people's). */
   memberIds: string[]
+}
+
+export interface ChoreRepeat {
+  freq: 'daily' | 'weekly' | 'monthly'
+  interval: number
+  /** Weekly: which weekdays (0 = Sunday). Defaults to the start date's weekday. */
+  days?: number[]
 }
