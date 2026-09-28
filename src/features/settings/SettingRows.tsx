@@ -1,8 +1,8 @@
 import { useId, useState, type ReactNode } from 'react'
 
-export function SettingsSection({ title, children }: { title: string; children: ReactNode }) {
+export function SettingsSection({ title, id, children }: { title: string; id?: string; children: ReactNode }) {
   return (
-    <section className="settings-section" aria-label={title}>
+    <section className="settings-section" aria-label={title} id={id}>
       <h2>{title}</h2>
       <div className="settings-rows">{children}</div>
     </section>

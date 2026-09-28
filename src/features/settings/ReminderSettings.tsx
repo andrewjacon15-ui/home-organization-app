@@ -12,7 +12,7 @@ export function ReminderSettings({ chime = playChime }: { chime?: () => void }) 
   const save = (changes: Parameters<typeof update>[0]) => void update(changes)
   return (
     <>
-      <SettingsSection title="Reminders">
+      <SettingsSection title="Reminders" id="reminders">
         <ToggleRow label="At time of event" checked={settings.remindAtStart} onChange={(v) => save({ remindAtStart: v })} />
         <ToggleRow label="Before event" checked={settings.remindBeforeEnabled} onChange={(v) => save({ remindBeforeEnabled: v })} />
         {settings.remindBeforeEnabled && (

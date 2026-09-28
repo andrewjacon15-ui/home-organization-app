@@ -37,7 +37,7 @@ export function GeneralSettings({ search = searchPlaces }: Props) {
 
   return (
     <>
-      <SettingsSection title="General">
+      <SettingsSection title="General" id="general">
         <div className="setting-row setting-row--stack">
           <div className="setting-row__label">
             Weather location
@@ -81,7 +81,7 @@ export function GeneralSettings({ search = searchPlaces }: Props) {
         />
       </SettingsSection>
 
-      <SettingsSection title="Display">
+      <SettingsSection title="Display" id="display">
         <SelectRow
           label="Text size"
           value={settings.textSize}

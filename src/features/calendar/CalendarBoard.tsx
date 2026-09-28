@@ -93,7 +93,6 @@ export function CalendarBoard({ kind, range, today, now, events, members, onDele
             <div className="day__header">
               <span className="day__weekday">{fromDateKey(key).toLocaleDateString(undefined, { weekday: 'short' })}</span>
               <span className="day__date">{fromDateKey(key).getDate()}</span>
-              {key === today && <span className="day__today">Today</span>}
               <DayWeather date={key} />
             </div>
             <span className="day__count">{count === 0 ? '—' : `${count} event${count === 1 ? '' : 's'}`}</span>

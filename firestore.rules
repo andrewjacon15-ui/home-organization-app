@@ -42,6 +42,10 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/invites/$(myEmail())).data.familyId == familyId;
     }
 
+    function isHexColor(value) {
+      return value is string && value.matches('^#[0-9a-fA-F]{6}$');
+    }
+
     function onlyKeys(keys) {
       return request.resource.data.keys().hasOnly(keys);
     }
@@ -77,10 +81,12 @@ service cloud.firestore {
         allow create: if request.auth.uid == userId
           && (isOwnerAfter(familyId) || isInvitedTo(familyId))
           && request.resource.data.email == myEmail()
-          && onlyKeys(['displayName', 'email', 'color', 'photoURL', 'joinedAt']);
+          && onlyKeys(['displayName', 'email', 'color', 'photoURL', 'joinedAt'])
+          && isHexColor(request.resource.data.color);
         // `calendar` (connection status) is written by Cloud Functions only.
         allow update: if request.auth.uid == userId
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'color', 'photoURL']);
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'color', 'photoURL'])
+          && isHexColor(request.resource.data.color);
         allow delete: if request.auth.uid == userId || isOwner(familyId);
 
         // OAuth refresh tokens. Admin SDK (Cloud Functions) only.
@@ -208,7 +214,7 @@ service cloud.firestore {
               'dimPastEvents', 'weekStartToday', 'monthStartCurrentWeek', 'scheduleDays', 'scheduleStartToday',
               'temperatureUnit', 'weatherLocation', 'textSize', 'density',
               'remindAtStart', 'remindBeforeEnabled', 'remindBeforeMinutes', 'remindChoresDue', 'reminderSound',
-              'showPhotosTab'])
+              'showPhotosTab', 'theme', 'accentColor'])
             && (!('calendarName' in d) || (d.calendarName is string && d.calendarName.size() <= 80))
             && optIntIn(d, 'weekStartsOn', 0, 6)
             && optOneOf(d, 'showCountdowns', ['always', 'never'])
@@ -221,7 +227,9 @@ service cloud.firestore {
             && optOneOf(d, 'density', ['compact', 'cozy', 'comfortable'])
             && optBool(d, 'remindAtStart') && optBool(d, 'remindBeforeEnabled')
             && optIntIn(d, 'remindBeforeMinutes', 1, 1440)
-            && optBool(d, 'remindChoresDue') && optBool(d, 'reminderSound') && optBool(d, 'showPhotosTab');
+            && optBool(d, 'remindChoresDue') && optBool(d, 'reminderSound') && optBool(d, 'showPhotosTab')
+            && optOneOf(d, 'theme', ['system', 'light', 'dark'])
+            && (!('accentColor' in d) || isHexColor(d.accentColor));
         }
         function validLock() {
           let d = request.resource.data;

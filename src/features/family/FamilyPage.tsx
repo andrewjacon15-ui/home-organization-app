@@ -2,7 +2,8 @@ import { signOut } from 'firebase/auth'
 import { useEffect, useState, type CSSProperties, type FormEvent } from 'react'
 import { auth } from '../../firebase'
 import { detectTimezone, timezoneOptions } from '../../lib/dates'
-import { inviteMember, MEMBER_COLORS, removeInvite, updateFamily, updateMember, watchInvites } from '../../lib/family'
+import { ColorPicker } from '../../components/ColorPicker'
+import { inviteMember, removeInvite, updateFamily, updateMember, watchInvites } from '../../lib/family'
 import type { Family, Invite, Member } from '../../types'
 
 interface Props {
@@ -106,21 +107,8 @@ export function FamilyPage({ family, members, userId }: Props) {
             />
           </label>
           <div className="field">
-            Color
-            <div className="swatches" role="radiogroup" aria-label="Your color">
-              {MEMBER_COLORS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  role="radio"
-                  aria-checked={me.color === c}
-                  aria-label={c}
-                  className={`swatch${me.color === c ? ' swatch--active' : ''}`}
-                  style={{ '--pill': c } as CSSProperties}
-                  onClick={() => updateMember(family.id, userId, { color: c }).catch(report)}
-                />
-              ))}
-            </div>
+            Your color
+            <ColorPicker label="Your color" value={me.color} onChange={(c) => updateMember(family.id, userId, { color: c }).catch(report)} />
           </div>
         </div>
       )}

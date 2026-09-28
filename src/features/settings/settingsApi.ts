@@ -1,5 +1,6 @@
 import { doc, onSnapshot, setDoc } from 'firebase/firestore'
 import { db } from '../../firebase'
+import { DEFAULT_ACCENT } from '../../lib/colors'
 
 /** Family-wide display settings (families/{id}/settings/display). Every field is optional in Firestore. */
 export interface DisplaySettings {
@@ -24,6 +25,8 @@ export interface DisplaySettings {
   remindChoresDue: boolean
   reminderSound: boolean
   showPhotosTab: boolean
+  theme: 'system' | 'light' | 'dark'
+  accentColor: string
 }
 
 /** Mirrors the Skylight defaults from the user's tablet. */
@@ -48,6 +51,8 @@ export const DEFAULT_SETTINGS: DisplaySettings = {
   remindChoresDue: false,
   reminderSound: true,
   showPhotosTab: true,
+  theme: 'system',
+  accentColor: DEFAULT_ACCENT,
 }
 
 const displayRef = (familyId: string) => doc(db, 'families', familyId, 'settings', 'display')

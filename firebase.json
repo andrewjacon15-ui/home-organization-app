@@ -18,7 +18,7 @@
     ],
     "headers": [
       {
-        "source": "/sw.js",
+        "source": "/@(sw.js|version.json)",
         "headers": [
           {
             "key": "Cache-Control",

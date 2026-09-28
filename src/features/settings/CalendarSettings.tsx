@@ -14,7 +14,7 @@ export function CalendarSettings({ familyName }: { familyName: string }) {
 
   return (
     <>
-      <SettingsSection title="Calendar">
+      <SettingsSection title="Calendar" id="calendar">
         <TextRow label="Calendar display name" value={settings.calendarName} placeholder={familyName} maxLength={80} onSave={(v) => save({ calendarName: v })} />
         <SelectRow label="Start week on" value={settings.weekStartsOn} options={WEEKDAYS} onChange={(v) => save({ weekStartsOn: v })} />
         <SelectRow
