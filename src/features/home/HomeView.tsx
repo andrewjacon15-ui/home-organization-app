@@ -56,7 +56,7 @@ export function HomeView(p: Props) {
           {days.map((d) => {
             const list = byDay[d]
             return (
-              <div key={d} className={`home-day${d === p.today ? ' home-day--today' : ''}${settings.shadeWeekends && isWeekend(d) ? ' home-day--weekend' : ''}`} aria-label={fromDateKey(d).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}>
+              <div key={d} className={`home-day${d === p.today ? ' home-day--today' : ''}${d < p.today ? ' home-day--past' : ''}${list.length === 0 ? ' home-day--empty' : ''}${settings.shadeWeekends && isWeekend(d) ? ' home-day--weekend' : ''}`} aria-label={fromDateKey(d).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}>
                 <div className="home-day__head">
                   <span className="home-day__name">
                     {fromDateKey(d).toLocaleDateString(undefined, { weekday: 'short' })} <b>{fromDateKey(d).getDate()}</b>

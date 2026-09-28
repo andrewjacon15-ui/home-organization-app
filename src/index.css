@@ -425,6 +425,8 @@ textarea:hover {
 
 .content {
   display: grid;
+  /* minmax(0, …) so a wide child (a swipeable strip) scrolls instead of widening the page. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 20px;
 }
 
@@ -1428,6 +1430,8 @@ textarea:hover {
     position: static;
   }
   .settings-index ol {
+    mask-image: linear-gradient(to right, #000 88%, transparent);
+    -webkit-mask-image: linear-gradient(to right, #000 88%, transparent);
     display: flex;
     flex-wrap: wrap;
     gap: 0 16px;
@@ -3092,5 +3096,282 @@ textarea:hover {
   .home-tasks,
   .home-lists {
     grid-auto-flow: row;
+  }
+}
+
+/* ==========================================================================
+   Phones: its own layout, not the wall display squeezed down.
+   Four tabs in a bottom bar (the rest under More), a one-line header,
+   lists instead of grids, and only today onward where a week is shown.
+   ========================================================================== */
+
+.rail__more,
+.masthead__short {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  :root {
+    --gutter: 16px;
+  }
+
+  /* Bottom bar */
+  .rail {
+    gap: 0;
+    padding: 0 max(6px, env(safe-area-inset-left)) env(safe-area-inset-bottom);
+    background: color-mix(in srgb, var(--paper) 92%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 40;
+  }
+  .rail__item--secondary {
+    display: none;
+  }
+  .rail__more {
+    display: grid;
+  }
+  .rail__item {
+    min-height: 56px;
+    padding: 7px 2px 6px;
+    gap: 3px;
+    font-size: 0.66rem;
+    letter-spacing: 0.02em;
+    background: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .rail__item--active {
+    background: none;
+  }
+  .rail__item span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .rail__item svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  /* One-line header: short date and weather. The phone already shows the time. */
+  .app {
+    padding: max(10px, env(safe-area-inset-top)) 16px calc(84px + env(safe-area-inset-bottom));
+  }
+  .masthead {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    padding-bottom: 8px;
+    margin-bottom: 14px;
+    border-bottom-width: 1px;
+  }
+  .masthead__day,
+  .masthead__full,
+  .masthead__time,
+  .masthead__name {
+    display: none;
+  }
+  .masthead__short {
+    display: inline;
+    font-family: var(--serif);
+    font-size: 1.35rem;
+    line-height: 1.2;
+  }
+  .masthead__meta {
+    gap: 8px;
+  }
+
+  .page-title {
+    font-size: 1.8rem;
+  }
+  .content {
+    gap: 16px;
+  }
+
+  /* iOS zooms into any field under 16px; keep them at 16. */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  /* Home: a running list from today, not a squeezed grid. */
+  .home {
+    gap: 22px;
+  }
+  .home-week {
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+    border-left: none;
+  }
+  .home-day {
+    border-right: none;
+    padding: 10px 0;
+    overflow: visible;
+  }
+  .home-day--past,
+  .home-day--empty:not(.home-day--today) {
+    display: none;
+  }
+  .app:has(.home) .masthead {
+    border-bottom: none;
+    margin-bottom: 4px;
+  }
+  .home-day--today {
+    padding-left: 10px;
+  }
+
+  /* Calendar and meals: this week's past days drop off (earlier weeks still show every day). */
+  .week:has(.day--today) .day--past,
+  .schedule:has(.schedule-day--today) .schedule-day--past {
+    display: none;
+  }
+  .schedule-day {
+    grid-template-columns: 52px minmax(0, 1fr);
+    gap: 12px;
+    padding: 12px 0 12px 8px;
+  }
+  .schedule-day__header .day__date {
+    font-size: 1.7rem;
+  }
+  .schedule-day__header .day__today {
+    font-size: 0.62rem;
+  }
+
+  /* Calendar toolbar: arrows and range on one line, views as a full-width strip. */
+  .connect {
+    padding: 12px;
+  }
+
+  /* Settings: the section index becomes one swipeable line. */
+  .settings-layout {
+    display: block;
+  }
+  .settings-index {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    margin: 0 -16px 8px;
+    padding: 6px 16px 0;
+    background: var(--paper);
+    border-bottom: 1px solid var(--rule);
+  }
+  .settings-index ol {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 18px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 6px 0 10px;
+    margin: 0;
+  }
+  .settings-index ol::-webkit-scrollbar {
+    display: none;
+  }
+  .settings-index li {
+    flex: none;
+  }
+  .settings-index .page-title {
+    display: none;
+  }
+  .settings-index ol {
+    border-top: none;
+  }
+  .settings-index a {
+    display: inline;
+    padding: 0;
+    border: none;
+    white-space: nowrap;
+    font-size: 0.95rem;
+  }
+  .settings-section {
+    scroll-margin-top: 64px;
+  }
+  .setting-row {
+    gap: 10px;
+  }
+}
+
+/* More: a sheet of the remaining sections, above the bottom bar. */
+.more-sheet__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  background: rgb(0 0 0 / 0.35);
+  animation: sheet-fade 160ms ease-out;
+}
+
+.more-sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(57px + env(safe-area-inset-bottom));
+  padding: 16px 16px 12px;
+  background: var(--surface);
+  border-top: 2px solid var(--rule-strong);
+  animation: sheet-up 180ms ease-out;
+}
+
+.more-sheet__title {
+  display: block;
+  font-family: var(--serif);
+  font-size: 1.2rem;
+  margin-bottom: 10px;
+}
+
+.more-sheet__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  border-top: 1px solid var(--rule);
+  border-left: 1px solid var(--rule);
+}
+
+.more-sheet__item {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 16px 6px;
+  border: none;
+  border-right: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  background: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.more-sheet__item svg {
+  width: 26px;
+  height: 26px;
+}
+
+.more-sheet__item--active {
+  color: var(--ink);
+  background: var(--paper-2);
+}
+
+.more-sheet__item--active svg {
+  color: var(--accent-text);
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+
+@keyframes sheet-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .more-sheet,
+  .more-sheet__backdrop {
+    animation: none;
   }
 }

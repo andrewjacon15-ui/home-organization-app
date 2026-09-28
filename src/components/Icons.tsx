@@ -66,6 +66,15 @@ export const PhotosIcon = (p: SVGProps<SVGSVGElement>) => (
   </svg>
 )
 
+export const MoreIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <rect x="4" y="4" width="6.5" height="6.5" />
+    <rect x="13.5" y="4" width="6.5" height="6.5" />
+    <rect x="4" y="13.5" width="6.5" height="6.5" />
+    <rect x="13.5" y="13.5" width="6.5" height="6.5" />
+  </svg>
+)
+
 export const SettingsIcon = (p: SVGProps<SVGSVGElement>) => (
   <svg {...base(p)}>
     <circle cx="12" cy="12" r="3" />

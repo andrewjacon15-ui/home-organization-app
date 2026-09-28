@@ -32,7 +32,7 @@ export function CalendarBoard({ kind, range, today, now, events, members, calend
   const byDay = useMemo(() => groupByDay(withOwners(events, calendarByKey), range.days) as Record<string, OwnedEvent[]>, [events, calendarByKey, range.days])
 
   const dayClass = (key: string, base: string) =>
-    [base, key === today && `${base}--today`, settings.shadeWeekends && isWeekend(key) && `${base}--weekend`,
+    [base, key === today && `${base}--today`, key < today && `${base}--past`, settings.shadeWeekends && isWeekend(key) && `${base}--weekend`,
       range.focusMonth !== null && fromDateKey(key).getMonth() !== range.focusMonth && `${base}--outside`]
       .filter(Boolean)
       .join(' ')
