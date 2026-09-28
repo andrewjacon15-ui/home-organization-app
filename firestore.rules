@@ -189,6 +189,33 @@ service cloud.firestore {
           && request.resource.data.memberIds is list && request.resource.data.memberIds.size() >= 1 && request.resource.data.memberIds.size() <= 20;
       }
 
+      // Grocery / to-do lists. Items can belong to a person's section (memberId) or the whole list (null).
+      match /lists/{listId} {
+        function validList() {
+          let d = request.resource.data;
+          return onlyKeys(['title', 'kind', 'sections', 'order', 'createdBy', 'createdAt'])
+            && d.title is string && d.title.size() > 0 && d.title.size() <= 80
+            && d.kind in ['grocery', 'todo', 'custom']
+            && d.sections is bool
+            && d.order is number;
+        }
+        allow read, delete: if isMember(familyId);
+        allow create, update: if isMember(familyId) && validList();
+
+        match /items/{itemId} {
+          function validItem() {
+            let d = request.resource.data;
+            return onlyKeys(['text', 'done', 'memberId', 'order', 'createdBy', 'createdAt', 'doneAt'])
+              && d.text is string && d.text.size() > 0 && d.text.size() <= 300
+              && d.done is bool
+              && (d.memberId == null || d.memberId is string)
+              && d.order is number;
+          }
+          allow read, delete: if isMember(familyId);
+          allow create, update: if isMember(familyId) && validItem();
+        }
+      }
+
       match /recipes/{recipeId} {
         function validRecipe() {
           let d = request.resource.data;
