@@ -1,11 +1,12 @@
 import type { User } from 'firebase/auth'
 import { useEffect, useState, type ReactElement, type SVGProps } from 'react'
 import { FamilySetup } from './components/FamilySetup'
-import { CalendarIcon, ChoresIcon, ListsIcon, MealsIcon, RecipesIcon, RewardsIcon, SettingsIcon } from './components/Icons'
+import { CalendarIcon, ChoresIcon, HomeIcon, ListsIcon, MealsIcon, RecipesIcon, RewardsIcon, SettingsIcon } from './components/Icons'
 import { SignIn } from './components/SignIn'
 import { CalendarPage } from './features/calendar/CalendarPage'
 import { ChoresPage } from './features/chores/ChoresPage'
 import { MealsPage } from './features/meals/MealsPage'
+import { HomePage } from './features/home/HomePage'
 import { ListsPage } from './features/lists/ListsPage'
 import { LockProvider } from './features/lock/LockContext'
 import { SleepProvider } from './features/sleep/SleepContext'
@@ -21,9 +22,10 @@ import { resolveFamily } from './lib/family'
 import { useAuthUser, useFamily, useNow } from './lib/hooks'
 import { reloadToLatest, useUpdateCheck } from './lib/version'
 
-type Tab = 'calendar' | 'lists' | 'chores' | 'rewards' | 'meals' | 'recipes' | 'settings'
+type Tab = 'home' | 'calendar' | 'lists' | 'chores' | 'rewards' | 'meals' | 'recipes' | 'settings'
 
 const TABS: { id: Tab; label: string; Icon: (p: SVGProps<SVGSVGElement>) => ReactElement }[] = [
+  { id: 'home', label: 'Home', Icon: HomeIcon },
   { id: 'calendar', label: 'Calendar', Icon: CalendarIcon },
   { id: 'lists', label: 'Lists', Icon: ListsIcon },
   { id: 'chores', label: 'Chores', Icon: ChoresIcon },
@@ -38,9 +40,9 @@ const TAB_KEY = 'last-tab'
 function initialTab(): Tab {
   try {
     const saved = localStorage.getItem(TAB_KEY)
-    return TABS.some((t) => t.id === saved) ? (saved as Tab) : 'calendar'
+    return TABS.some((t) => t.id === saved) ? (saved as Tab) : 'home'
   } catch {
-    return 'calendar'
+    return 'home'
   }
 }
 
@@ -148,6 +150,7 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
           <span className="masthead__name">{settings.calendarName || family.name}</span>
         </header>
         <main className="content">
+          {tab === 'home' && <HomePage familyId={familyId} userId={userId} members={members} onNavigate={setTab} />}
           {tab === 'calendar' && <CalendarPage familyId={familyId} userId={userId} members={members} />}
           {tab === 'lists' && <ListsPage familyId={familyId} userId={userId} members={members} />}
           {tab === 'chores' && <ChoresPage familyId={familyId} userId={userId} members={members} />}
