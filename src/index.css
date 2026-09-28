@@ -1089,3 +1089,106 @@ summary:focus-visible {
     animation: none;
   }
 }
+
+/* Rewards */
+.reward-form {
+  display: grid;
+  grid-template-columns: 70px 1fr 90px auto auto;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+@media (max-width: 720px) {
+  .reward-form {
+    grid-template-columns: 70px 1fr;
+  }
+}
+
+.reward-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.reward-card {
+  border-top: 6px solid var(--pill);
+}
+
+.reward-card__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.reward-card__name {
+  font-size: 1.3rem;
+  font-weight: 700;
+  flex: 1;
+}
+
+.reward-card__balance {
+  font-size: 1.3rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.reward-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.reward {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.reward__emoji {
+  font-size: 1.6rem;
+}
+
+.reward__body {
+  flex: 1;
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.reward__title {
+  font-weight: 600;
+}
+
+.reward__cost {
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.progress {
+  height: 8px;
+  background: var(--bg);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress__fill {
+  height: 100%;
+  background: var(--pill);
+  transition: width 0.3s;
+}
+
+.reward--ready .reward__title {
+  color: var(--pill);
+}
+
+.claimed-list {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+}

@@ -16,6 +16,8 @@ interface Props {
   onAdd: (chore: NewChore) => void
   onToggle: (chore: Chore) => void
   onDelete: (chore: Chore) => void
+  /** Star balances from the ledger. Without it, stars are counted from completed chores. */
+  stars?: Map<string, number>
 }
 
 const ANYONE = ''
@@ -35,7 +37,7 @@ function sortOpen(a: Chore, b: Chore) {
   return a.title.localeCompare(b.title)
 }
 
-export function ChoreList({ chores, members, today, onAdd, onToggle, onDelete }: Props) {
+export function ChoreList({ chores, members, today, onAdd, onToggle, onDelete, stars }: Props) {
   const [filter, setFilter] = useState<string | null>(null)
   const [title, setTitle] = useState('')
   const [assigneeId, setAssigneeId] = useState(ANYONE)
@@ -50,12 +52,13 @@ export function ChoreList({ chores, members, today, onAdd, onToggle, onDelete }:
   const done = visible.filter((c) => c.done).sort((a, b) => a.title.localeCompare(b.title))
 
   const pointsByMember = useMemo(() => {
+    if (stars) return stars
     const totals = new Map<string, number>()
     for (const c of chores) {
       if (c.done && c.assigneeId) totals.set(c.assigneeId, (totals.get(c.assigneeId) ?? 0) + c.points)
     }
     return totals
-  }, [chores])
+  }, [chores, stars])
 
   function submit(e: FormEvent) {
     e.preventDefault()
@@ -128,7 +131,7 @@ export function ChoreList({ chores, members, today, onAdd, onToggle, onDelete }:
           >
             <span className="chip__dot" aria-hidden />
             {m.displayName.split(' ')[0]}
-            <span className="chip__score" aria-label={`${pointsByMember.get(m.id) ?? 0} points`}>
+            <span className="chip__score" aria-label={`${pointsByMember.get(m.id) ?? 0} stars`}>
               ★ {pointsByMember.get(m.id) ?? 0}
             </span>
           </button>
