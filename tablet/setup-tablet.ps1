@@ -43,6 +43,8 @@ if ($model -ne 'rk3562_15_inch') { Write-Host "Warning: expected a 150-CAL (rk35
 if ($Restore) {
     Step 'Turning the Skylight app back on'
     foreach ($p in $skylightPackages) { & $adb shell pm enable $p }
+    & $adb shell rm -f /sdcard/fully-auto-settings.json
+    & $adb shell settings put system accelerometer_rotation 1
     & $adb shell am start -n com.skylight/odesk.johnlife.skylight.activity.MainActivity | Out-Null
     Write-Host "`nSkylight is back. To remove Fully too: adb uninstall $fully" -ForegroundColor Green
     return
@@ -65,11 +67,39 @@ Step 'Keeping the screen on and letting Fully start itself at boot'
 & $adb shell appops set $fully SYSTEM_ALERT_WINDOW allow
 & $adb shell dumpsys deviceidle whitelist +$fully | Out-Null
 
+Step 'Wall display settings: no screensaver, landscape only, no lock screen, silent taps'
+# Android's own screensaver would cover the app; the app has its own.
+& $adb shell settings put secure screensaver_enabled 0
+& $adb shell settings put secure screensaver_activate_on_sleep 0
+& $adb shell settings put secure screensaver_activate_on_dock 0
+# Wall-mounted, so don't let a bump rotate it. Rotation 0 is landscape on this panel.
+& $adb shell settings put system accelerometer_rotation 0
+& $adb shell settings put system user_rotation 0
+& $adb shell settings put system sound_effects_enabled 0
+& $adb shell settings put system lockscreen_sounds_enabled 0
+& $adb shell settings put system haptic_feedback_enabled 0
+& $adb shell locksettings set-disabled true | Out-Null
+
 Step 'Turning off the Skylight app so it stops taking over the screen'
 # disable-user is reversible (-Restore); the Skylight keyboard stays, it's the tablet's keyboard.
 foreach ($p in $skylightPackages) { & $adb shell pm disable-user --user 0 $p }
 
-Step 'Opening the app in Fully'
-& $adb shell am start -W -n "$fully/.MainActivity" -a android.intent.action.VIEW -d $Url | Out-Null
+Step 'Applying Fully settings from tablet/fully-auto-settings.json'
+# Fully reads /sdcard/fully-auto-settings.json each time it starts ("Enable Settings
+# Auto-Import" is on by default); it needs storage access to see the file.
+# Without it Fully stops at a "Permissions required" dialog on every boot.
+& $adb shell appops set $fully MANAGE_EXTERNAL_STORAGE allow
+& $adb shell appops set --uid $fully MANAGE_EXTERNAL_STORAGE allow
+# Android saves app-op changes lazily; a reboot before that loses them.
+& $adb shell appops write-settings | Out-Null
+$settings = Get-Content (Join-Path $PSScriptRoot 'fully-auto-settings.json') -Raw | ConvertFrom-Json
+$settings.startURL = $Url
+$settingsFile = Join-Path $env:TEMP 'fully-auto-settings.json'
+[IO.File]::WriteAllText($settingsFile, ($settings | ConvertTo-Json), (New-Object Text.UTF8Encoding $false))
+& $adb push -q $settingsFile /sdcard/fully-auto-settings.json | Out-Null
 
-Write-Host "`nDone. Finish the Fully settings on the tablet (docs/TABLET-SETUP.md, step 4)." -ForegroundColor Green
+Step 'Restarting Fully'
+& $adb shell am force-stop $fully
+& $adb shell am start -W -n "$fully/.MainActivity" | Out-Null
+
+Write-Host "`nDone. Sign in on the tablet, then restart it to check it comes back up in Fully." -ForegroundColor Green
