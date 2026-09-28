@@ -1,7 +1,7 @@
 import type { User } from 'firebase/auth'
 import { useEffect, useState, type ReactElement, type SVGProps } from 'react'
 import { FamilySetup } from './components/FamilySetup'
-import { CalendarIcon, ChoresIcon, HomeIcon, ListsIcon, MealsIcon, RecipesIcon, RewardsIcon, SettingsIcon } from './components/Icons'
+import { CalendarIcon, ChoresIcon, HomeIcon, ListsIcon, MealsIcon, PhotosIcon, RecipesIcon, RewardsIcon, SettingsIcon } from './components/Icons'
 import { SignIn } from './components/SignIn'
 import { CalendarPage } from './features/calendar/CalendarPage'
 import { ChoresPage } from './features/chores/ChoresPage'
@@ -10,6 +10,8 @@ import { HomePage } from './features/home/HomePage'
 import { ListsPage } from './features/lists/ListsPage'
 import { LockProvider } from './features/lock/LockContext'
 import { SleepProvider } from './features/sleep/SleepContext'
+import { PhotosPage } from './features/photos/PhotosPage'
+import { ScreensaverProvider } from './features/photos/ScreensaverContext'
 import { RecipesPage } from './features/recipes/RecipesPage'
 import { ReminderCenter } from './features/reminders/ReminderCenter'
 import { RewardsPage } from './features/rewards/RewardsPage'
@@ -22,7 +24,7 @@ import { resolveFamily } from './lib/family'
 import { useAuthUser, useFamily, useNow } from './lib/hooks'
 import { reloadToLatest, useUpdateCheck } from './lib/version'
 
-type Tab = 'home' | 'calendar' | 'lists' | 'chores' | 'rewards' | 'meals' | 'recipes' | 'settings'
+type Tab = 'home' | 'calendar' | 'lists' | 'chores' | 'rewards' | 'meals' | 'recipes' | 'photos' | 'settings'
 
 const TABS: { id: Tab; label: string; Icon: (p: SVGProps<SVGSVGElement>) => ReactElement }[] = [
   { id: 'home', label: 'Home', Icon: HomeIcon },
@@ -32,6 +34,7 @@ const TABS: { id: Tab; label: string; Icon: (p: SVGProps<SVGSVGElement>) => Reac
   { id: 'rewards', label: 'Rewards', Icon: RewardsIcon },
   { id: 'meals', label: 'Meals', Icon: MealsIcon },
   { id: 'recipes', label: 'Recipes', Icon: RecipesIcon },
+  { id: 'photos', label: 'Photos', Icon: PhotosIcon },
   { id: 'settings', label: 'Settings', Icon: SettingsIcon },
 ]
 
@@ -78,7 +81,9 @@ function SignedIn({ user }: { user: User }) {
       <WeatherProvider>
         <LockProvider familyId={familyId}>
           <SleepProvider>
-            <Home familyId={familyId} userId={user.uid} />
+            <ScreensaverProvider familyId={familyId}>
+              <Home familyId={familyId} userId={user.uid} />
+            </ScreensaverProvider>
           </SleepProvider>
         </LockProvider>
       </WeatherProvider>
@@ -121,7 +126,7 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
         <span className="rail__mark" aria-hidden>
           {(settings.calendarName || family.name).replace(/^the\s+/i, '').charAt(0)}
         </span>
-        {TABS.map(({ id, label, Icon }) => (
+        {TABS.filter((t) => t.id !== 'photos' || settings.showPhotosTab).map(({ id, label, Icon }) => (
           <button key={id} type="button" className={`rail__item${tab === id ? ' rail__item--active' : ''}`} aria-current={tab === id ? 'page' : undefined} onClick={() => setTab(id)}>
             <Icon />
             <span>{label}</span>
@@ -157,6 +162,7 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
           {tab === 'rewards' && <RewardsPage familyId={familyId} userId={userId} members={members} />}
           {tab === 'meals' && <MealsPage familyId={familyId} userId={userId} />}
           {tab === 'recipes' && <RecipesPage familyId={familyId} userId={userId} />}
+          {tab === 'photos' && <PhotosPage familyId={familyId} userId={userId} />}
           {tab === 'settings' && <SettingsPage family={family} members={members} userId={userId} />}
         </main>
       </div>

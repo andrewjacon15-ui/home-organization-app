@@ -159,9 +159,21 @@ service cloud.firestore {
       }
 
       match /photos/{photoId} {
+        // The file lives in Storage at storagePath (inside this family's folder).
+        function validPhoto() {
+          let d = request.resource.data;
+          return onlyKeys(['storagePath', 'url', 'kind', 'width', 'height', 'caption', 'uploadedBy', 'createdAt'])
+            && d.storagePath is string && d.storagePath.matches('^families/' + familyId + '/photos/[^/]+$')
+            && (!('url' in d) || (d.url is string && d.url.size() <= 2000))
+            && (!('kind' in d) || d.kind in ['image', 'video'])
+            && (!('caption' in d) || (d.caption is string && d.caption.size() <= 200))
+            && (!('width' in d) || d.width is number)
+            && (!('height' in d) || d.height is number);
+        }
         allow read: if isMember(familyId);
-        allow create: if isMember(familyId) && request.resource.data.uploadedBy == request.auth.uid;
+        allow create: if isMember(familyId) && validPhoto() && request.resource.data.uploadedBy == request.auth.uid;
         allow update: if isMember(familyId)
+          && validPhoto()
           && resource.data.uploadedBy == request.auth.uid
           && request.resource.data.uploadedBy == resource.data.uploadedBy;
         allow delete: if isMember(familyId)
@@ -283,7 +295,8 @@ service cloud.firestore {
               'temperatureUnit', 'weatherLocation', 'textSize', 'density',
               'remindAtStart', 'remindBeforeEnabled', 'remindBeforeMinutes', 'remindChoresDue', 'reminderSound',
               'showPhotosTab', 'theme', 'accentColor', 'colorEventsBy',
-              'sleepEnabled', 'sleepFrom', 'sleepTo'])
+              'sleepEnabled', 'sleepFrom', 'sleepTo',
+              'screensaverEnabled', 'screensaverAfterMinutes', 'screensaverSeconds', 'screensaverShuffle'])
             && (!('calendarName' in d) || (d.calendarName is string && d.calendarName.size() <= 80))
             && optIntIn(d, 'weekStartsOn', 0, 6)
             && optOneOf(d, 'showCountdowns', ['always', 'never'])
@@ -300,6 +313,8 @@ service cloud.firestore {
             && optOneOf(d, 'theme', ['system', 'light', 'dark'])
             && optOneOf(d, 'colorEventsBy', ['person', 'calendar'])
             && optBool(d, 'sleepEnabled') && optTime(d, 'sleepFrom') && optTime(d, 'sleepTo')
+            && optBool(d, 'screensaverEnabled') && optIntIn(d, 'screensaverAfterMinutes', 1, 120)
+            && optIntIn(d, 'screensaverSeconds', 3, 300) && optBool(d, 'screensaverShuffle')
             && (!('accentColor' in d) || isHexColor(d.accentColor));
         }
         function validLock() {

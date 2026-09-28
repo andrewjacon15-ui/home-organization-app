@@ -576,6 +576,40 @@ describe('synced calendars', () => {
   })
 })
 
+describe('photo records and screensaver settings', () => {
+  const photo = {
+    storagePath: `families/${FAM_A}/photos/p9.jpg`,
+    url: 'https://firebasestorage.googleapis.com/v0/b/x/o/p9.jpg?alt=media&token=t',
+    kind: 'image',
+    width: 2048,
+    height: 1536,
+    caption: 'Lake weekend',
+    uploadedBy: BOB.uid,
+  }
+
+  it('accepts a described photo or video and caption edits by the uploader', async () => {
+    const db = dbFor(BOB)
+    await assertSucceeds(setDoc(doc(db, `families/${FAM_A}/photos/p9`), photo))
+    await assertSucceeds(setDoc(doc(db, `families/${FAM_A}/photos/v9`), { ...photo, kind: 'video', storagePath: `families/${FAM_A}/photos/v9.mp4` }))
+    await assertSucceeds(updateDoc(doc(db, `families/${FAM_A}/photos/p9`), { caption: 'Lake weekend 2026' }))
+  })
+
+  it('rejects files outside the family folder, odd kinds, and extra fields', async () => {
+    const db = dbFor(BOB)
+    await assertFails(setDoc(doc(db, `families/${FAM_A}/photos/x1`), { ...photo, storagePath: 'families/famB/photos/p.jpg' }))
+    await assertFails(setDoc(doc(db, `families/${FAM_A}/photos/x2`), { ...photo, kind: 'audio' }))
+    await assertFails(setDoc(doc(db, `families/${FAM_A}/photos/x3`), { ...photo, caption: 'x'.repeat(201) }))
+    await assertFails(setDoc(doc(db, `families/${FAM_A}/photos/x4`), { ...photo, hack: true }))
+  })
+
+  it('accepts screensaver settings', async () => {
+    const display = doc(dbFor(BOB), `families/${FAM_A}/settings/display`)
+    await assertSucceeds(setDoc(display, { screensaverEnabled: true, screensaverAfterMinutes: 5, screensaverSeconds: 12, screensaverShuffle: true }))
+    await assertFails(setDoc(display, { screensaverAfterMinutes: 0 }))
+    await assertFails(setDoc(display, { screensaverSeconds: 1 }))
+  })
+})
+
 describe('sleep mode settings', () => {
   it('accepts an on/off switch and HH:MM times', async () => {
     const display = doc(dbFor(BOB), `families/${FAM_A}/settings/display`)

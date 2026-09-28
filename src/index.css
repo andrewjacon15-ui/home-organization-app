@@ -2131,6 +2131,206 @@ textarea:hover {
 }
 
 /* --------------------------------------------------------------------------
+   Photos and the screensaver slideshow
+   -------------------------------------------------------------------------- */
+
+.photos__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--rule-strong);
+  margin-bottom: 16px;
+}
+
+.photos__progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  color: var(--ink-2);
+}
+
+.photos__progress progress {
+  flex: 1;
+  max-width: 320px;
+  accent-color: var(--accent);
+}
+
+.photos__grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 6px;
+}
+
+.photos__thumb {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r);
+  overflow: hidden;
+  background: var(--paper-2);
+  cursor: pointer;
+}
+
+.photos__thumb img,
+.photos__thumb video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.photos__badge {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  padding: 2px 6px;
+  background: rgb(0 0 0 / 0.6);
+  color: #fff;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.photos__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgb(0 0 0 / 0.55);
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+
+.photos__detail {
+  width: min(720px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r);
+  padding: 16px;
+  display: grid;
+  gap: 14px;
+}
+
+.photos__detail img,
+.photos__detail video {
+  width: 100%;
+  max-height: 60vh;
+  object-fit: contain;
+  background: #000;
+}
+
+.photos__caption {
+  display: grid;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.photos__actions {
+  justify-content: space-between;
+}
+
+.photos__delete {
+  color: var(--danger);
+}
+
+/* The slideshow is always dark, whatever the theme: it's a picture frame. */
+.slideshow {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: #000;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.slideshow__layer {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 1.6s ease-in-out;
+}
+
+.slideshow__layer--on {
+  opacity: 1;
+}
+
+.slideshow__media {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+/* A slow push-in, like a picture frame's "Ken Burns" effect. */
+.slideshow__layer--on .slideshow__media--drift {
+  animation: slideshow-drift 30s ease-out both;
+}
+
+@keyframes slideshow-drift {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.08);
+  }
+}
+
+.slideshow__overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 48px 32px 24px;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  color: #fff;
+  background: linear-gradient(transparent, rgb(0 0 0 / 0.55));
+  pointer-events: none;
+}
+
+.slideshow__time {
+  font-family: var(--serif);
+  font-size: 3rem;
+  line-height: 1;
+}
+
+.slideshow__date {
+  font-size: 1.1rem;
+  opacity: 0.85;
+}
+
+.slideshow__caption {
+  flex-basis: 100%;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.2rem;
+  opacity: 0.9;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slideshow__layer {
+    transition: none;
+  }
+  .slideshow__layer--on .slideshow__media--drift {
+    animation: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
    Lists
    -------------------------------------------------------------------------- */
 

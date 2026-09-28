@@ -5,14 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:emulators": "firebase emulators:start --only auth,firestore",
+    "dev:emulators": "firebase emulators:start --only auth,firestore,storage",
     "build": "tsc -b && vite build",
     "lint": "oxlint && npm --prefix functions run lint",
     "preview": "vite preview",
     "test": "npm run test:web && npm run test:functions && npm run test:rules",
     "test:web": "vitest run",
-    "test:rules": "firebase emulators:exec --only firestore --project demo-family-rules \"vitest run --config vitest.rules.config.ts\"",
-    "deploy": "npm run lint && npm test && npm run build && firebase deploy --only hosting,firestore,functions",
+    "test:rules": "firebase emulators:exec --only firestore,storage --project demo-family-rules \"vitest run --config vitest.rules.config.ts\"",
+    "deploy": "npm run lint && npm test && npm run build && firebase deploy --only hosting,firestore,functions,storage",
     "test:functions": "npm --prefix functions test"
   },
   "dependencies": {

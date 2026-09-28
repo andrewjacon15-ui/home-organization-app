@@ -33,6 +33,11 @@ export interface DisplaySettings {
   sleepEnabled: boolean
   sleepFrom: string
   sleepTo: string
+  /** Wall display only: photo slideshow after this many idle minutes. */
+  screensaverEnabled: boolean
+  screensaverAfterMinutes: number
+  screensaverSeconds: number
+  screensaverShuffle: boolean
 }
 
 /** Mirrors the Skylight defaults from the user's tablet. */
@@ -63,6 +68,10 @@ export const DEFAULT_SETTINGS: DisplaySettings = {
   sleepEnabled: true,
   sleepFrom: '21:00',
   sleepTo: '06:00',
+  screensaverEnabled: true,
+  screensaverAfterMinutes: 5,
+  screensaverSeconds: 12,
+  screensaverShuffle: true,
 }
 
 const displayRef = (familyId: string) => doc(db, 'families', familyId, 'settings', 'display')
