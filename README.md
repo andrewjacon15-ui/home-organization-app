@@ -21,6 +21,11 @@ React + Vite PWA on Firebase (Hosting, Firestore, Auth, Functions, Storage).
 Security rules tests (`tests/rules/`) are written before rule changes. Change
 the test first, watch it fail, then edit `firestore.rules`.
 
+## Wall tablet
+
+See [docs/TABLET-SETUP.md](docs/TABLET-SETUP.md) to turn a Skylight Calendar 15"
+into the kitchen display (no rooting needed).
+
 ## How families work
 
 The first person to sign in creates a family and becomes its owner. The owner
