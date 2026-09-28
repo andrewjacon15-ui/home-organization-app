@@ -78,9 +78,9 @@ service cloud.firestore {
           && (isOwnerAfter(familyId) || isInvitedTo(familyId))
           && request.resource.data.email == myEmail()
           && onlyKeys(['displayName', 'email', 'color', 'photoURL', 'joinedAt']);
+        // `calendar` (connection status) is written by Cloud Functions only.
         allow update: if request.auth.uid == userId
-          && request.resource.data.email == resource.data.email
-          && onlyKeys(['displayName', 'email', 'color', 'photoURL', 'joinedAt']);
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'color', 'photoURL']);
         allow delete: if request.auth.uid == userId || isOwner(familyId);
 
         // OAuth refresh tokens. Admin SDK (Cloud Functions) only.
@@ -118,11 +118,25 @@ service cloud.firestore {
 
       // Google events are written by the sync function (Admin SDK) only.
       match /events/{eventId} {
+        function validManualEvent() {
+          let d = request.resource.data;
+          return onlyKeys(['source', 'sourceUserId', 'title', 'start', 'end', 'allDay', 'startDate', 'endDate', 'location', 'createdAt'])
+            && d.source == 'manual'
+            && d.title is string && d.title.size() > 0 && d.title.size() <= 200
+            && d.start is timestamp && d.end is timestamp && d.end >= d.start
+            && d.allDay is bool
+            && (!('startDate' in d) || isDateKey(d.startDate))
+            && (!('endDate' in d) || isDateKey(d.endDate))
+            && (!('location' in d) || (d.location is string && d.location.size() <= 300));
+        }
         allow read: if isMember(familyId);
-        allow create: if isMember(familyId) && request.resource.data.source == 'manual';
+        allow create: if isMember(familyId)
+          && validManualEvent()
+          && request.resource.data.sourceUserId == request.auth.uid;
         allow update: if isMember(familyId)
           && resource.data.source == 'manual'
-          && request.resource.data.source == 'manual';
+          && validManualEvent()
+          && request.resource.data.sourceUserId == resource.data.sourceUserId;
         allow delete: if isMember(familyId) && resource.data.source == 'manual';
       }
 

@@ -1,0 +1,46 @@
+import { initializeApp } from 'firebase-admin/app'
+import { getFirestore } from 'firebase-admin/firestore'
+import { HttpsError, onCall, type CallableRequest } from 'firebase-functions/https'
+import * as logger from 'firebase-functions/logger'
+import { defineSecret } from 'firebase-functions/params'
+import { onSchedule } from 'firebase-functions/scheduler'
+import * as calendar from './calendar.js'
+import { googleApi } from './google.js'
+import { firestoreStore } from './store.js'
+
+initializeApp()
+
+/** The "Calendar connect" OAuth client. The ID is public; the secret lives in Secret Manager. */
+export const GOOGLE_CLIENT_ID = '254203364485-vj57g7ocoo1p7qen3nttc61vusrsg44c.apps.googleusercontent.com'
+const clientSecret = defineSecret('GOOGLE_OAUTH_CLIENT_SECRET')
+
+const deps = () => ({
+  store: firestoreStore(getFirestore()),
+  google: googleApi(GOOGLE_CLIENT_ID, clientSecret.value()),
+})
+
+/** Turns our errors into the callable protocol's errors; logs anything unexpected. */
+function callable<T>(handler: (req: CallableRequest) => Promise<T>) {
+  return onCall({ secrets: [clientSecret] }, async (req) => {
+    try {
+      return await handler(req)
+    } catch (err) {
+      if (err instanceof calendar.CalendarError) throw new HttpsError(err.code, err.message)
+      if (calendar.isInvalidGrant(err)) throw new HttpsError('failed-precondition', 'Google rejected the sign-in. Please try connecting again.')
+      logger.error('calendar callable failed', { error: String(err), uid: req.auth?.uid })
+      throw new HttpsError('internal', 'Something went wrong talking to Google Calendar.')
+    }
+  })
+}
+
+export const connectCalendar = callable((req) => calendar.connectCalendar(deps(), req.auth?.uid, req.data ?? {}))
+export const syncMyCalendar = callable((req) => calendar.syncMine(deps(), req.auth?.uid, req.data ?? {}))
+export const disconnectCalendar = callable((req) => calendar.disconnectCalendar(deps(), req.auth?.uid, req.data ?? {}))
+
+export const syncCalendars = onSchedule(
+  { schedule: 'every 15 minutes', secrets: [clientSecret], timeoutSeconds: 300 },
+  async () => {
+    const result = await calendar.syncAll({ ...deps(), log: (msg, extra) => logger.warn(msg, extra) })
+    logger.info('calendar sync done', result)
+  },
+)

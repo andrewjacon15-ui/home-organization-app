@@ -6,6 +6,7 @@ import {
   persistentLocalCache,
   persistentMultipleTabManager,
 } from 'firebase/firestore'
+import { connectFunctionsEmulator, getFunctions } from 'firebase/functions'
 
 const useEmulators = import.meta.env.VITE_USE_EMULATORS === 'true'
 
@@ -32,10 +33,16 @@ export const db = initializeFirestore(app, {
   localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
 })
 
+export const functions = getFunctions(app, 'us-central1')
+
 if (useEmulators) {
   connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true })
   connectFirestoreEmulator(db, '127.0.0.1', 8080)
+  connectFunctionsEmulator(functions, '127.0.0.1', 5001)
 }
 
 export const googleProvider = new GoogleAuthProvider()
 googleProvider.setCustomParameters({ prompt: 'select_account' })
+
+/** "Calendar connect" OAuth client (public ID). Its secret is only in Cloud Functions. */
+export const GOOGLE_CALENDAR_CLIENT_ID = '254203364485-vj57g7ocoo1p7qen3nttc61vusrsg44c.apps.googleusercontent.com'

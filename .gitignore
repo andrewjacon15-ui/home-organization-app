@@ -31,3 +31,5 @@ ui-debug.log
 emulator-data/
 functions/lib/
 .env
+functions/node_modules/
+functions/.secret.local

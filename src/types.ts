@@ -11,6 +11,7 @@ export interface Member {
   email: string
   color: string
   photoURL?: string
+  calendar?: MemberCalendarStatus
 }
 
 export interface Invite {
@@ -39,3 +40,24 @@ export interface MealPlan {
 }
 
 export type MealSlot = keyof MealPlan
+
+export interface CalendarEvent {
+  id: string
+  source: 'google' | 'manual'
+  sourceUserId: string
+  title: string
+  start: Date
+  end: Date
+  allDay: boolean
+  /** All-day only: YYYY-MM-DD, end exclusive. */
+  startDate?: string
+  endDate?: string
+  location?: string
+}
+
+export type NewManualEvent = Pick<CalendarEvent, 'title' | 'start' | 'end' | 'allDay' | 'startDate' | 'endDate'>
+
+/** Written by Cloud Functions onto the member doc. */
+export type MemberCalendarStatus =
+  | { status: 'connected'; email: string; lastSyncAt?: { toDate(): Date }; eventCount?: number }
+  | { status: 'needs_reconnect'; email: string; error?: string }

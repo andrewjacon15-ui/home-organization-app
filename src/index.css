@@ -563,3 +563,120 @@ summary:focus-visible {
 .meal textarea:hover {
   border-color: var(--border);
 }
+
+/* Calendar */
+.connect {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+}
+
+.connect--warning {
+  border-color: var(--danger);
+}
+
+.add-event-toggle {
+  margin-bottom: 12px;
+}
+
+.event-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.event-form > input:first-child {
+  flex: 1 1 240px;
+}
+
+.event-form__allday {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--tap);
+}
+
+.event-form__allday input {
+  width: 22px;
+  height: 22px;
+  min-height: 0;
+}
+
+.day__empty {
+  color: var(--border);
+  margin: 4px 0;
+}
+
+.events {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.event {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  border-left: 4px solid var(--pill);
+  background: color-mix(in srgb, var(--pill) 10%, var(--surface));
+  border-radius: 6px;
+  padding: 4px 4px 4px 8px;
+  font-size: 0.9rem;
+}
+
+.event--allday {
+  background: color-mix(in srgb, var(--pill) 28%, var(--surface));
+}
+
+.event__body {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.event__time {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.event__title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.event__location {
+  font-size: 0.75rem;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.event__delete {
+  width: 32px;
+  height: 32px;
+  font-size: 0.8rem;
+}
+
+.legend {
+  list-style: none;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 0;
+  margin: 12px 0 0;
+  color: var(--muted);
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
