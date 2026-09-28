@@ -45,6 +45,8 @@ export interface CalendarEvent {
   id: string
   source: 'google' | 'manual'
   sourceUserId: string
+  /** Manual events: who the event is for (defaults to the creator). */
+  memberIds?: string[]
   title: string
   start: Date
   end: Date
@@ -55,7 +57,7 @@ export interface CalendarEvent {
   location?: string
 }
 
-export type NewManualEvent = Pick<CalendarEvent, 'title' | 'start' | 'end' | 'allDay' | 'startDate' | 'endDate'>
+export type NewManualEvent = Pick<CalendarEvent, 'title' | 'start' | 'end' | 'allDay' | 'startDate' | 'endDate' | 'memberIds'>
 
 /** Written by Cloud Functions onto the member doc. */
 export type MemberCalendarStatus =

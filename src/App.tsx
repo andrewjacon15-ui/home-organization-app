@@ -4,18 +4,19 @@ import { FamilySetup } from './components/FamilySetup'
 import { SignIn } from './components/SignIn'
 import { CalendarPage } from './features/calendar/CalendarPage'
 import { ChoresPage } from './features/chores/ChoresPage'
-import { FamilyPage } from './features/family/FamilyPage'
 import { MealsPage } from './features/meals/MealsPage'
+import { SettingsProvider, useSettings } from './features/settings/SettingsContext'
+import { SettingsPage } from './features/settings/SettingsPage'
 import { resolveFamily } from './lib/family'
 import { useAuthUser, useFamily, useNow } from './lib/hooks'
 
-type Tab = 'calendar' | 'chores' | 'meals' | 'family'
+type Tab = 'calendar' | 'chores' | 'meals' | 'settings'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'calendar', label: 'Calendar' },
   { id: 'chores', label: 'Chores' },
   { id: 'meals', label: 'Meals' },
-  { id: 'family', label: 'Family' },
+  { id: 'settings', label: 'Settings' },
 ]
 
 export default function App() {
@@ -45,13 +46,18 @@ function SignedIn({ user }: { user: User }) {
   }
   if (familyId === undefined) return <Splash />
   if (familyId === null) return <FamilySetup user={user} onCreated={setFamilyId} />
-  return <Home familyId={familyId} userId={user.uid} />
+  return (
+    <SettingsProvider familyId={familyId}>
+      <Home familyId={familyId} userId={user.uid} />
+    </SettingsProvider>
+  )
 }
 
 function Home({ familyId, userId }: { familyId: string; userId: string }) {
   const { family, members } = useFamily(familyId)
   const [tab, setTab] = useState<Tab>('calendar')
   const now = useNow()
+  const { settings } = useSettings()
 
   if (!family) return <Splash />
 
@@ -61,6 +67,7 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
         <div>
           <div className="clock">{now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</div>
           <div className="muted">{now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</div>
+          <div className="topbar__name">{settings.calendarName || family.name}</div>
         </div>
         <nav className="tabs" aria-label="Sections">
           {TABS.map((t) => (
@@ -74,7 +81,7 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
         {tab === 'calendar' && <CalendarPage familyId={familyId} userId={userId} members={members} />}
         {tab === 'chores' && <ChoresPage familyId={familyId} userId={userId} members={members} />}
         {tab === 'meals' && <MealsPage familyId={familyId} userId={userId} />}
-        {tab === 'family' && <FamilyPage family={family} members={members} userId={userId} />}
+        {tab === 'settings' && <SettingsPage family={family} members={members} userId={userId} />}
       </main>
     </div>
   )

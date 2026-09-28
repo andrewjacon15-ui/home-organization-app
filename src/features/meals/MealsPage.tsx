@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { addDays, daysBetween, startOfWeek } from '../../lib/dates'
 import { useToday } from '../../lib/hooks'
+import { useSettings } from '../settings/SettingsContext'
 import type { MealPlan } from '../../types'
 import { MealPlanner } from './MealPlanner'
 import { saveMealPlan, watchMealPlans } from './mealsApi'
@@ -12,7 +13,8 @@ interface Props {
 
 export function MealsPage({ familyId, userId }: Props) {
   const today = useToday()
-  const currentWeekStart = startOfWeek(today)
+  const { settings } = useSettings()
+  const currentWeekStart = startOfWeek(today, settings.weekStartsOn)
   // An offset (not a fixed date) so the wall display rolls to the new week on its own.
   const [weekOffset, setWeekOffset] = useState(0)
   const weekStart = addDays(currentWeekStart, weekOffset * 7)

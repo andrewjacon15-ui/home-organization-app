@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
-import { addDays, daysBetween, fromDateKey, startOfWeek } from '../../lib/dates'
-import { useToday } from '../../lib/hooks'
+import { addDays, fromDateKey } from '../../lib/dates'
+import { useNow, useToday } from '../../lib/hooks'
 import type { CalendarEvent, Member } from '../../types'
+import { useSettings } from '../settings/SettingsContext'
+import { AddEventForm } from './AddEventForm'
 import { addManualEvent, connectCalendar, deleteManualEvent, disconnectCalendar, syncMyCalendar, watchEvents } from './calendarApi'
+import { CalendarBoard } from './CalendarBoard'
 import { CalendarConnect } from './CalendarConnect'
-import { CalendarWeek } from './CalendarWeek'
 import { ConnectCancelled, loadGoogleIdentity, requestCalendarCode } from './googleIdentity'
+import { viewRange, type CalendarViewKind } from './views'
 
 interface Props {
   familyId: string
@@ -13,21 +16,28 @@ interface Props {
   members: Member[]
 }
 
+const VIEWS: { id: CalendarViewKind; label: string }[] = [
+  { id: 'week', label: 'Week' },
+  { id: 'month', label: 'Month' },
+  { id: 'schedule', label: 'Schedule' },
+]
+
 export function CalendarPage({ familyId, userId, members }: Props) {
+  const { settings } = useSettings()
   const today = useToday()
-  const currentWeekStart = startOfWeek(today)
-  // An offset (not a fixed date) so the wall display rolls to the new week on its own.
-  const [weekOffset, setWeekOffset] = useState(0)
-  const weekStart = addDays(currentWeekStart, weekOffset * 7)
+  const now = useNow()
+  const [kind, setKind] = useState<CalendarViewKind>('week')
+  // Pages away from the one containing today, so a wall display rolls forward on its own.
+  const [offset, setOffset] = useState(0)
+  const range = viewRange(kind, today, offset, settings)
+  const first = range.days[0]
+  const last = range.days[range.days.length - 1]
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const me = members.find((m) => m.id === userId)
 
-  useEffect(
-    () => watchEvents(familyId, fromDateKey(weekStart), fromDateKey(addDays(weekStart, 7)), setEvents),
-    [familyId, weekStart],
-  )
+  useEffect(() => watchEvents(familyId, fromDateKey(first), fromDateKey(addDays(last, 1)), setEvents), [familyId, first, last])
 
   // Load Google's script ahead of time so the consent popup opens directly from the click.
   useEffect(() => {
@@ -67,16 +77,60 @@ export function CalendarPage({ familyId, userId, members }: Props) {
           }
         }}
       />
-      <CalendarWeek
-        weekStart={weekStart}
-        currentWeekStart={currentWeekStart}
-        today={today}
-        events={events}
-        members={members}
-        onWeekChange={(start) => setWeekOffset(Math.round(daysBetween(currentWeekStart, start) / 7))}
-        onAdd={(e) => addManualEvent(familyId, userId, e).catch(report)}
-        onDelete={(e) => deleteManualEvent(familyId, e.id).catch(report)}
-      />
+
+      <section className="calendar" aria-labelledby="calendar-heading">
+        <div className="calendar__toolbar">
+          <div className="week-nav">
+            <button type="button" className="button" onClick={() => setOffset(offset - 1)} aria-label="Previous">
+              ‹
+            </button>
+            <h2 id="calendar-heading" className="week-nav__label">
+              {range.label}
+            </h2>
+            <button type="button" className="button" onClick={() => setOffset(offset + 1)} aria-label="Next">
+              ›
+            </button>
+            {offset !== 0 && (
+              <button type="button" className="link" onClick={() => setOffset(0)}>
+                Today
+              </button>
+            )}
+          </div>
+          <div className="segmented" role="group" aria-label="View">
+            {VIEWS.map((v) => (
+              <button
+                key={v.id}
+                type="button"
+                className={`segmented__item${kind === v.id ? ' segmented__item--active' : ''}`}
+                aria-pressed={kind === v.id}
+                onClick={() => {
+                  setKind(v.id)
+                  setOffset(0)
+                }}
+              >
+                {v.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <AddEventForm
+          defaultDate={range.days.includes(today) ? today : first}
+          members={members}
+          userId={userId}
+          onAdd={(e) => addManualEvent(familyId, userId, e).catch(report)}
+        />
+
+        <CalendarBoard
+          kind={kind}
+          range={range}
+          today={today}
+          now={now}
+          events={events}
+          members={members}
+          onDelete={(e) => deleteManualEvent(familyId, e.id).catch(report)}
+        />
+      </section>
     </>
   )
 }

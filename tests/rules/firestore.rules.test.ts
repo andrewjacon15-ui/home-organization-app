@@ -338,3 +338,89 @@ describe('photos', () => {
     await assertSucceeds(deleteDoc(doc(dbFor(ALICE), `families/${FAM_A}/photos/p1`)))
   })
 })
+
+describe('family settings', () => {
+  const display = (db: Firestore) => doc(db, `families/${FAM_A}/settings/display`)
+  const lock = (db: Firestore) => doc(db, `families/${FAM_A}/settings/lock`)
+
+  it('lets any member read and write display settings', async () => {
+    await assertSucceeds(
+      setDoc(display(dbFor(BOB)), {
+        calendarName: 'Smith Family',
+        weekStartsOn: 1,
+        showCountdowns: 'always',
+        colorCodeMultiProfile: true,
+        shadeWeekends: false,
+        dimPastEvents: true,
+        weekStartToday: false,
+        monthStartCurrentWeek: true,
+        scheduleDays: 7,
+        scheduleStartToday: false,
+        temperatureUnit: 'F',
+        weatherLocation: { label: 'Atlanta, GA', lat: 33.7, lon: -84.4 },
+        textSize: 'small',
+        density: 'cozy',
+        remindAtStart: false,
+        remindBeforeEnabled: true,
+        remindBeforeMinutes: 30,
+        remindChoresDue: false,
+        reminderSound: true,
+        showPhotosTab: true,
+      }),
+    )
+    await assertSucceeds(getDoc(display(dbFor(ALICE))))
+    await assertSucceeds(updateDoc(display(dbFor(ALICE)), { shadeWeekends: true }))
+  })
+
+  it('rejects unknown keys and bad values', async () => {
+    const db = dbFor(BOB)
+    await assertFails(setDoc(display(db), { hacked: true }))
+    await assertFails(setDoc(display(db), { weekStartsOn: 7 }))
+    await assertFails(setDoc(display(db), { showCountdowns: 'sometimes' }))
+    await assertFails(setDoc(display(db), { scheduleDays: 0 }))
+    await assertFails(setDoc(display(db), { temperatureUnit: 'K' }))
+    await assertFails(setDoc(display(db), { weatherLocation: { label: 'x', lat: 'north', lon: 1 } }))
+    await assertFails(setDoc(display(db), { remindBeforeMinutes: -5 }))
+    await assertFails(setDoc(doc(db, `families/${FAM_A}/settings/other`), { x: 1 }))
+  })
+
+  it('keeps settings inside the family and never deletable', async () => {
+    await assertFails(getDoc(display(dbFor(MALLORY))))
+    await assertFails(setDoc(display(dbFor(MALLORY)), { shadeWeekends: true }))
+    await setDoc(display(dbFor(BOB)), { shadeWeekends: true })
+    await assertFails(deleteDoc(display(dbFor(ALICE))))
+  })
+
+  it('validates the parental lock doc', async () => {
+    await assertSucceeds(setDoc(lock(dbFor(BOB)), { enabled: true, pinHash: 'a'.repeat(64), salt: 'b'.repeat(32), lockAfterMinutes: 5 }))
+    await assertFails(setDoc(lock(dbFor(BOB)), { enabled: true, pin: '1234' }))
+    await assertFails(setDoc(lock(dbFor(BOB)), { enabled: 'yes' }))
+  })
+})
+
+describe('events for multiple people', () => {
+  it('accepts a manual event tagged with family members', async () => {
+    await assertSucceeds(
+      setDoc(doc(dbFor(BOB), `families/${FAM_A}/events/multi`), {
+        source: 'manual',
+        sourceUserId: BOB.uid,
+        memberIds: [BOB.uid, ALICE.uid],
+        title: 'Family dinner',
+        start: Timestamp.fromDate(new Date('2026-10-01T22:00:00Z')),
+        end: Timestamp.fromDate(new Date('2026-10-01T23:00:00Z')),
+        allDay: false,
+      }),
+    )
+    await assertFails(
+      setDoc(doc(dbFor(BOB), `families/${FAM_A}/events/multi2`), {
+        source: 'manual',
+        sourceUserId: BOB.uid,
+        memberIds: 'everyone',
+        title: 'Bad',
+        start: Timestamp.fromDate(new Date('2026-10-01T22:00:00Z')),
+        end: Timestamp.fromDate(new Date('2026-10-01T23:00:00Z')),
+        allDay: false,
+      }),
+    )
+  })
+})

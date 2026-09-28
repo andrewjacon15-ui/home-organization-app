@@ -120,8 +120,9 @@ service cloud.firestore {
       match /events/{eventId} {
         function validManualEvent() {
           let d = request.resource.data;
-          return onlyKeys(['source', 'sourceUserId', 'title', 'start', 'end', 'allDay', 'startDate', 'endDate', 'location', 'createdAt'])
+          return onlyKeys(['source', 'sourceUserId', 'memberIds', 'title', 'start', 'end', 'allDay', 'startDate', 'endDate', 'location', 'createdAt'])
             && d.source == 'manual'
+            && (!('memberIds' in d) || (d.memberIds is list && d.memberIds.size() <= 20))
             && d.title is string && d.title.size() > 0 && d.title.size() <= 200
             && d.start is timestamp && d.end is timestamp && d.end >= d.start
             && d.allDay is bool
@@ -148,6 +149,59 @@ service cloud.firestore {
           && request.resource.data.uploadedBy == resource.data.uploadedBy;
         allow delete: if isMember(familyId)
           && (resource.data.uploadedBy == request.auth.uid || isOwner(familyId));
+      }
+
+      // Family-wide display settings (settings/display) and the parental lock (settings/lock).
+      // Every field is optional; the app fills in defaults.
+      match /settings/{docId} {
+        function optBool(d, k) {
+          return !(k in d) || d[k] is bool;
+        }
+        function optIntIn(d, k, lo, hi) {
+          return !(k in d) || (d[k] is int && d[k] >= lo && d[k] <= hi);
+        }
+        function optOneOf(d, k, values) {
+          return !(k in d) || d[k] in values;
+        }
+        function validLocation(loc) {
+          return loc is map && loc.keys().hasOnly(['label', 'lat', 'lon'])
+            && loc.label is string && loc.label.size() <= 200
+            && loc.lat is number && loc.lat >= -90 && loc.lat <= 90
+            && loc.lon is number && loc.lon >= -180 && loc.lon <= 180;
+        }
+        function validDisplay() {
+          let d = request.resource.data;
+          return onlyKeys([
+              'calendarName', 'weekStartsOn', 'showCountdowns', 'colorCodeMultiProfile', 'shadeWeekends',
+              'dimPastEvents', 'weekStartToday', 'monthStartCurrentWeek', 'scheduleDays', 'scheduleStartToday',
+              'temperatureUnit', 'weatherLocation', 'textSize', 'density',
+              'remindAtStart', 'remindBeforeEnabled', 'remindBeforeMinutes', 'remindChoresDue', 'reminderSound',
+              'showPhotosTab'])
+            && (!('calendarName' in d) || (d.calendarName is string && d.calendarName.size() <= 80))
+            && optIntIn(d, 'weekStartsOn', 0, 6)
+            && optOneOf(d, 'showCountdowns', ['always', 'never'])
+            && optBool(d, 'colorCodeMultiProfile') && optBool(d, 'shadeWeekends') && optBool(d, 'dimPastEvents')
+            && optBool(d, 'weekStartToday') && optBool(d, 'monthStartCurrentWeek') && optBool(d, 'scheduleStartToday')
+            && optIntIn(d, 'scheduleDays', 1, 14)
+            && optOneOf(d, 'temperatureUnit', ['F', 'C'])
+            && (!('weatherLocation' in d) || d.weatherLocation == null || validLocation(d.weatherLocation))
+            && optOneOf(d, 'textSize', ['small', 'medium', 'large'])
+            && optOneOf(d, 'density', ['compact', 'cozy', 'comfortable'])
+            && optBool(d, 'remindAtStart') && optBool(d, 'remindBeforeEnabled')
+            && optIntIn(d, 'remindBeforeMinutes', 1, 1440)
+            && optBool(d, 'remindChoresDue') && optBool(d, 'reminderSound') && optBool(d, 'showPhotosTab');
+        }
+        function validLock() {
+          let d = request.resource.data;
+          return onlyKeys(['enabled', 'pinHash', 'salt', 'lockAfterMinutes'])
+            && d.enabled is bool
+            && (!('pinHash' in d) || (d.pinHash is string && d.pinHash.size() == 64))
+            && (!('salt' in d) || (d.salt is string && d.salt.size() <= 64))
+            && optIntIn(d, 'lockAfterMinutes', 1, 240);
+        }
+        allow read: if isMember(familyId);
+        allow create, update: if isMember(familyId)
+          && ((docId == 'display' && validDisplay()) || (docId == 'lock' && validLock()));
       }
 
       match /reminderPrefs/{userId} {
