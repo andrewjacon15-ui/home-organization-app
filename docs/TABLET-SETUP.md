@@ -59,9 +59,9 @@ The script:
   Android 10+ requires before an app can open itself at boot
 - turns off Android's screensaver, locks the screen to landscape, removes the
   lock screen, and silences touch sounds and vibration
-- switches off `com.skylight` and `skylight.watchdog` (the watchdog relaunches
-  Skylight whenever it's closed). The Skylight keyboard stays, because it's
-  the tablet's default on-screen keyboard.
+- switches off `com.skylight` and `skylight.watchdog`, which also stops all
+  Skylight updates (see [Updates](#updates)). The Skylight keyboard stays,
+  because it's the tablet's default on-screen keyboard.
 - copies [`tablet/fully-auto-settings.json`](../tablet/fully-auto-settings.json)
   to the tablet and restarts Fully, which applies it (see below)
 
@@ -108,10 +108,36 @@ next time Fully starts.
 Connecting Google Calendar uses a popup, so do that from a phone or computer,
 not the tablet.
 
+## Updates
+
+A Skylight update must not undo this setup, so Skylight can't update anything.
+The Skylight apps stay installed, so you can always go back.
+
+- **Who can update what:** `skylight.watchdog` is Skylight's updater. It
+  installed the current Skylight app, keyboard and itself. Apart from Android's
+  own system components, it and `com.skylight` are the only apps allowed to
+  install packages. The tablet has no Play Store or Google services, and no
+  other firmware update client. (Tested firmware: `skylightOS` build from
+  2024-11-23, Android 13.)
+- **What the script does:** it disables both apps (`pm disable-user`), which
+  survives restarts. An app can't turn itself back on, and with the updater off,
+  nothing downloads Skylight app or firmware updates. In case either is ever
+  re-enabled, the script also denies them permission to install apps and to run
+  in the background.
+- **What can still undo it:** only a factory reset (holding power for 10
+  seconds) or someone deliberately running `-Restore` or re-enabling the apps in
+  Android Settings. After a factory reset, run this guide again.
+- **Check it:** `adb shell pm list packages -d` should list `com.skylight` and
+  `skylight.watchdog`.
+
+The web app updates itself. Deploys reach the tablet on the next reload, which
+happens at least every 30 minutes when idle.
+
 ## Undo
 
 - Bring Skylight back: run `tablet\setup-tablet.cmd -Restore`. This turns the
-  Skylight apps back on, turns auto-rotate back on, and removes the Fully
+  Skylight apps back on (lifting the install and background blocks, so Skylight
+  can update again), turns auto-rotate back on, and removes the Fully
   settings file.
 - Remove Fully too: `adb uninstall de.ozerov.fully`
 - Full factory reset: hold the power button for 10 seconds. This erases

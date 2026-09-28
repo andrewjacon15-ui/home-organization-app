@@ -42,7 +42,11 @@ if ($model -ne 'rk3562_15_inch') { Write-Host "Warning: expected a 150-CAL (rk35
 
 if ($Restore) {
     Step 'Turning the Skylight app back on'
-    foreach ($p in $skylightPackages) { & $adb shell pm enable $p }
+    foreach ($p in $skylightPackages) {
+        & $adb shell appops reset $p
+        & $adb shell pm enable $p
+    }
+    & $adb shell appops write-settings | Out-Null
     & $adb shell rm -f /sdcard/fully-auto-settings.json
     & $adb shell settings put system accelerometer_rotation 1
     & $adb shell am start -n com.skylight/odesk.johnlife.skylight.activity.MainActivity | Out-Null
@@ -80,9 +84,19 @@ Step 'Wall display settings: no screensaver, landscape only, no lock screen, sil
 & $adb shell settings put system haptic_feedback_enabled 0
 & $adb shell locksettings set-disabled true | Out-Null
 
-Step 'Turning off the Skylight app so it stops taking over the screen'
-# disable-user is reversible (-Restore); the Skylight keyboard stays, it's the tablet's keyboard.
-foreach ($p in $skylightPackages) { & $adb shell pm disable-user --user 0 $p }
+Step 'Turning off the Skylight app and its updater'
+# skylight.watchdog is Skylight's updater: it installed the current com.skylight,
+# skylight.keyboard and itself, and these two are the only non-AOSP apps allowed to
+# install packages. There's no Play Store, so disabling them stops all updates,
+# including firmware. disable-user survives reboots and is reversible (-Restore).
+# The Skylight keyboard stays; it's the tablet's keyboard and can't install anything.
+foreach ($p in $skylightPackages) {
+    & $adb shell pm disable-user --user 0 $p
+    # Second layer in case they're ever re-enabled: no installing, no background work.
+    & $adb shell appops set $p REQUEST_INSTALL_PACKAGES deny
+    & $adb shell appops set $p RUN_ANY_IN_BACKGROUND ignore
+    & $adb shell appops set $p RUN_IN_BACKGROUND ignore
+}
 
 Step 'Applying Fully settings from tablet/fully-auto-settings.json'
 # Fully reads /sdcard/fully-auto-settings.json each time it starts ("Enable Settings
