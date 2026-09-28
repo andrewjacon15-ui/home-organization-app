@@ -17,6 +17,7 @@ export function watchEvents(familyId: string, from: Date, to: Date, onChange: (e
           id: d.id,
           source: data.source,
           sourceUserId: data.sourceUserId,
+          ...(Array.isArray(data.memberIds) ? { memberIds: data.memberIds } : {}),
           title: data.title,
           start: (data.start as Timestamp).toDate(),
           end: (data.end as Timestamp).toDate(),
@@ -30,9 +31,10 @@ export function watchEvents(familyId: string, from: Date, to: Date, onChange: (e
 }
 
 export function addManualEvent(familyId: string, userId: string, event: NewManualEvent) {
-  const { start, end, startDate, endDate, ...rest } = event
+  const { start, end, startDate, endDate, memberIds, ...rest } = event
   return addDoc(eventsCol(familyId), {
     ...rest,
+    ...(memberIds?.length ? { memberIds } : {}),
     ...(startDate ? { startDate, endDate } : {}),
     start: Timestamp.fromDate(start),
     end: Timestamp.fromDate(end),
