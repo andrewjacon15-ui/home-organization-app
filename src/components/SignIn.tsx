@@ -1,19 +1,29 @@
-import { FirebaseError } from 'firebase/app'
-import { signInWithPopup, signInWithRedirect } from 'firebase/auth'
-import { useState } from 'react'
+﻿import { FirebaseError } from 'firebase/app'
+import { getRedirectResult, signInWithPopup, signInWithRedirect } from 'firebase/auth'
+import { useEffect, useState } from 'react'
 import { auth, googleProvider } from '../firebase'
+import { isKioskBrowser } from '../kiosk'
 
 export function SignIn() {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
+  // Surface failures from a redirect sign-in that came back to this page.
+  useEffect(() => {
+    getRedirectResult(auth).catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)))
+  }, [])
+
   async function signIn() {
     setBusy(true)
     setError(null)
     try {
+      if (isKioskBrowser()) {
+        await signInWithRedirect(auth, googleProvider)
+        return
+      }
       await signInWithPopup(auth, googleProvider)
     } catch (e) {
-      // Kiosk browsers and installed PWAs often block popups; fall back to a full-page redirect.
+      // Installed PWAs often block popups; fall back to a full-page redirect.
       if (e instanceof FirebaseError && (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment')) {
         await signInWithRedirect(auth, googleProvider)
         return
