@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { useToday } from '../../lib/hooks'
+import { useNow, useToday } from '../../lib/hooks'
 import type { Chore, Member } from '../../types'
-import { backfillChoreStars, balances, setChoreDoneWithStars, watchStars, type StarEntry } from '../rewards/rewardsApi'
-import { addChore, deleteChore, watchChores } from './choresApi'
-import { ChoreList } from './ChoreList'
+import { backfillChoreStars, balances, watchStars, type StarEntry } from '../rewards/rewardsApi'
+import { useSettings } from '../settings/SettingsContext'
+import { ChoreBoard } from './ChoreBoard'
+import { addChore, deleteChore, setOccurrenceDone, watchChores } from './choresApi'
 
 interface Props {
   familyId: string
@@ -16,13 +17,15 @@ export function ChoresPage({ familyId, userId, members }: Props) {
   const [entries, setEntries] = useState<StarEntry[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const today = useToday()
+  const now = useNow()
+  const { settings } = useSettings()
 
   useEffect(() => watchChores(familyId, setChores), [familyId])
   useEffect(() => watchStars(familyId, setEntries), [familyId])
 
-  // One-time catch-up for chores completed before stars had a ledger.
+  // One-time catch-up for one-off chores completed before stars had a ledger.
   useEffect(() => {
-    if (entries) void backfillChoreStars(familyId, chores, entries, userId)
+    if (entries) void backfillChoreStars(familyId, chores.filter((c) => !c.repeat), entries, userId)
   }, [familyId, chores, entries, userId])
 
   const report = (e: unknown) => setError(e instanceof Error ? e.message : String(e))
@@ -34,13 +37,15 @@ export function ChoresPage({ familyId, userId, members }: Props) {
           {error} <button className="link" onClick={() => setError(null)}>Dismiss</button>
         </p>
       )}
-      <ChoreList
+      <ChoreBoard
         chores={chores}
         members={members}
+        stars={entries ? balances(entries) : new Map()}
         today={today}
+        now={now}
+        weekStartsOn={settings.weekStartsOn}
+        onToggle={(o, done, doneBy) => setOccurrenceDone(familyId, o, done, doneBy, userId, today).catch(report)}
         onAdd={(c) => addChore(familyId, userId, c).catch(report)}
-        onToggle={(c) => setChoreDoneWithStars(familyId, c, !c.done, userId).catch(report)}
-        stars={entries ? balances(entries) : undefined}
         onDelete={(c) => deleteChore(familyId, c.id).catch(report)}
       />
     </>

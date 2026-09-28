@@ -616,3 +616,24 @@ describe('lists', () => {
     await assertFails(setDoc(doc(dbFor(MALLORY), `families/${FAM_A}/lists/l2/items/x7`), { ...item, createdBy: MALLORY.uid }))
   })
 })
+
+describe('repeating chores', () => {
+  const base = { title: 'Water the plants', assigneeId: null, dueDate: '2026-09-28', dueTime: '08:00', done: false, points: 2 }
+
+  it('accepts a repeat rule, per-day completions, and who did an up-for-grabs chore', async () => {
+    const db = dbFor(BOB)
+    const ref = doc(db, `families/${FAM_A}/chores/r1`)
+    await assertSucceeds(setDoc(ref, { ...base, repeat: { freq: 'weekly', interval: 1, days: [0, 3] } }))
+    await assertSucceeds(updateDoc(ref, { completions: { '2026-09-28': BOB.uid } }))
+    await assertSucceeds(setDoc(doc(db, `families/${FAM_A}/chores/r2`), { ...base, repeat: { freq: 'daily', interval: 1 } }))
+    await assertSucceeds(setDoc(doc(db, `families/${FAM_A}/chores/o1`), { ...base, done: true, doneBy: ALICE.uid }))
+  })
+
+  it('rejects malformed repeat rules', async () => {
+    const db = dbFor(BOB)
+    await assertFails(setDoc(doc(db, `families/${FAM_A}/chores/x1`), { ...base, repeat: { freq: 'hourly', interval: 1 } }))
+    await assertFails(setDoc(doc(db, `families/${FAM_A}/chores/x2`), { ...base, repeat: { freq: 'daily', interval: 0 } }))
+    await assertFails(setDoc(doc(db, `families/${FAM_A}/chores/x3`), { ...base, repeat: { freq: 'weekly', interval: 1, days: 'mon' } }))
+    await assertFails(setDoc(doc(db, `families/${FAM_A}/chores/x4`), { ...base, completions: 'yesterday' }))
+  })
+})
