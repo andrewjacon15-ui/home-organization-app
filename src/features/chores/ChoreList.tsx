@@ -2,6 +2,12 @@ import { useMemo, useState, type CSSProperties, type FormEvent } from 'react'
 import { relativeDayLabel } from '../../lib/dates'
 import type { Chore, Member, NewChore } from '../../types'
 
+/** "07:30" → "7:30 AM" in the device's locale. */
+const formatTime = (hhmm: string) => {
+  const [h, m] = hhmm.split(':').map(Number)
+  return new Date(2000, 0, 1, h, m).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+}
+
 interface Props {
   chores: Chore[]
   members: Member[]
@@ -21,6 +27,11 @@ function sortOpen(a: Chore, b: Chore) {
     if (b.dueDate === null) return -1
     return a.dueDate < b.dueDate ? -1 : 1
   }
+  if ((a.dueTime ?? '') !== (b.dueTime ?? '')) {
+    if (!a.dueTime) return 1
+    if (!b.dueTime) return -1
+    return a.dueTime < b.dueTime ? -1 : 1
+  }
   return a.title.localeCompare(b.title)
 }
 
@@ -29,6 +40,7 @@ export function ChoreList({ chores, members, today, onAdd, onToggle, onDelete }:
   const [title, setTitle] = useState('')
   const [assigneeId, setAssigneeId] = useState(ANYONE)
   const [dueDate, setDueDate] = useState(today)
+  const [dueTime, setDueTime] = useState('')
   const [points, setPoints] = useState(1)
 
   const memberById = useMemo(() => new Map(members.map((m) => [m.id, m])), [members])
@@ -53,6 +65,7 @@ export function ChoreList({ chores, members, today, onAdd, onToggle, onDelete }:
       title: trimmed,
       assigneeId: assigneeId === ANYONE ? null : assigneeId,
       dueDate: dueDate || null,
+      ...(dueDate && dueTime ? { dueTime } : {}),
       points: Math.max(0, Math.floor(points) || 0),
     })
     setTitle('')
@@ -82,6 +95,7 @@ export function ChoreList({ chores, members, today, onAdd, onToggle, onDelete }:
             <span className={overdue ? 'chore__due chore__due--overdue' : 'chore__due'}>
               {overdue ? 'Overdue · ' : ''}
               {relativeDayLabel(chore.dueDate, today)}
+              {chore.dueTime && ` · ${formatTime(chore.dueTime)}`}
             </span>
           )}
           {chore.points > 0 && <span className="chore__points">★ {chore.points}</span>}
@@ -139,6 +153,7 @@ export function ChoreList({ chores, members, today, onAdd, onToggle, onDelete }:
           ))}
         </select>
         <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} aria-label="Due date" />
+        <input type="time" value={dueTime} onChange={(e) => setDueTime(e.target.value)} aria-label="Due time" disabled={!dueDate} />
         <input
           type="number"
           min={0}

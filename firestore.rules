@@ -92,10 +92,12 @@ service cloud.firestore {
       match /chores/{choreId} {
         function validChore() {
           let d = request.resource.data;
-          return onlyKeys(['title', 'assigneeId', 'dueDate', 'done', 'points', 'createdAt', 'createdBy'])
+          return onlyKeys(['title', 'assigneeId', 'dueDate', 'dueTime', 'done', 'points', 'createdAt', 'createdBy'])
             && d.title is string && d.title.size() > 0 && d.title.size() <= 200
             && (d.assigneeId == null || d.assigneeId is string)
             && (d.dueDate == null || isDateKey(d.dueDate))
+            && (!('dueTime' in d) || d.dueTime == null
+                || (d.dueTime is string && d.dueTime.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$')))
             && d.done is bool
             && d.points is int && d.points >= 0 && d.points <= 1000;
         }

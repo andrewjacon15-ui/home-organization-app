@@ -424,3 +424,17 @@ describe('events for multiple people', () => {
     )
   })
 })
+
+describe('chore due times', () => {
+  const chore = { title: 'Feed the dog', assigneeId: null, dueDate: '2026-10-01', done: false, points: 1 }
+
+  it('accepts an optional HH:MM due time', async () => {
+    await assertSucceeds(setDoc(doc(dbFor(BOB), `families/${FAM_A}/chores/t1`), { ...chore, dueTime: '07:30' }))
+    await assertSucceeds(setDoc(doc(dbFor(BOB), `families/${FAM_A}/chores/t2`), { ...chore, dueTime: null }))
+  })
+
+  it('rejects malformed times', async () => {
+    await assertFails(setDoc(doc(dbFor(BOB), `families/${FAM_A}/chores/t3`), { ...chore, dueTime: '7:30am' }))
+    await assertFails(setDoc(doc(dbFor(BOB), `families/${FAM_A}/chores/t4`), { ...chore, dueTime: '25:00' }))
+  })
+})

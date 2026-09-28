@@ -14,6 +14,7 @@ export function watchChores(familyId: string, onChange: (chores: Chore[]) => voi
           title: data.title,
           assigneeId: data.assigneeId ?? null,
           dueDate: data.dueDate ?? null,
+          ...(data.dueTime ? { dueTime: data.dueTime } : {}),
           done: data.done,
           points: data.points ?? 0,
         }

@@ -74,6 +74,15 @@ describe('ChoreList', () => {
     expect(screen.getByLabelText('Chore')).toHaveValue('')
   })
 
+  it('adds a chore with a due time and shows it', async () => {
+    const { props, user } = setup({ chores: [{ id: '9', title: 'Feed dog', assigneeId: null, dueDate: TODAY, dueTime: '07:30', done: false, points: 1 }] })
+    expect(screen.getByText(/Today · 7:30/)).toBeInTheDocument()
+    await user.type(screen.getByLabelText('Chore'), 'Walk dog')
+    await user.type(screen.getByLabelText('Due time'), '18:00')
+    await user.click(screen.getByRole('button', { name: 'Add' }))
+    expect(props.onAdd).toHaveBeenCalledWith({ title: 'Walk dog', assigneeId: null, dueDate: TODAY, dueTime: '18:00', points: 1 })
+  })
+
   it('adds an unassigned, undated chore', async () => {
     const { props, user } = setup()
     await user.type(screen.getByLabelText('Chore'), 'Sweep')

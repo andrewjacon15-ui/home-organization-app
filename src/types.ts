@@ -26,6 +26,8 @@ export interface Chore {
   assigneeId: string | null
   /** YYYY-MM-DD, or null for "whenever". */
   dueDate: string | null
+  /** HH:MM, optional. Chores with a time can trigger "when due" reminders. */
+  dueTime?: string | null
   done: boolean
   points: number
 }
