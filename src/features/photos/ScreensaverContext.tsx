@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
-import { isKioskBrowser } from '../../kiosk'
+import { useDevice } from '../../lib/DeviceContext'
 import { useSettings } from '../settings/SettingsContext'
 import { useSleep } from '../sleep/SleepContext'
 import { watchPhotos, type Photo } from './photosApi'
@@ -17,7 +17,9 @@ const ScreensaverContext = createContext<ScreensaverValue>({ photos: [], applies
 const CHECK_MS = 5_000
 
 /** Shows the family photo slideshow on the wall tablet after it sits idle (never while asleep). */
-export function ScreensaverProvider({ familyId, children, kiosk = isKioskBrowser() }: { familyId: string; children: ReactNode; kiosk?: boolean }) {
+export function ScreensaverProvider({ familyId, children, kiosk: kioskProp }: { familyId: string; children: ReactNode; kiosk?: boolean }) {
+  const { device } = useDevice()
+  const kiosk = kioskProp ?? device === 'tablet'
   const { settings } = useSettings()
   const { asleep } = useSleep()
   const [photos, setPhotos] = useState<Photo[]>([])

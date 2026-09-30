@@ -296,7 +296,8 @@ service cloud.firestore {
               'remindAtStart', 'remindBeforeEnabled', 'remindBeforeMinutes', 'remindChoresDue', 'reminderSound',
               'showPhotosTab', 'theme', 'accentColor', 'colorEventsBy',
               'sleepEnabled', 'sleepFrom', 'sleepTo',
-              'screensaverEnabled', 'screensaverAfterMinutes', 'screensaverSeconds', 'screensaverShuffle'])
+              'screensaverEnabled', 'screensaverAfterMinutes', 'screensaverSeconds', 'screensaverShuffle',
+              'hiddenTabs'])
             && (!('calendarName' in d) || (d.calendarName is string && d.calendarName.size() <= 80))
             && optIntIn(d, 'weekStartsOn', 0, 6)
             && optOneOf(d, 'showCountdowns', ['always', 'never'])
@@ -315,7 +316,16 @@ service cloud.firestore {
             && optBool(d, 'sleepEnabled') && optTime(d, 'sleepFrom') && optTime(d, 'sleepTo')
             && optBool(d, 'screensaverEnabled') && optIntIn(d, 'screensaverAfterMinutes', 1, 120)
             && optIntIn(d, 'screensaverSeconds', 3, 300) && optBool(d, 'screensaverShuffle')
-            && (!('accentColor' in d) || isHexColor(d.accentColor));
+            && (!('accentColor' in d) || isHexColor(d.accentColor))
+            && (!('hiddenTabs' in d) || validHiddenTabs(d.hiddenTabs));
+        }
+        // Side-bar sections hidden on each kind of device: { phone?: [...], tablet?: [...], desktop?: [...] }.
+        function tabList(h, k) {
+          return !(k in h) || (h[k] is list && h[k].size() <= 12);
+        }
+        function validHiddenTabs(h) {
+          return h is map && h.keys().hasOnly(['phone', 'tablet', 'desktop'])
+            && tabList(h, 'phone') && tabList(h, 'tablet') && tabList(h, 'desktop');
         }
         function validLock() {
           let d = request.resource.data;

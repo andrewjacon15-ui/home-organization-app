@@ -621,6 +621,21 @@ describe('photo records and screensaver settings', () => {
   })
 })
 
+describe('side bar settings', () => {
+  const display = (db: Firestore) => doc(db, `families/${FAM_A}/settings/display`)
+
+  it('accepts hidden sections per device type', async () => {
+    await assertSucceeds(setDoc(display(dbFor(BOB)), { hiddenTabs: { phone: ['rewards', 'recipes'], tablet: [], desktop: ['photos'] } }, { merge: true }))
+  })
+
+  it('rejects unknown device types, non-lists, and oversized lists', async () => {
+    await assertFails(setDoc(display(dbFor(BOB)), { hiddenTabs: { watch: [] } }, { merge: true }))
+    await assertFails(setDoc(display(dbFor(BOB)), { hiddenTabs: { phone: 'rewards' } }, { merge: true }))
+    await assertFails(setDoc(display(dbFor(BOB)), { hiddenTabs: { phone: Array.from({ length: 13 }, (_, i) => `t${i}`) } }, { merge: true }))
+    await assertFails(setDoc(display(dbFor(BOB)), { hiddenTabs: ['phone'] }, { merge: true }))
+  })
+})
+
 describe('sleep mode settings', () => {
   it('accepts an on/off switch and HH:MM times', async () => {
     const display = doc(dbFor(BOB), `families/${FAM_A}/settings/display`)

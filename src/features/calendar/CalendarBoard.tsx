@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useFitHeight } from '../../lib/useFitHeight'
+import { useOverflowCue } from '../../lib/useOverflowCue'
 import { fromDateKey } from '../../lib/dates'
 import type { CalendarEvent, Member, SyncedCalendar } from '../../types'
 import { useSettings } from '../settings/SettingsContext'
@@ -27,6 +28,8 @@ export function CalendarBoard({ kind, range, today, now, events, members, calend
   const { settings } = useSettings()
   const columns = kind === 'week' || kind === 'threeDay'
   const [fitRef, fitStyle] = useFitHeight<HTMLOListElement>(columns)
+  // A busy day scrolls inside its column; fade its bottom edge so that reads as "more", not a cut-off.
+  const cueRef = useOverflowCue<HTMLOListElement>(':scope > .day > .events', 'day--more')
   const memberById = useMemo(() => new Map(members.map((m) => [m.id, m])), [members])
   const calendarByKey = useMemo(() => new Map(calendars.map((c) => [c.key, c])), [calendars])
   const byDay = useMemo(() => groupByDay(withOwners(events, calendarByKey), range.days) as Record<string, OwnedEvent[]>, [events, calendarByKey, range.days])
@@ -90,7 +93,12 @@ export function CalendarBoard({ kind, range, today, now, events, members, calend
   }
 
   return (
-    <ol ref={fitRef} style={fitStyle} className={`week week--fit${kind === 'threeDay' ? ' week--3' : ''}`}>
+    <ol
+      ref={(list) => {
+        fitRef(list)
+        cueRef(list)
+      }}
+      style={fitStyle} className={`week week--fit${kind === 'threeDay' ? ' week--3' : ''}`}>
       {range.days.map((key) => {
         const count = byDay[key].length
         return (
