@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
-import { isKioskBrowser } from '../../kiosk'
+import { useDevice } from '../../lib/DeviceContext'
 import { useSettings } from '../settings/SettingsContext'
 import { inSleepWindow, isAsleep } from './sleep'
 
@@ -24,7 +24,10 @@ const CHECK_MS = 15_000
  * A tap wakes it; inside the window it dozes off again after 2 idle minutes.
  * With Fully Kiosk's JavaScript interface enabled, the backlight is turned off too.
  */
-export function SleepProvider({ children, kiosk = isKioskBrowser() }: { children: ReactNode; kiosk?: boolean }) {
+/** `kiosk` defaults to "this is a tablet" (the wall display, or any device set to Tablet). */
+export function SleepProvider({ children, kiosk: kioskProp }: { children: ReactNode; kiosk?: boolean }) {
+  const { device } = useDevice()
+  const kiosk = kioskProp ?? device === 'tablet'
   const { settings } = useSettings()
   const [asleep, setAsleep] = useState(false)
   const manual = useRef(false)

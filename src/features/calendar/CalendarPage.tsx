@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { addDays, fromDateKey } from '../../lib/dates'
+import type { Device } from '../../lib/device'
+import { useDevice } from '../../lib/DeviceContext'
 import { useNow, useToday } from '../../lib/hooks'
 import type { CalendarEvent, Member, SyncedCalendar } from '../../types'
 import { useSettings } from '../settings/SettingsContext'
@@ -28,7 +30,7 @@ const VIEWS: { id: CalendarViewKind; label: string }[] = [
 const VIEW_KEY = 'calendar-view'
 
 /** Each device remembers its own view (the wall tablet might like 3 Day while phones use Week). */
-function initialView(): CalendarViewKind {
+function initialView(device: Device): CalendarViewKind {
   try {
     const v = localStorage.getItem(VIEW_KEY)
     if (VIEWS.some((x) => x.id === v)) return v as CalendarViewKind
@@ -36,7 +38,7 @@ function initialView(): CalendarViewKind {
     // fall through to the default
   }
   // A phone is too narrow for a week of columns; a running list reads better there.
-  return window.matchMedia?.('(max-width: 720px)').matches ? 'schedule' : 'week'
+  return device === 'phone' ? 'schedule' : 'week'
 }
 
 function rememberView(v: CalendarViewKind) {
@@ -51,7 +53,8 @@ export function CalendarPage({ familyId, userId, members }: Props) {
   const { settings } = useSettings()
   const today = useToday()
   const now = useNow()
-  const [kind, setKind] = useState<CalendarViewKind>(initialView)
+  const { layout } = useDevice()
+  const [kind, setKind] = useState<CalendarViewKind>(() => initialView(layout))
   // Pages away from the one containing today, so a wall display rolls forward on its own.
   const [offset, setOffset] = useState(0)
   const range = viewRange(kind, today, offset, settings)

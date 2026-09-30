@@ -1,8 +1,8 @@
 import type { User } from 'firebase/auth'
 import { useEffect, useState } from 'react'
 import { FamilySetup } from './components/FamilySetup'
-import { CalendarIcon, ChoresIcon, HomeIcon, ListsIcon, MealsIcon, PhotosIcon, RecipesIcon, RewardsIcon, SettingsIcon } from './components/Icons'
-import { NavRail, type NavTab } from './components/NavRail'
+import { NavRail } from './components/NavRail'
+import { navFor, TABS, type Tab } from './components/navTabs'
 import { SignIn } from './components/SignIn'
 import { CalendarPage } from './features/calendar/CalendarPage'
 import { ChoresPage } from './features/chores/ChoresPage'
@@ -21,23 +21,10 @@ import { SettingsPage } from './features/settings/SettingsPage'
 import { CurrentWeather } from './features/weather/WeatherBadges'
 import { WeatherProvider } from './features/weather/WeatherContext'
 import { DEFAULT_ACCENT, isHex, readableOn } from './lib/colors'
+import { DeviceProvider, useDevice } from './lib/DeviceContext'
 import { resolveFamily } from './lib/family'
 import { useAuthUser, useFamily, useNow } from './lib/hooks'
 import { reloadToLatest, useUpdateCheck } from './lib/version'
-
-type Tab = 'home' | 'calendar' | 'lists' | 'chores' | 'rewards' | 'meals' | 'recipes' | 'photos' | 'settings'
-
-const TABS: NavTab<Tab>[] = [
-  { id: 'home', label: 'Home', Icon: HomeIcon, phone: true },
-  { id: 'calendar', label: 'Calendar', Icon: CalendarIcon, phone: true },
-  { id: 'lists', label: 'Lists', Icon: ListsIcon, phone: true },
-  { id: 'chores', label: 'Chores', Icon: ChoresIcon, phone: true },
-  { id: 'rewards', label: 'Rewards', Icon: RewardsIcon },
-  { id: 'meals', label: 'Meals', Icon: MealsIcon },
-  { id: 'recipes', label: 'Recipes', Icon: RecipesIcon },
-  { id: 'photos', label: 'Photos', Icon: PhotosIcon },
-  { id: 'settings', label: 'Settings', Icon: SettingsIcon },
-]
 
 const TAB_KEY = 'last-tab'
 
@@ -51,6 +38,14 @@ function initialTab(): Tab {
 }
 
 export default function App() {
+  return (
+    <DeviceProvider>
+      <Signed />
+    </DeviceProvider>
+  )
+}
+
+function Signed() {
   const user = useAuthUser()
   if (user === undefined) return <Splash />
   if (user === null) return <SignIn />
@@ -97,6 +92,7 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
   const [tab, setTabState] = useState<Tab>(initialTab)
   const now = useNow()
   const { settings } = useSettings()
+  const { device } = useDevice()
   const update = useUpdateCheck({ onMount: true })
 
   const setTab = (t: Tab) => {
@@ -122,11 +118,14 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
 
   if (!family) return <Splash />
 
-  const visibleTabs = TABS.filter((t) => t.id !== 'photos' || settings.showPhotosTab)
+  // Each kind of device has its own side bar (Settings → Device & side bar).
+  const visibleTabs = navFor(settings.hiddenTabs[device])
+  // If the section you were on has been hidden here, fall back to the first one shown.
+  const shown: Tab = visibleTabs.some((t) => t.id === tab) ? tab : visibleTabs[0].id
 
   return (
     <div className="shell">
-      <NavRail tabs={visibleTabs} current={tab} title={settings.calendarName || family.name} onSelect={setTab} />
+      <NavRail tabs={visibleTabs} current={shown} title={settings.calendarName || family.name} onSelect={setTab} />
 
       <div className="app">
         {update.state === 'available' && (
@@ -150,15 +149,15 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
           <span className="masthead__name">{settings.calendarName || family.name}</span>
         </header>
         <main className="content">
-          {tab === 'home' && <HomePage familyId={familyId} userId={userId} members={members} onNavigate={setTab} />}
-          {tab === 'calendar' && <CalendarPage familyId={familyId} userId={userId} members={members} />}
-          {tab === 'lists' && <ListsPage familyId={familyId} userId={userId} members={members} />}
-          {tab === 'chores' && <ChoresPage familyId={familyId} userId={userId} members={members} />}
-          {tab === 'rewards' && <RewardsPage familyId={familyId} userId={userId} members={members} />}
-          {tab === 'meals' && <MealsPage familyId={familyId} userId={userId} />}
-          {tab === 'recipes' && <RecipesPage familyId={familyId} userId={userId} />}
-          {tab === 'photos' && <PhotosPage familyId={familyId} userId={userId} />}
-          {tab === 'settings' && <SettingsPage family={family} members={members} userId={userId} />}
+          {shown === 'home' && <HomePage familyId={familyId} userId={userId} members={members} onNavigate={setTab} />}
+          {shown === 'calendar' && <CalendarPage familyId={familyId} userId={userId} members={members} />}
+          {shown === 'lists' && <ListsPage familyId={familyId} userId={userId} members={members} />}
+          {shown === 'chores' && <ChoresPage familyId={familyId} userId={userId} members={members} />}
+          {shown === 'rewards' && <RewardsPage familyId={familyId} userId={userId} members={members} />}
+          {shown === 'meals' && <MealsPage familyId={familyId} userId={userId} />}
+          {shown === 'recipes' && <RecipesPage familyId={familyId} userId={userId} />}
+          {shown === 'photos' && <PhotosPage familyId={familyId} userId={userId} />}
+          {shown === 'settings' && <SettingsPage family={family} members={members} userId={userId} />}
         </main>
       </div>
       <ReminderCenter familyId={familyId} members={members} />

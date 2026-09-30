@@ -12,7 +12,6 @@ export function ScreensaverSettings() {
 
   return (
     <SettingsSection title="Photos & screensaver" id="photos">
-      <ToggleRow label="Show Photos tab" checked={settings.showPhotosTab} onChange={(v) => save({ showPhotosTab: v })} />
       <ToggleRow
         label="Photo screensaver"
         hint={`The wall display shows family photos when nobody has touched it for a while (not during sleep mode). ${photos.length === 0 ? 'Add photos in the Photos tab first.' : `${photos.length} ${photos.length === 1 ? 'item' : 'items'} in the library.`}`}

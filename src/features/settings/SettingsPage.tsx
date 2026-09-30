@@ -6,6 +6,7 @@ import { PinPad } from '../lock/PinPad'
 import { AboutSettings } from './AboutSettings'
 import { AppearanceSettings } from './AppearanceSettings'
 import { CalendarSettings } from './CalendarSettings'
+import { DeviceSettings } from './DeviceSettings'
 import { EmailReminderSettings } from './EmailReminderSettings'
 import { GeneralSettings } from './GeneralSettings'
 import { GoogleCalendarSettings } from './GoogleCalendarSettings'
@@ -23,6 +24,7 @@ interface Props {
 const SECTIONS = [
   { id: 'family', label: 'Family' },
   { id: 'appearance', label: 'Appearance' },
+  { id: 'device', label: 'Device & side bar' },
   { id: 'general', label: 'General' },
   { id: 'display', label: 'Display' },
   { id: 'google', label: 'Google Calendar' },
@@ -72,6 +74,7 @@ export function SettingsPage({ family, members, userId }: Props) {
           <FamilyPage family={family} members={members} userId={userId} />
         </section>
         <AppearanceSettings />
+        <DeviceSettings />
         <GeneralSettings />
         <GoogleCalendarSettings familyId={family.id} me={members.find((m) => m.id === userId)} members={members} />
         <CalendarSettings familyName={family.name} />
