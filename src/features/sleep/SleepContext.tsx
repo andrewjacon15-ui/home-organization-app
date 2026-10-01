@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useDevice } from '../../lib/DeviceContext'
+import { useHeldAwake } from '../../lib/keepAwake'
 import { useSettings } from '../settings/SettingsContext'
 import { inSleepWindow, isAsleep } from './sleep'
 
@@ -29,9 +30,12 @@ export function SleepProvider({ children, kiosk: kioskProp }: { children: ReactN
   const { device } = useDevice()
   const kiosk = kioskProp ?? device === 'tablet'
   const { settings } = useSettings()
-  const [asleep, setAsleep] = useState(false)
+  const [scheduledAsleep, setAsleep] = useState(false)
   const manual = useRef(false)
   const lastActivity = useRef(0)
+  // Cooking mode keeps the screen on.
+  const held = useHeldAwake()
+  const asleep = scheduledAsleep && !held
 
   const evaluate = useCallback(() => {
     const now = new Date()

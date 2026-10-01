@@ -4265,3 +4265,230 @@ thead .sidebar-grid__current {
   color: var(--ink-2);
   cursor: pointer;
 }
+
+/* --------------------------------------------------------------------------
+   Cooking mode: the recipe and nothing else, readable from across the kitchen.
+   -------------------------------------------------------------------------- */
+
+.recipe__title-actions {
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.cooking {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  color: var(--ink);
+  padding: 20px 28px 24px;
+  overflow: hidden;
+}
+
+.cooking__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.cooking__title {
+  margin: 0;
+  font-size: var(--fs-display);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cooking__tools {
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.cooking__servings {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 4px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  font-weight: 600;
+}
+
+.cooking__servings .icon-button {
+  display: inline-grid;
+  place-items: center;
+}
+
+.cooking__progress {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: var(--fs-small);
+}
+
+.cooking__body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: 32px;
+  padding-top: 16px;
+}
+
+.cooking__ingredients,
+.cooking__steps {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.cooking__ingredients h2,
+.cooking__steps h2 {
+  font-size: var(--fs-lead);
+  margin: 0 0 8px;
+}
+
+.cooking__ingredients ul,
+.cooking__steps ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cooking__check {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 4px;
+  min-height: 48px;
+  border-bottom: 1px solid var(--rule);
+  font-size: 1.15rem;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.cooking__check input {
+  width: 24px;
+  height: 24px;
+  margin-top: 2px;
+  flex: none;
+}
+
+.cooking__check--done span,
+.cooking__step--done span:last-child {
+  color: var(--ink-3);
+  text-decoration: line-through;
+}
+
+.cooking__step {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 12px;
+  width: 100%;
+  padding: 14px 4px;
+  border: none;
+  border-bottom: 1px solid var(--rule);
+  background: none;
+  color: inherit;
+  text-align: left;
+  font-size: 1.2rem;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.cooking__num {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-weight: 600;
+  font-size: var(--fs-body);
+}
+
+.cooking__step--done .cooking__num {
+  background: var(--paper-2);
+  color: var(--ink-3);
+}
+
+.cooking__one {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 16px;
+}
+
+.cooking__count {
+  margin: 0;
+  color: var(--ink-2);
+  font-weight: 600;
+}
+
+.cooking__big {
+  flex: 1;
+  margin: 0;
+  overflow-y: auto;
+  font-size: 1.75rem;
+  line-height: 1.45;
+  font-weight: 500;
+}
+
+.cooking__big--done {
+  color: var(--ink-3);
+}
+
+.cooking__nav {
+  justify-content: space-between;
+}
+
+.cooking__navbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 56px;
+  padding: 0 24px;
+  font-size: var(--fs-lead);
+}
+
+.cooking__error {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: 71;
+}
+
+:root[data-device='phone'] .cooking {
+  padding: 12px 16px calc(16px + env(safe-area-inset-bottom));
+  overflow-y: auto;
+}
+
+:root[data-device='phone'] .cooking__head {
+  grid-template-columns: 1fr;
+}
+
+:root[data-device='phone'] .cooking__title {
+  white-space: normal;
+  font-size: var(--fs-title, 1.5rem);
+}
+
+:root[data-device='phone'] .cooking__tools {
+  justify-content: flex-start;
+}
+
+:root[data-device='phone'] .cooking__body {
+  grid-template-columns: 1fr;
+  flex: none;
+}
+
+:root[data-device='phone'] .cooking__ingredients,
+:root[data-device='phone'] .cooking__steps {
+  overflow: visible;
+}

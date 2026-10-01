@@ -4,7 +4,8 @@ import { addItems, groceryListId, watchLists, type FamilyList } from '../lists/l
 import { DEFAULT_KITCHEN } from '@shared/recipes/kitchen.js'
 import { importRecipe, rebuildCatalog, saveTags, setFavorite, watchCatalog, type CatalogEntry } from './catalog'
 import { findOnline, watchKitchen } from './kitchenApi'
-import { deleteRecipe, lines, markReviewed, planRecipe, saveRecipe, watchRecipe, type Recipe } from './recipesApi'
+import { CookingMode } from './CookingMode'
+import { deleteRecipe, getRecipe, lines, markReviewed, planRecipe, saveRecipe, watchRecipe, type Recipe } from './recipesApi'
 import { RecipeBook } from './RecipeBook'
 import { takeRecipesFilter } from './recipesFilter'
 
@@ -12,6 +13,7 @@ export function RecipesPage({ familyId, userId }: { familyId: string; userId: st
   const [entries, setEntries] = useState<CatalogEntry[] | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
   const [current, setCurrent] = useState<Recipe | null>(null)
+  const [cooking, setCooking] = useState<Recipe | null>(null)
   const [error, setError] = useState<string | null>(null)
   const today = useToday()
   // Settings → Cookbooks → "N need review" opens straight onto the review list.
@@ -64,7 +66,15 @@ export function RecipesPage({ familyId, userId }: { familyId: string; userId: st
         initialFilter={initialFilter}
         staples={kitchen.staples}
         onFindOnline={(have) => findOnline(familyId, have)}
-        onSaveOnline={async (r) => (await importRecipe(familyId, r.url)).id}
+        onSaveOnline={async (r) => {
+          // A web recipe joins the catalog only when the family actually cooks it.
+          const { id } = await importRecipe(familyId, r.url)
+          setSelected(id)
+          const saved = await getRecipe(familyId, id)
+          if (saved) setCooking(saved)
+          return id
+        }}
+        onCook={setCooking}
         onPlan={(r, date, slot) => planRecipe(familyId, userId, date, slot, r.title).catch(report)}
         onAddToGrocery={async (r) => {
           const items = lines(r.ingredients)
@@ -77,6 +87,7 @@ export function RecipesPage({ familyId, userId }: { familyId: string; userId: st
           }
         }}
       />
+      {cooking && <CookingMode familyId={familyId} userId={userId} recipe={cooking} onClose={() => setCooking(null)} />}
     </>
   )
 }

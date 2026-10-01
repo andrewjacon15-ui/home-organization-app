@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useDevice } from '../../lib/DeviceContext'
+import { isHeldAwake } from '../../lib/keepAwake'
 import { useSettings } from '../settings/SettingsContext'
 import { useSleep } from '../sleep/SleepContext'
 import { watchPhotos, type Photo } from './photosApi'
@@ -37,7 +38,7 @@ export function ScreensaverProvider({ familyId, children, kiosk: kioskProp }: { 
     events.forEach((e) => window.addEventListener(e, touch, { passive: true }))
     const id = setInterval(() => {
       const idle = Date.now() - lastActivity.current >= settings.screensaverAfterMinutes * 60_000
-      if (kiosk && settings.screensaverEnabled && photos.length > 0 && !asleep && idle) setActive(true)
+      if (kiosk && settings.screensaverEnabled && photos.length > 0 && !asleep && idle && !isHeldAwake()) setActive(true)
     }, CHECK_MS)
     return () => {
       events.forEach((e) => window.removeEventListener(e, touch))

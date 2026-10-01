@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { StaticSettings } from '../settings/SettingsContext'
 import { inSleepWindow, isAsleep, WAKE_IDLE_MS } from './sleep'
+import { holdAwake } from '../../lib/keepAwake'
 import { SleepProvider, useSleep } from './SleepContext'
 
 const at = (hhmm: string) => new Date(`2026-09-28T${hhmm}:00`)
@@ -76,6 +77,17 @@ describe('SleepProvider', () => {
     mount(true, { sleepEnabled: false })
     act(() => vi.advanceTimersByTime(10 * 60_000))
     expect(screen.queryByLabelText('Sleeping. Tap to wake.')).not.toBeInTheDocument()
+  })
+
+  it('stays awake while cooking mode holds the screen on, and sleeps again after', () => {
+    vi.setSystemTime(at('22:00'))
+    const release = holdAwake()
+    mount(true)
+    act(() => vi.advanceTimersByTime(10 * 60_000))
+    expect(screen.queryByLabelText('Sleeping. Tap to wake.')).not.toBeInTheDocument()
+    act(() => release())
+    act(() => vi.advanceTimersByTime(WAKE_IDLE_MS + 15_000))
+    expect(screen.getByLabelText('Sleeping. Tap to wake.')).toBeInTheDocument()
   })
 
   it('"Enter sleep mode now" sleeps immediately, even midday', () => {

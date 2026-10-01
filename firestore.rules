@@ -312,6 +312,23 @@ service cloud.firestore {
         }
       }
 
+      // Cooking progress, shared live while a recipe is being made. Temporary: deleted on
+      // Done/Reset and expired by a TTL policy on expireAt (firestore.indexes.json).
+      match /cookingSessions/{recipeId} {
+        function validSession() {
+          let d = request.resource.data;
+          return onlyKeys(['servings', 'items', 'steps', 'step', 'startedBy', 'updatedAt', 'expireAt'])
+            && (d.servings == null || (d.servings is int && d.servings >= 1 && d.servings <= 100))
+            && d.items is list && d.items.size() <= 100
+            && d.steps is list && d.steps.size() <= 100
+            && d.step is int && d.step >= 0 && d.step <= 200
+            && d.startedBy == request.auth.uid
+            && d.expireAt is timestamp;
+        }
+        allow read, delete: if isMember(familyId);
+        allow create, update: if isMember(familyId) && validSession();
+      }
+
       // The catalog index: a few shard docs with one short entry per recipe, so browsing
       // reads a handful of documents. Cloud Functions keep it in sync (functions/src/recipeIndex.ts).
       match /recipeIndex/{shard} {
