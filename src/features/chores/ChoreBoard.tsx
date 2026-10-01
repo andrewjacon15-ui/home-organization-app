@@ -19,10 +19,12 @@ interface Props {
   onToggle: (o: Occurrence, done: boolean, doneBy: string | null) => void
   onAdd: (chore: NewChore) => void
   onDelete: (chore: Chore) => void
+  /** Show only this person's column (plus Up for Grabs); null or absent shows everyone. */
+  only?: string | null
 }
 
 /** Skylight-style chore board: a column per person plus "Up for Grabs", by day or by week. */
-export function ChoreBoard({ chores, members, stars, today, now, weekStartsOn, onToggle, onAdd, onDelete }: Props) {
+export function ChoreBoard({ chores, members, stars, today, now, weekStartsOn, onToggle, onAdd, onDelete, only = null }: Props) {
   const [view, setView] = useState<'day' | 'week'>('day')
   const [offset, setOffset] = useState(0)
   const [adding, setAdding] = useState<{ assignee: string | null } | null>(null)
@@ -30,7 +32,8 @@ export function ChoreBoard({ chores, members, stars, today, now, weekStartsOn, o
 
   const day = addDays(today, offset)
   const weekStart = addDays(startOfWeek(today, weekStartsOn), offset * 7)
-  const columns = [...members.map((m) => ({ id: m.id, member: m as Member | null })), { id: GRABS, member: null }]
+  const shown = only ? members.filter((m) => m.id === only) : members
+  const columns = [...shown.map((m) => ({ id: m.id, member: m as Member | null })), { id: GRABS, member: null }]
   const belongs = (c: Chore, colId: string) => (colId === GRABS ? !c.assigneeId || !members.some((m) => m.id === c.assigneeId) : c.assigneeId === colId)
 
   const toolbar = (

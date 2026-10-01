@@ -27,6 +27,14 @@ function setup(list = chores) {
 }
 
 describe('ChoreBoard day view', () => {
+  it('can show just one person (plus Up for Grabs), without moving other people’s chores into Up for Grabs', () => {
+    const props = { chores, members, stars: new Map(), today: TODAY, now: NOW, weekStartsOn: 0, onToggle: vi.fn(), onAdd: vi.fn(), onDelete: vi.fn() }
+    render(<ChoreBoard {...props} only="a" />)
+    expect(screen.getAllByRole('article').map((a) => a.getAttribute('aria-label'))).toEqual(['Andrew', 'Up for Grabs'])
+    expect(screen.queryByText('Water the plants')).not.toBeInTheDocument()
+    expect(screen.getByText('Sweep the garage')).toBeInTheDocument()
+  })
+
   it('has a column per person plus Up for Grabs, with progress and stars', () => {
     setup()
     expect(screen.getAllByRole('article').map((a) => a.getAttribute('aria-label'))).toEqual(['Lydia', 'Andrew', 'Up for Grabs'])
