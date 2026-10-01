@@ -18,6 +18,17 @@ export const DEFAULT_ACCENT = '#1D4ED8'
 
 export const isHex = (value: string) => /^#[0-9a-fA-F]{6}$/.test(value)
 
+/** "#1d4ed8" at 12% → "#1d4ed81f" (8-digit hex works in every browser we support, unlike color-mix()). */
+export function withAlpha(hex: string, alpha: number): string {
+  return hex + Math.round(Math.min(1, Math.max(0, alpha)) * 255).toString(16).padStart(2, '0')
+}
+
+/** Blend two hex colors: t = 0 gives `a`, 1 gives `b`. */
+export function mixHex(a: string, b: string, t: number): string {
+  const ch = (h: string, i: number) => parseInt(h.slice(i, i + 2), 16)
+  return '#' + [1, 3, 5].map((i) => Math.round(ch(a, i) + (ch(b, i) - ch(a, i)) * t).toString(16).padStart(2, '0')).join('')
+}
+
 /** "#abc" / "abc" / "#AABBCC" → "#aabbcc", or null if it isn't a color. */
 export function normalizeHex(input: string): string | null {
   let v = input.trim().replace(/^#/, '')

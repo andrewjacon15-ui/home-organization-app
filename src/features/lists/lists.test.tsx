@@ -91,7 +91,7 @@ describe('ListsBoard', () => {
 
   it('creates a new list', async () => {
     const { actions, user } = setup()
-    await user.click(screen.getByRole('button', { name: '+ New list' }))
+    await user.click(screen.getByRole('button', { name: 'New list' }))
     await user.type(screen.getByLabelText('New list name'), 'Packing list')
     await user.click(screen.getByRole('button', { name: 'Create' }))
     expect(actions.onCreateList).toHaveBeenCalledWith('Packing list')

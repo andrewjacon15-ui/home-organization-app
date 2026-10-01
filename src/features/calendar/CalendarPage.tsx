@@ -13,6 +13,7 @@ import { CalendarBoard } from './CalendarBoard'
 import { CalendarConnect } from './CalendarConnect'
 import { useCalendarConnection } from './useCalendarConnection'
 import { viewRange, type CalendarViewKind } from './views'
+import { BackIcon, NextIcon } from '../../components/Icons'
 
 interface Props {
   familyId: string
@@ -98,13 +99,13 @@ export function CalendarPage({ familyId, userId, members }: Props) {
         <div className="calendar__toolbar">
           <div className="week-nav">
             <button type="button" className="button" onClick={() => setOffset(offset - 1)} aria-label="Previous">
-              ‹
+              <BackIcon />
             </button>
             <h2 id="calendar-heading" className="week-nav__label">
               {range.label}
             </h2>
             <button type="button" className="button" onClick={() => setOffset(offset + 1)} aria-label="Next">
-              ›
+              <NextIcon />
             </button>
             {offset !== 0 && (
               <button type="button" className="link" onClick={() => setOffset(0)}>

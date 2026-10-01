@@ -193,7 +193,7 @@ describe('AddEventForm', () => {
     const onAdd = vi.fn()
     const user = userEvent.setup()
     render(<AddEventForm defaultDate={TODAY} members={members} userId="a" onAdd={onAdd} />)
-    await user.click(screen.getByRole('button', { name: '+ Add event' }))
+    await user.click(screen.getByRole('button', { name: 'Add event' }))
     expect(screen.getByLabelText('Date')).toHaveValue(TODAY)
     expect(screen.getByRole('button', { name: /Andrew/ })).toHaveAttribute('aria-pressed', 'true')
     await user.click(screen.getByRole('button', { name: /Bea/ }))
