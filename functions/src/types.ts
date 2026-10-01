@@ -78,6 +78,9 @@ export interface CalendarStore {
   deleteTokens(familyId: string, uid: string): Promise<void>
   listConnected(): Promise<ConnectedMember[]>
   listGoogleEventIds(familyId: string, uid: string): Promise<string[]>
+  /** This person's synced events as stored, so a sync can write only what changed. */
+  listGoogleEvents(familyId: string, uid: string): Promise<Map<string, EventDoc>>
+  getCalendarStatus(familyId: string, uid: string): Promise<CalendarStatus | null>
   upsertEvents(familyId: string, events: { id: string; data: EventDoc }[]): Promise<void>
   deleteEvents(familyId: string, ids: string[]): Promise<void>
   setCalendarStatus(familyId: string, uid: string, status: CalendarStatus | null): Promise<void>

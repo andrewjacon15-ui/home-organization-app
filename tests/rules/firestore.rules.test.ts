@@ -562,6 +562,19 @@ describe('cookbooks', () => {
   })
 })
 
+describe('recipe index', () => {
+  it('is readable by members and written only by the server', async () => {
+    await assertSucceeds(getDocs(collection(dbFor(BOB), `families/${FAM_A}/recipeIndex`)))
+    await assertFails(setDoc(doc(dbFor(BOB), `families/${FAM_A}/recipeIndex/s0`), { e: {} }))
+    await assertFails(getDocs(collection(dbFor(MALLORY), `families/${FAM_A}/recipeIndex`)))
+  })
+
+  it('keeps the import politeness records server-only', async () => {
+    await assertFails(getDoc(doc(dbFor(BOB), 'crawlHosts/example.com')))
+    await assertFails(setDoc(doc(dbFor(BOB), 'crawlHosts/example.com'), { lastAt: 0 }))
+  })
+})
+
 describe('recipes', () => {
   it('accept structured fields from cookbooks, and review edits', async () => {
     const parsed = {
@@ -575,6 +588,9 @@ describe('recipes', () => {
     await assertFails(setDoc(doc(dbFor(BOB), `families/${FAM_A}/recipes/ck_2`), { ...parsed, source: { type: 'scraped' } }))
     await assertFails(setDoc(doc(dbFor(BOB), `families/${FAM_A}/recipes/ck_3`), { ...parsed, needsReview: 'yes' }))
     await assertFails(setDoc(doc(dbFor(BOB), `families/${FAM_A}/recipes/ck_4`), { ...parsed, items: 'lots' }))
+    // Favorites and hand-edited tags.
+    await assertSucceeds(updateDoc(doc(dbFor(ALICE), `families/${FAM_A}/recipes/ck_1`), { favorite: true, tags: { meal: ['dinner'], cuisine: [], main: [], diet: [] }, tagsEdited: true }))
+    await assertFails(updateDoc(doc(dbFor(ALICE), `families/${FAM_A}/recipes/ck_1`), { tags: 'dinner' }))
   })
 
   const recipe = {
@@ -698,6 +714,8 @@ describe('side bar settings', () => {
     await assertFails(setDoc(display(dbFor(BOB)), { hiddenTabs: { phone: 'rewards' } }, { merge: true }))
     await assertFails(setDoc(display(dbFor(BOB)), { hiddenTabs: { phone: Array.from({ length: 13 }, (_, i) => `t${i}`) } }, { merge: true }))
     await assertFails(setDoc(display(dbFor(BOB)), { hiddenTabs: ['phone'] }, { merge: true }))
+    await assertSucceeds(setDoc(display(dbFor(BOB)), { homePanels: { tablet: ['lists', 'tasks', 'calendar'], phone: ['tasks'] } }, { merge: true }))
+    await assertFails(setDoc(display(dbFor(BOB)), { homePanels: { tv: [] } }, { merge: true }))
   })
 })
 

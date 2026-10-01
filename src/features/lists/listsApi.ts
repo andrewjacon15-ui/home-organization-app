@@ -1,4 +1,4 @@
-import { collection, deleteDoc, doc, getDocs, onSnapshot, serverTimestamp, setDoc, updateDoc, writeBatch } from 'firebase/firestore'
+import { collection, deleteDoc, doc, getDocs, limit, onSnapshot, query, serverTimestamp, setDoc, updateDoc, writeBatch } from 'firebase/firestore'
 import { db } from '../../firebase'
 
 export type ListKind = 'grocery' | 'todo' | 'custom'
@@ -52,7 +52,7 @@ export function watchItems(familyId: string, listId: string, onChange: (items: L
 
 /** First visit: create the Grocery and To-Do lists. Fixed IDs make a race between two devices harmless. */
 export async function ensureDefaultLists(familyId: string, userId: string) {
-  const existing = await getDocs(listsCol(familyId))
+  const existing = await getDocs(query(listsCol(familyId), limit(1)))
   if (!existing.empty) return
   const batch = writeBatch(db)
   DEFAULT_LISTS.forEach((l, i) => {

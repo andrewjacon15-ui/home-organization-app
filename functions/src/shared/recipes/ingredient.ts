@@ -39,6 +39,7 @@ const TAIL_NOTES = /\b(to taste|to serve|for (?:garnish|serving|the pan|greasing
 export function cleanLine(raw: string): string {
   return normalizeFractions(raw)
     .replace(/^[\s•·◦▪▫■□▢☐✓✔*–-]+/, '')
+    .replace(/\*+/g, ' ') // footnote marks: "3 green onions* sliced"
     .replace(/\s+/g, ' ')
     .trim()
 }
@@ -87,6 +88,13 @@ export function parseIngredient(raw: string): Ingredient {
   if (plus) {
     notes.push(plus[0].trim())
     s = s.slice(plus[0].length)
+  }
+
+  // "boneless, skinless chicken breast": a comma between describing words isn't the note break.
+  for (let c = indexOutsideParens(s, ','); c >= 0; c = indexOutsideParens(s, ',')) {
+    const before = s.slice(0, c).trim().toLowerCase().split(/\s+/)
+    if (!before.every((w) => FILLER.has(w) || SIZES.has(w) || PREP.has(w))) break
+    s = `${s.slice(0, c)}${s.slice(c + 1)}`
   }
 
   // Parentheticals are notes, kept in the order written: "½ cup (1 stick) butter, softened".

@@ -7,7 +7,9 @@ import { watchCalendars, watchEvents } from '../calendar/calendarApi'
 import { applyFilter, loadHidden } from '../calendar/filter'
 import { deleteChore, setOccurrenceDone, watchChores } from '../chores/choresApi'
 import { addItems, ensureDefaultLists, setItemDone, watchItems, watchLists, type FamilyList, type ListItem } from '../lists/listsApi'
+import { useDevice } from '../../lib/DeviceContext'
 import { useSettings } from '../settings/SettingsContext'
+import { homePanelsFor } from './homePanels'
 import { HomeView, type HomeTarget } from './HomeView'
 
 interface Props {
@@ -19,6 +21,12 @@ interface Props {
 
 export function HomePage({ familyId, userId, members, onNavigate }: Props) {
   const { settings } = useSettings()
+  const { device } = useDevice()
+  const panels = homePanelsFor(settings.homePanels, device)
+  // Hidden panels don't load their data, so they cost no reads.
+  const showCalendar = panels.includes('calendar')
+  const showTasks = panels.includes('tasks')
+  const showLists = panels.includes('lists')
   const today = useToday()
   const now = useNow()
   const weekStart = settings.weekStartToday ? today : startOfWeek(today, settings.weekStartsOn)
@@ -31,14 +39,21 @@ export function HomePage({ familyId, userId, members, onNavigate }: Props) {
   const [fitRef, fitStyle] = useFitHeight<HTMLDivElement>(true)
   const report = (e: unknown) => setError(e instanceof Error ? e.message : String(e))
 
-  useEffect(() => watchEvents(familyId, fromDateKey(weekStart), fromDateKey(addDays(weekStart, 14)), setEvents), [familyId, weekStart])
-  useEffect(() => watchCalendars(familyId, setCalendars), [familyId])
-  useEffect(() => watchChores(familyId, setChores), [familyId])
   useEffect(() => {
+    if (showCalendar) return watchEvents(familyId, fromDateKey(weekStart), fromDateKey(addDays(weekStart, 14)), setEvents)
+  }, [familyId, weekStart, showCalendar])
+  useEffect(() => {
+    if (showCalendar) return watchCalendars(familyId, setCalendars)
+  }, [familyId, showCalendar])
+  useEffect(() => {
+    if (showTasks) return watchChores(familyId, setChores)
+  }, [familyId, showTasks])
+  useEffect(() => {
+    if (!showLists) return
     ensureDefaultLists(familyId, userId).catch(() => undefined)
     return watchLists(familyId, setLists)
-  }, [familyId, userId])
-  const shownIds = lists
+  }, [familyId, userId, showLists])
+  const shownIds = (showLists ? lists : [])
     .slice(0, 2)
     .map((l) => l.id)
     .join(',')
@@ -70,6 +85,7 @@ export function HomePage({ familyId, userId, members, onNavigate }: Props) {
         lists={lists}
         items={items}
         onNavigate={onNavigate}
+        panels={panels}
         onToggleChore={(o, done, doneBy) => setOccurrenceDone(familyId, o, done, doneBy, userId, today).catch(report)}
         onDeleteChore={(c) => deleteChore(familyId, c.id).catch(report)}
         onAddItem={(l, text) => addItems(familyId, l.id, userId, [text]).catch(report)}

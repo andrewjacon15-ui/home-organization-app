@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { MealPlanner } from '../meals/MealPlanner'
 import { findRecipe, lines, type Recipe } from './recipesApi'
-import { RecipeBook } from './RecipeBook'
+import { TestBook } from './TestBook'
 
 const TODAY = '2026-09-29'
 const tacos: Recipe = {
@@ -21,7 +21,7 @@ afterEach(() => vi.restoreAllMocks())
 
 function book(recipes = [tacos, soup]) {
   const props = { recipes, today: TODAY, onSave: vi.fn(async () => 'new-id'), onDelete: vi.fn(), onPlan: vi.fn() }
-  render(<RecipeBook {...props} />)
+  render(<TestBook {...props} />)
   return { props, user: userEvent.setup() }
 }
 
@@ -42,7 +42,7 @@ describe('RecipeBook', () => {
     const { user } = book()
     expect(within(screen.getByRole('list', { name: 'Recipes' })).getAllByRole('button')).toHaveLength(2)
     await user.type(screen.getByLabelText('Search recipes'), 'basil')
-    expect(within(screen.getByRole('list', { name: 'Recipes' })).getAllByRole('button').map((b) => b.textContent)).toEqual(['Tomato soup'])
+    expect(within(screen.getByRole('list', { name: 'Recipes' })).getAllByRole('button').map((b) => b.textContent)).toEqual([expect.stringContaining('Tomato soup')])
     await user.clear(screen.getByLabelText('Search recipes'))
     await user.click(screen.getByRole('button', { name: /Chicken tacos/ }))
     const recipe = screen.getByRole('article', { name: 'Chicken tacos' })
@@ -79,7 +79,7 @@ describe('RecipeBook', () => {
     expect(screen.getByRole('button', { name: 'Save recipe' })).toBeDisabled()
     await user.clear(screen.getByLabelText('Source link'))
     await user.click(screen.getByRole('button', { name: 'Save recipe' }))
-    expect(props.onSave).toHaveBeenCalledWith({ title: 'Pancakes', ingredients: 'flour\nmilk', steps: '', servings: 3, minutes: null, url: null }, undefined)
+    expect(props.onSave).toHaveBeenCalledWith({ title: 'Pancakes', ingredients: 'flour\nmilk', steps: '', servings: 3, minutes: null, url: null, tagsEdited: false }, undefined)
   })
 
   it('edits and deletes (with confirm)', async () => {

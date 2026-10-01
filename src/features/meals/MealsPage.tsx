@@ -5,7 +5,8 @@ import { useSettings } from '../settings/SettingsContext'
 import type { MealPlan } from '../../types'
 import { MealPlanner } from './MealPlanner'
 import { saveMealPlan, watchMealPlans } from './mealsApi'
-import { findRecipe, watchRecipes, type Recipe } from '../recipes/recipesApi'
+import { findEntry, watchCatalog, type CatalogEntry } from '../recipes/catalog'
+import { getRecipe, type Recipe } from '../recipes/recipesApi'
 import { RecipeView } from '../recipes/RecipeBook'
 
 interface Props {
@@ -22,10 +23,11 @@ export function MealsPage({ familyId, userId }: Props) {
   const weekStart = addDays(currentWeekStart, weekOffset * 7)
   const [plans, setPlans] = useState<Record<string, MealPlan>>({})
   const [error, setError] = useState<string | null>(null)
-  const [recipes, setRecipes] = useState<Recipe[]>([])
+  // Recipe titles come from the catalog index (a few documents); a recipe is read only when opened.
+  const [recipes, setRecipes] = useState<CatalogEntry[]>([])
   const [open, setOpen] = useState<Recipe | null>(null)
 
-  useEffect(() => watchRecipes(familyId, setRecipes), [familyId])
+  useEffect(() => watchCatalog(familyId, setRecipes), [familyId])
 
   useEffect(() => watchMealPlans(familyId, weekStart, addDays(weekStart, 6), setPlans), [familyId, weekStart])
 
@@ -41,9 +43,12 @@ export function MealsPage({ familyId, userId }: Props) {
         currentWeekStart={currentWeekStart}
         today={today}
         plans={plans}
-        recipeTitles={recipes.map((r) => r.title)}
-        hasRecipe={(text) => !!findRecipe(recipes, text)}
-        onOpenRecipe={(text) => setOpen(findRecipe(recipes, text) ?? null)}
+        recipeTitles={recipes.map((r) => r.t)}
+        hasRecipe={(text) => !!findEntry(recipes, text)}
+        onOpenRecipe={(text) => {
+          const e = findEntry(recipes, text)
+          if (e) getRecipe(familyId, e.id).then(setOpen, (err) => setError(err instanceof Error ? err.message : String(err)))
+        }}
         onWeekChange={(start) => setWeekOffset(Math.round(daysBetween(currentWeekStart, start) / 7))}
         onSave={(date, plan) =>
           saveMealPlan(familyId, date, plan, userId).catch((e) => setError(e instanceof Error ? e.message : String(e)))

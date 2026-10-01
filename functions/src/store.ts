@@ -1,5 +1,5 @@
 import { FieldValue, type Firestore } from 'firebase-admin/firestore'
-import type { CalendarStore, StoredCalendar, StoredTokens } from './types.js'
+import type { CalendarStatus, CalendarStore, EventDoc, StoredCalendar, StoredTokens } from './types.js'
 
 const BATCH_LIMIT = 400
 
@@ -53,6 +53,22 @@ export function firestoreStore(db: Firestore): CalendarStore {
     async listGoogleEventIds(familyId, uid) {
       const snap = await eventsCol(familyId).where('sourceUserId', '==', uid).where('source', '==', 'google').select().get()
       return snap.docs.map((d) => d.id)
+    },
+
+    async listGoogleEvents(familyId, uid) {
+      const snap = await eventsCol(familyId).where('sourceUserId', '==', uid).where('source', '==', 'google').get()
+      const out = new Map<string, EventDoc>()
+      for (const d of snap.docs) {
+        const x = d.data()
+        out.set(d.id, { ...(x as EventDoc), start: x.start?.toDate?.() ?? x.start, end: x.end?.toDate?.() ?? x.end })
+      }
+      return out
+    },
+
+    async getCalendarStatus(familyId, uid) {
+      const s = (await memberRef(familyId, uid).get()).get('calendar') as (CalendarStatus & { lastSyncAt?: { toDate?: () => Date } }) | undefined
+      if (!s) return null
+      return s.status === 'connected' ? { ...s, lastSyncAt: s.lastSyncAt?.toDate?.() ?? new Date(0) } : s
     },
 
     async upsertEvents(familyId, events) {

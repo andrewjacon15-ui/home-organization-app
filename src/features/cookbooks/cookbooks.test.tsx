@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { RecipeBook } from '../recipes/RecipeBook'
+import { TestBook } from '../recipes/TestBook'
 import type { Recipe } from '../recipes/recipesApi'
 import { describeFile, type Cookbook } from './cookbooksApi'
 import { CookbookList } from './CookbookList'
@@ -110,7 +110,7 @@ describe('Needs review', () => {
   it('filters to low-confidence cookbook recipes and clears one with "Looks right"', () => {
     const onMarkReviewed = vi.fn()
     render(
-      <RecipeBook
+      <TestBook
         {...props}
         recipes={[recipe('a'), recipe('b', { needsReview: true, source: { type: 'cookbook', bookTitle: 'Old Family Book', location: 'p. 7 (OCR)' } })]}
         onMarkReviewed={onMarkReviewed}
@@ -125,12 +125,12 @@ describe('Needs review', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Looks right' }))
     expect(onMarkReviewed).toHaveBeenCalledWith(expect.objectContaining({ id: 'b' }))
 
-    fireEvent.click(screen.getByRole('button', { name: 'All' }))
+    fireEvent.click(screen.getByRole('button', { name: /Needs review/ }))
     expect(within(list).getAllByRole('button')).toHaveLength(2)
   })
 
   it('hides the filter when nothing needs review', () => {
-    render(<RecipeBook {...props} recipes={[recipe('a')]} />)
+    render(<TestBook {...props} recipes={[recipe('a')]} />)
     expect(screen.queryByRole('button', { name: /Needs review/ })).not.toBeInTheDocument()
   })
 })

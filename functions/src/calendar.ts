@@ -51,7 +51,6 @@ export interface SyncResult {
   status: 'connected' | 'needs_reconnect'
 }
 
-/** Mirrors one person's primary calendar into the family's events collection. */
 const HEX = /^#[0-9a-f]{6}$/i
 
 /** Merges Google's calendar list with what the family already chose (show/hide, color, nickname, people). */
@@ -84,9 +83,11 @@ export async function syncMember(
   let calendars: StoredCalendar[]
   const docs: { id: string; data: EventDoc }[] = []
   try {
-    const merged = mergeCalendars(uid, await google.listCalendars(tokens.refreshToken), await store.listCalendars(familyId, uid))
+    const stored = await store.listCalendars(familyId, uid)
+    const merged = mergeCalendars(uid, await google.listCalendars(tokens.refreshToken), stored)
     calendars = merged.keep
-    await store.upsertCalendars(familyId, calendars)
+    const storedByKey = new Map(stored.map((c) => [c.key, c]))
+    await store.upsertCalendars(familyId, calendars.filter((c) => !sameJson(c, storedByKey.get(c.key))))
     await store.deleteCalendars(familyId, merged.removed)
 
     for (const c of calendars.filter((x) => x.enabled)) {
@@ -108,19 +109,41 @@ export async function syncMember(
     throw err
   }
 
+  // Write only what changed: a sync every 15 minutes that rewrote every event would cost a
+  // write per event per run, and push every event again to every open screen.
+  const existing = await store.listGoogleEvents(familyId, uid)
   const keep = new Set(docs.map((d) => d.id))
-  const stale = (await store.listGoogleEventIds(familyId, uid)).filter((id) => !keep.has(id))
+  const changed = docs.filter((d) => !sameEvent(existing.get(d.id), d.data))
+  const stale = [...existing.keys()].filter((id) => !keep.has(id))
 
-  await store.upsertEvents(familyId, docs)
+  await store.upsertEvents(familyId, changed)
   await store.deleteEvents(familyId, stale)
-  await store.setCalendarStatus(familyId, uid, {
-    status: 'connected',
-    email: tokens.email,
-    lastSyncAt: now,
-    eventCount: docs.length,
-    calendarCount: calendars.filter((c) => c.enabled).length,
-  })
-  return { upserted: docs.length, deleted: stale.length, status: 'connected' }
+  const status = { status: 'connected' as const, email: tokens.email, lastSyncAt: now, eventCount: docs.length, calendarCount: calendars.filter((c) => c.enabled).length }
+  const prev = await store.getCalendarStatus(familyId, uid)
+  // The "last synced" time is refreshed hourly when nothing else changed (each write reaches every device).
+  const fresh =
+    prev?.status === 'connected' &&
+    prev.email === status.email &&
+    prev.eventCount === status.eventCount &&
+    prev.calendarCount === status.calendarCount &&
+    now.getTime() - prev.lastSyncAt.getTime() < STATUS_REFRESH_MS
+  if (!fresh || changed.length || stale.length) await store.setCalendarStatus(familyId, uid, status)
+  return { upserted: changed.length, deleted: stale.length, status: 'connected' }
+}
+
+const STATUS_REFRESH_MS = 60 * 60_000
+
+function sameJson(a: unknown, b: unknown): boolean {
+  return b !== undefined && JSON.stringify(a) === JSON.stringify(b)
+}
+
+const EVENT_FIELDS = ['source', 'sourceUserId', 'googleEventId', 'calendarKey', 'title', 'allDay', 'startDate', 'endDate', 'location', 'htmlLink'] as const
+
+/** Same event as stored (times compared as instants; missing optional fields count as equal). */
+export function sameEvent(stored: EventDoc | undefined, next: EventDoc): boolean {
+  if (!stored) return false
+  if (stored.start?.getTime() !== next.start.getTime() || stored.end?.getTime() !== next.end.getTime()) return false
+  return EVENT_FIELDS.every((k) => (stored[k] ?? null) === (next[k] ?? null))
 }
 
 async function requireMember(store: CalendarStore, familyId: unknown, uid: string | undefined): Promise<string> {

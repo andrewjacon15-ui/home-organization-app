@@ -2906,13 +2906,14 @@ font-weight: 600;
   min-height: 0;
 }
 
+/* Panels stack top to bottom in the order Settings → Home screen chooses (--home-rows set inline). */
 .home {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 20px 28px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: var(--home-rows, minmax(0, 1fr));
+  gap: 16px;
 }
 
 .home-panel {
@@ -2924,10 +2925,6 @@ font-weight: 600;
   border: 1px solid var(--rule);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-sm);
-}
-
-.home-panel--calendar {
-  grid-row: 1 / span 2;
 }
 
 .home-panel__head {
@@ -2944,12 +2941,13 @@ font-weight: 600;
   margin: 0;
 }
 
+/* A full-width row: the seven days and Next Week side by side. */
 .home-week {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  grid-template-rows: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-rows: minmax(0, 1fr);
   border: 1px solid var(--rule);
   border-radius: var(--r);
   overflow: hidden;
@@ -3124,10 +3122,7 @@ letter-spacing: -0.015em;
 @media (max-width: 999px) {
   .home {
     grid-template-columns: 1fr;
-    grid-template-rows: auto;
-  }
-  .home-panel--calendar {
-    grid-row: auto;
+    grid-template-rows: none;
   }
   .home-week {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3873,4 +3868,233 @@ thead .sidebar-grid__current {
 :root[data-device='phone'] .cookbook__actions {
   grid-column: 1 / -1;
   justify-content: flex-end;
+}
+
+/* --------------------------------------------------------------------------
+   Recipe catalog: filters, favorites, tags, import from a link
+   -------------------------------------------------------------------------- */
+
+.recipe-book__head {
+  flex-wrap: wrap;
+}
+
+.recipe-book__add {
+  gap: 8px;
+}
+
+.recipe-book__add .button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.catalog-bar {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.catalog-bar .chip {
+  min-height: 36px;
+  padding: 0 12px;
+  gap: 6px;
+  font-size: var(--fs-small);
+}
+
+.catalog-filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+  padding: 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+
+.catalog-filters__field select {
+  width: 100%;
+}
+
+.catalog-filters__note {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.catalog-count {
+  margin: 0;
+  font-size: var(--fs-small);
+}
+
+.recipe-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  border-bottom: 1px solid var(--rule);
+}
+
+.recipe-item .recipe-row {
+  border-bottom: none;
+}
+
+.favorite {
+  display: inline-grid;
+  place-items: center;
+}
+
+.favorite--on {
+  color: #d97706;
+}
+
+.recipe__title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.recipe__original {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.recipe__tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0 14px;
+}
+
+.tag {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--paper-2);
+  color: var(--ink-2);
+  font-size: var(--fs-label);
+  font-weight: 600;
+}
+
+.tag-editor {
+  display: grid;
+  gap: 12px;
+  margin: 12px 0 16px;
+}
+
+.tag-editor__group {
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tag-editor__group legend {
+  font-size: var(--fs-label);
+  font-weight: 600;
+  color: var(--ink-2);
+  margin-bottom: 6px;
+}
+
+.tag-editor__group .row {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag-editor__group .chip {
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: var(--fs-small);
+}
+
+.import-form {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+
+.import-form p {
+  margin: 0;
+}
+
+:root[data-device='phone'] .catalog-filters {
+  gap: 8px 10px;
+  padding: 10px;
+}
+
+/* Settings → Home screen */
+.home-panels {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  max-width: 460px;
+}
+
+.home-panels__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px 4px 14px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.home-panels__row:last-child {
+  border-bottom: none;
+}
+
+.home-panels__row--off .home-panels__label {
+  color: var(--ink-3);
+}
+
+.home-panels__label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-weight: 500;
+}
+
+/* Home on wide screens: panels are full-width rows, so lay their contents out across the width
+   (list items and chores in columns, the add box beside each list's name) and keep chrome thin. */
+@media (min-width: 1000px) {
+  .home .home-panel {
+    padding: 6px 14px 10px;
+  }
+  .home .home-panel__head {
+    padding: 2px 0 4px;
+  }
+  .home-list {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    column-gap: 16px;
+  }
+  .home-list .add-item {
+    align-self: center;
+  }
+  .home-list .list-items {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    align-content: start;
+    column-gap: 12px;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: none;
+  }
+  .home-list .list-item__text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .home-person .chore-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    align-content: start;
+    gap: 6px 10px;
+    min-height: 0;
+  }
 }

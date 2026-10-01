@@ -1,5 +1,6 @@
-import { addDoc, collection, deleteDoc, doc, getDoc, onSnapshot, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore'
+import { addDoc, collection, deleteDoc, doc, getDoc, onSnapshot, serverTimestamp, setDoc, updateDoc, type DocumentData } from 'firebase/firestore'
 import { parseIngredient } from '@shared/recipes/ingredient.js'
+import { autoTag, cleanTags, type RecipeTags } from '@shared/recipes/tagger.js'
 import { db } from '../../firebase'
 import type { MealPlan, MealSlot } from '../../types'
 
@@ -24,6 +25,15 @@ export interface Recipe {
   /** Changed by the family (re-parsing a book won't overwrite it). */
   edited?: boolean
   favorite?: boolean
+  /** Auto-tags (or the family's own when tagsEdited). */
+  tags?: RecipeTags
+  tagsEdited?: boolean
+  /** Web recipes: star rating from the site, credit line, and a picture. */
+  rating?: { value: number; count: number } | null
+  credit?: string | null
+  image?: string | null
+  prepMinutes?: number | null
+  cookMinutes?: number | null
   servings?: number | null
   minutes?: number | null
   /** One ingredient per line. */
@@ -49,29 +59,39 @@ export function findRecipe(recipes: Recipe[], mealText: string): Recipe | undefi
   return key ? recipes.find((r) => r.title.trim().toLowerCase() === key) : undefined
 }
 
-export function watchRecipes(familyId: string, onChange: (recipes: Recipe[]) => void) {
-  return onSnapshot(recipesCol(familyId), (snap) => {
-    const list = snap.docs.map((d) => {
-      const x = d.data()
-      return {
-        id: d.id,
-        title: x.title,
-        ingredients: x.ingredients ?? '',
-        steps: x.steps ?? '',
-        servings: x.servings ?? null,
-        minutes: x.minutes ?? null,
-        url: x.url ?? null,
-        source: x.source ?? null,
-        needsReview: !!x.needsReview,
-        confidence: x.confidence ?? null,
-        yieldText: x.yieldText ?? null,
-        edited: !!x.edited,
-        favorite: !!x.favorite,
-      } satisfies Recipe
-    })
-    list.sort((a, b) => a.title.localeCompare(b.title))
-    onChange(list)
-  })
+function fromDoc(id: string, x: DocumentData): Recipe {
+  return {
+    id,
+    title: x.title,
+    ingredients: x.ingredients ?? '',
+    steps: x.steps ?? '',
+    servings: x.servings ?? null,
+    minutes: x.minutes ?? null,
+    url: x.url ?? null,
+    source: x.source ?? null,
+    needsReview: !!x.needsReview,
+    confidence: x.confidence ?? null,
+    yieldText: x.yieldText ?? null,
+    edited: !!x.edited,
+    favorite: !!x.favorite,
+    tags: cleanTags(x.tags),
+    tagsEdited: !!x.tagsEdited,
+    rating: x.rating ?? null,
+    credit: x.credit ?? null,
+    image: x.image ?? null,
+    prepMinutes: x.prepMinutes ?? null,
+    cookMinutes: x.cookMinutes ?? null,
+  }
+}
+
+/** One recipe, live (favorite and tag changes show at once). Browsing uses the catalog index instead. */
+export function watchRecipe(familyId: string, id: string, onChange: (recipe: Recipe | null) => void) {
+  return onSnapshot(doc(recipesCol(familyId), id), (snap) => onChange(snap.exists() ? fromDoc(snap.id, snap.data()) : null))
+}
+
+export async function getRecipe(familyId: string, id: string): Promise<Recipe | null> {
+  const snap = await getDoc(doc(recipesCol(familyId), id))
+  return snap.exists() ? fromDoc(snap.id, snap.data()) : null
 }
 
 function clean(draft: RecipeDraft) {
@@ -86,16 +106,19 @@ function clean(draft: RecipeDraft) {
 }
 
 /** The structured fields every recipe keeps alongside its text (parsed with the same rules as cookbooks). */
-function structured(draft: RecipeDraft) {
+export function structured(draft: RecipeDraft) {
+  const items = lines(draft.ingredients)
+    .filter((l) => !/:\s*$/.test(l)) // group labels like "For the sauce:"
+    .slice(0, 80)
+    .map((l) => {
+      const i = parseIngredient(l)
+      return { raw: i.raw, qty: i.qty, qtyMax: i.qtyMax, unit: i.unit, name: i.name, note: i.note, key: i.key, family: i.family, known: i.known }
+    })
   return {
-    items: lines(draft.ingredients)
-      .filter((l) => !/:\s*$/.test(l)) // group labels like "For the sauce:"
-      .slice(0, 80)
-      .map((l) => {
-        const i = parseIngredient(l)
-        return { raw: i.raw, qty: i.qty, qtyMax: i.qtyMax, unit: i.unit, name: i.name, note: i.note, key: i.key, family: i.family, known: i.known }
-      }),
+    items,
     stepList: lines(draft.steps).slice(0, 80),
+    // Tags the family set by hand stay; otherwise they follow the ingredients.
+    ...(draft.tagsEdited ? {} : { tags: autoTag({ title: draft.title, items }) }),
   }
 }
 

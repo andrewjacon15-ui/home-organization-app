@@ -6,6 +6,7 @@
  * anything stalled (a crashed instance). All rule-based: see shared/recipes/.
  */
 import { BookError, type BookReader } from './books/reader.js'
+import { autoTag } from './shared/recipes/tagger.js'
 import { extractRecipes, REVIEW_THRESHOLD, type Block, type ExtractedRecipe } from './shared/recipes/extract.js'
 
 export type BookStatus = 'uploading' | 'queued' | 'parsing' | 'done' | 'error'
@@ -162,6 +163,7 @@ export function toRecipeDoc(r: ExtractedRecipe, bookId: string, book: BookDoc, o
         known: i.known,
       })),
       stepList: r.steps.slice(0, 80).map((s) => s.slice(0, 2000)),
+      tags: autoTag({ title, items: r.items }),
       confidence: r.confidence,
       needsReview,
       edited: false,
