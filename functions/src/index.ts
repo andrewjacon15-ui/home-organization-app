@@ -3,8 +3,12 @@ import { getFirestore } from 'firebase-admin/firestore'
 import { HttpsError, onCall, type CallableRequest } from 'firebase-functions/https'
 import * as logger from 'firebase-functions/logger'
 import { defineSecret } from 'firebase-functions/params'
+import { onDocumentWritten } from 'firebase-functions/firestore'
 import { onSchedule } from 'firebase-functions/scheduler'
+import { getStorage } from 'firebase-admin/storage'
 import * as calendar from './calendar.js'
+import * as cookbooks from './cookbooks.js'
+import { firestoreCookbookStore, storageBookFiles } from './cookbookStore.js'
 import { googleApi } from './google.js'
 import * as reminders from './reminders.js'
 import { firestoreReminderStore, gmailMailer } from './reminderStore.js'
@@ -66,3 +70,50 @@ export const sendReminderEmails = onSchedule(
     if (result.eventEmails || result.digests || result.failures) logger.info('reminder emails sent', result)
   },
 )
+
+// ---------------------------------------------------------------------------
+// Cookbooks: upload in the app, parse here in resumable chunks (see cookbooks.ts).
+
+const cookbookDeps = (): cookbooks.CookbookDeps => ({
+  store: firestoreCookbookStore(getFirestore()),
+  files: storageBookFiles(getStorage()),
+  // The PDF/EPUB/OCR libraries load only when a book is actually being read.
+  async open(format, data) {
+    if (format === 'epub') return (await import('./books/epub.js')).openEpub(data)
+    const [{ openPdf }, { ocrPng }] = await Promise.all([import('./books/pdf.js'), import('./books/ocr.js')])
+    return openPdf(data, ocrPng)
+  },
+  log: (msg, extra) => logger.error(msg, extra),
+})
+
+function cookbookCallable<T>(handler: (req: CallableRequest) => Promise<T>) {
+  return onCall({ invoker: 'public', timeoutSeconds: 120 }, async (req) => {
+    try {
+      return await handler(req)
+    } catch (err) {
+      if (err instanceof cookbooks.CookbookError) throw new HttpsError(err.code, err.message)
+      logger.error('cookbook callable failed', { error: String((err as Error)?.stack ?? err), uid: req.auth?.uid })
+      throw new HttpsError('internal', 'Something went wrong. Please try again.')
+    }
+  })
+}
+
+export const cookbookParse = cookbookCallable((req) => cookbooks.startParse(cookbookDeps(), req.auth?.uid, req.data ?? {}))
+export const cookbookDelete = cookbookCallable((req) => cookbooks.deleteCookbook(cookbookDeps(), req.auth?.uid, req.data ?? {}))
+
+/** Each write of a book's parse state that advances it runs the next chunk. */
+export const processCookbook = onDocumentWritten(
+  { document: 'families/{familyId}/cookbooks/{bookId}/work/state', memory: '2GiB', cpu: 1, timeoutSeconds: 540, maxInstances: 3 },
+  async (event) => {
+    const before = (event.data?.before.data() as cookbooks.ParseState | undefined) ?? null
+    const after = (event.data?.after.data() as cookbooks.ParseState | undefined) ?? null
+    if (!cookbooks.shouldProcess(before, after)) return
+    await cookbooks.processChunk(cookbookDeps(), event.params.familyId, event.params.bookId, after!)
+  },
+)
+
+/** Restarts any parse whose instance died mid-chunk. */
+export const cookbookWatchdog = onSchedule({ schedule: 'every 15 minutes', timeoutSeconds: 120 }, async () => {
+  const kicked = await cookbooks.kickStalled(cookbookDeps())
+  if (kicked) logger.warn('restarted stalled cookbook parses', { kicked })
+})

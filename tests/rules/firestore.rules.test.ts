@@ -536,7 +536,47 @@ describe('appearance', () => {
   })
 })
 
+describe('cookbooks', () => {
+  const book = { title: 'Salt Fat Acid Heat', format: 'pdf', storagePath: 'families/famA/cookbooks/bk1/original.pdf', sizeBytes: 1234, status: 'uploading', createdBy: BOB.uid }
+
+  it('lets members add a book record for their own upload, and rename it', async () => {
+    await assertSucceeds(setDoc(doc(dbFor(BOB), `families/${FAM_A}/cookbooks/bk1`), book))
+    await assertSucceeds(updateDoc(doc(dbFor(ALICE), `families/${FAM_A}/cookbooks/bk1`), { title: 'SFAH' }))
+    await assertSucceeds(getDocs(collection(dbFor(ALICE), `families/${FAM_A}/cookbooks`)))
+  })
+
+  it('keeps parse status, the file path, and deletion with the server', async () => {
+    await assertFails(setDoc(doc(dbFor(BOB), `families/${FAM_A}/cookbooks/bk2`), { ...book, status: 'done' }))
+    await assertFails(setDoc(doc(dbFor(BOB), `families/${FAM_A}/cookbooks/bk2`), { ...book, storagePath: 'families/famB/cookbooks/bk2/original.pdf' }))
+    await assertFails(setDoc(doc(dbFor(BOB), `families/${FAM_A}/cookbooks/bk2`), { ...book, format: 'docx', storagePath: 'families/famA/cookbooks/bk2/original.docx' }))
+    await assertFails(setDoc(doc(dbFor(BOB), `families/${FAM_A}/cookbooks/bk2`), { ...book, createdBy: ALICE.uid }))
+    await assertSucceeds(setDoc(doc(dbFor(BOB), `families/${FAM_A}/cookbooks/bk1`), book))
+    await assertFails(updateDoc(doc(dbFor(BOB), `families/${FAM_A}/cookbooks/bk1`), { status: 'done', recipeCount: 99 }))
+    await assertFails(deleteDoc(doc(dbFor(BOB), `families/${FAM_A}/cookbooks/bk1`)))
+    await assertFails(getDoc(doc(dbFor(BOB), `families/${FAM_A}/cookbooks/bk1/work/state`)))
+  })
+
+  it("keeps other families out", async () => {
+    await assertFails(setDoc(doc(dbFor(MALLORY), `families/${FAM_A}/cookbooks/bk9`), { ...book, storagePath: 'families/famA/cookbooks/bk9/original.pdf', createdBy: MALLORY.uid }))
+    await assertFails(getDocs(collection(dbFor(MALLORY), `families/${FAM_A}/cookbooks`)))
+  })
+})
+
 describe('recipes', () => {
+  it('accept structured fields from cookbooks, and review edits', async () => {
+    const parsed = {
+      title: 'Banana Bread', ingredients: '3 bananas', steps: 'Bake.', createdBy: BOB.uid,
+      source: { type: 'cookbook', bookId: 'bk1', bookTitle: 'Baking', location: 'p. 7' },
+      items: [{ raw: '3 bananas', qty: 3, qtyMax: null, unit: null, name: 'bananas', note: '', key: 'banana', family: 'banana', known: true }],
+      stepList: ['Bake.'], confidence: 0.5, needsReview: true, edited: false, favorite: false, yieldText: null,
+    }
+    await assertSucceeds(setDoc(doc(dbFor(BOB), `families/${FAM_A}/recipes/ck_1`), parsed))
+    await assertSucceeds(updateDoc(doc(dbFor(ALICE), `families/${FAM_A}/recipes/ck_1`), { needsReview: false, edited: true, title: 'Grandma’s Banana Bread' }))
+    await assertFails(setDoc(doc(dbFor(BOB), `families/${FAM_A}/recipes/ck_2`), { ...parsed, source: { type: 'scraped' } }))
+    await assertFails(setDoc(doc(dbFor(BOB), `families/${FAM_A}/recipes/ck_3`), { ...parsed, needsReview: 'yes' }))
+    await assertFails(setDoc(doc(dbFor(BOB), `families/${FAM_A}/recipes/ck_4`), { ...parsed, items: 'lots' }))
+  })
+
   const recipe = {
     title: 'Chicken tacos',
     servings: 4,

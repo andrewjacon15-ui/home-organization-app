@@ -2,6 +2,7 @@
 import react from '@vitejs/plugin-react'
 import { execSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { defineConfig, type Plugin } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
@@ -33,6 +34,10 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(APP_VERSION),
     __BUILD_TIME__: JSON.stringify(BUILD_TIME),
+  },
+  resolve: {
+    // Rule-based recipe parsing lives with the Cloud Functions and is shared with the app.
+    alias: { '@shared': fileURLToPath(new URL('./functions/src/shared', import.meta.url)) },
   },
   build: {
     // The Firebase SDK is ~650 kB on its own (cached separately); app chunks stay far below this.

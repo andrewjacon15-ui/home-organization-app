@@ -250,9 +250,29 @@ service cloud.firestore {
       }
 
       match /recipes/{recipeId} {
+        function optList(d, k, max) {
+          return !(k in d) || (d[k] is list && d[k].size() <= max);
+        }
+        function optMap(d, k) {
+          return !(k in d) || d[k] == null || d[k] is map;
+        }
+        function optBoolean(d, k) {
+          return !(k in d) || d[k] is bool;
+        }
+        function optNum(d, k) {
+          return !(k in d) || d[k] == null || d[k] is number;
+        }
         function validRecipe() {
           let d = request.resource.data;
-          return onlyKeys(['title', 'servings', 'minutes', 'ingredients', 'steps', 'url', 'createdBy', 'createdAt', 'updatedAt'])
+          return onlyKeys(['title', 'servings', 'minutes', 'ingredients', 'steps', 'url', 'createdBy', 'createdAt', 'updatedAt',
+              // Structured recipe system (cookbooks, web imports, cooking mode)
+              'source', 'dedupeKey', 'yieldText', 'prepMinutes', 'cookMinutes', 'totalMinutes', 'items', 'stepList',
+              'tags', 'tagsEdited', 'favorite', 'confidence', 'needsReview', 'edited', 'rating', 'credit', 'image'])
+            && (!('source' in d) || d.source == null || (d.source is map && d.source.type in ['manual', 'cookbook', 'online']))
+            && optList(d, 'items', 100) && optList(d, 'stepList', 100)
+            && optMap(d, 'tags') && optMap(d, 'rating')
+            && optBoolean(d, 'favorite') && optBoolean(d, 'needsReview') && optBoolean(d, 'edited') && optBoolean(d, 'tagsEdited')
+            && optNum(d, 'confidence') && optNum(d, 'prepMinutes') && optNum(d, 'cookMinutes') && optNum(d, 'totalMinutes')
             && d.title is string && d.title.size() > 0 && d.title.size() <= 120
             && d.ingredients is string && d.ingredients.size() <= 5000
             && d.steps is string && d.steps.size() <= 10000
@@ -263,6 +283,33 @@ service cloud.firestore {
         }
         allow read, delete: if isMember(familyId);
         allow create, update: if isMember(familyId) && validRecipe();
+      }
+
+      // Uploaded cookbooks. The app creates the record for its own upload and can rename it;
+      // parse status, counts, cover, and deletion belong to the Cloud Functions (cookbooks.ts).
+      match /cookbooks/{bookId} {
+        function validNewBook() {
+          let d = request.resource.data;
+          return onlyKeys(['title', 'format', 'storagePath', 'sizeBytes', 'status', 'createdBy', 'createdAt'])
+            && d.title is string && d.title.size() > 0 && d.title.size() <= 200
+            && d.format in ['epub', 'pdf']
+            && d.storagePath == 'families/' + familyId + '/cookbooks/' + bookId + '/original.' + d.format
+            && d.sizeBytes is int && d.sizeBytes > 0 && d.sizeBytes <= 300 * 1024 * 1024
+            && d.status == 'uploading'
+            && d.createdBy == request.auth.uid;
+        }
+        allow read: if isMember(familyId);
+        allow create: if isMember(familyId) && validNewBook();
+        allow update: if isMember(familyId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title'])
+          && request.resource.data.title is string
+          && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 200;
+        allow delete: if false;
+
+        // Parse cursor and lease (Cloud Functions only).
+        match /work/{doc} {
+          allow read, write: if false;
+        }
       }
 
       match /rewards/{rewardId} {

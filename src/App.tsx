@@ -164,7 +164,7 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
           {shown === 'meals' && <MealsPage familyId={familyId} userId={userId} />}
           {shown === 'recipes' && <RecipesPage familyId={familyId} userId={userId} />}
           {shown === 'photos' && <PhotosPage familyId={familyId} userId={userId} />}
-          {shown === 'settings' && <SettingsPage family={family} members={members} userId={userId} />}
+          {shown === 'settings' && <SettingsPage family={family} members={members} userId={userId} onOpenRecipes={() => setTab('recipes')} />}
           </Suspense>
         </main>
       </div>
