@@ -25,7 +25,6 @@ export interface DisplaySettings {
   remindBeforeMinutes: number
   remindChoresDue: boolean
   reminderSound: boolean
-  showPhotosTab: boolean
   theme: 'system' | 'light' | 'dark'
   accentColor: string
   /** Color synced events by their Google calendar's color, or by the person's color. */
@@ -64,7 +63,6 @@ export const DEFAULT_SETTINGS: DisplaySettings = {
   remindBeforeMinutes: 30,
   remindChoresDue: false,
   reminderSound: true,
-  showPhotosTab: true,
   theme: 'system',
   accentColor: DEFAULT_ACCENT,
   colorEventsBy: 'calendar',

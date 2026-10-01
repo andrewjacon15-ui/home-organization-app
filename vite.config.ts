@@ -34,6 +34,21 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(APP_VERSION),
     __BUILD_TIME__: JSON.stringify(BUILD_TIME),
   },
+  build: {
+    // The Firebase SDK is ~650 kB on its own (cached separately); app chunks stay far below this.
+    chunkSizeWarningLimit: 700,
+    rolldownOptions: {
+      output: {
+        // Firebase and React change far less often than the app: separate files stay cached across deploys.
+        codeSplitting: {
+          groups: [
+            { name: 'firebase', test: /node_modules[\\/](@firebase|firebase)[\\/]/ },
+            { name: 'react', test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/ },
+          ],
+        },
+      },
+    },
+  },
   plugins: [
     react(),
     versionFile(),

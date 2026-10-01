@@ -50,7 +50,3 @@ export function useDevice() {
   return useContext(DeviceContext)
 }
 
-/** For tests: a fixed device. */
-export function StaticDevice({ device, children }: { device: Device; children: ReactNode }) {
-  return <DeviceContext.Provider value={{ device, detected: device, pref: 'auto', setPref: () => undefined, layout: device }}>{children}</DeviceContext.Provider>
-}

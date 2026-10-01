@@ -79,8 +79,35 @@ describe('PhotoLibrary', () => {
     expect(props.onCaption).toHaveBeenCalledWith(expect.objectContaining({ id: 'a' }), 'Beach day')
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
-    expect(props.onDelete).toHaveBeenCalledWith(expect.objectContaining({ id: 'a' }))
+    expect(props.onDelete).toHaveBeenCalledWith([expect.objectContaining({ id: 'a' })])
     expect(screen.queryByRole('dialog', { name: 'Photo details' })).not.toBeInTheDocument()
+  })
+
+  it('removes several photos at once in Select mode, after confirming', () => {
+    const onDelete = vi.fn()
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    render(<PhotoLibrary photos={[photo('a'), photo('b', { caption: 'Beach' }), photo('c', { caption: 'Lake' })]} {...props} onDelete={onDelete} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }))
+    expect(screen.getByRole('button', { name: 'Remove' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Beach' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Lake' }))
+    expect(screen.getByRole('button', { name: 'Beach' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByText('2 selected')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
+    expect(confirm).toHaveBeenCalledWith('Remove these 2 photos for everyone?')
+    expect(onDelete).toHaveBeenCalledWith([expect.objectContaining({ id: 'b' }), expect.objectContaining({ id: 'c' })])
+    // Back to browsing.
+    expect(screen.getByRole('button', { name: 'Select' })).toBeInTheDocument()
+  })
+
+  it('keeps photos when the removal is cancelled', () => {
+    const onDelete = vi.fn()
+    vi.spyOn(window, 'confirm').mockReturnValue(false)
+    render(<PhotoLibrary photos={[photo('a')]} {...props} onDelete={onDelete} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Select' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Photo' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
+    expect(onDelete).not.toHaveBeenCalled()
   })
 
   it('shows upload progress', () => {

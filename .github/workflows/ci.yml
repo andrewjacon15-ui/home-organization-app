@@ -1,0 +1,92 @@
+# Every pull request and every push to main: lint, typecheck, all three test suites,
+# both builds, and a production dependency audit. Branch protection can require
+# the "CI passed" job.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  app:
+    name: Lint, typecheck, unit tests, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
+      - run: npm ci
+      - run: npm ci --prefix functions
+      - name: Lint (web + functions typecheck)
+        run: npm run lint
+      - name: Web tests
+        run: npm run test:web
+      - name: Functions tests
+        run: npm run test:functions
+      - name: Web build (tsc + vite)
+        run: npm run build
+      - name: Functions build
+        run: npm run build --prefix functions
+
+  rules:
+    name: Security rules (Firestore + Storage emulators)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Cache emulator downloads
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ hashFiles('package-lock.json') }}
+      - run: npm ci
+      - name: Rules tests
+        run: npm run test:rules
+
+  audit:
+    name: Dependency audit (production)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Web app
+        run: npm audit --omit=dev --audit-level=moderate
+      - name: Cloud Functions
+        run: npm audit --omit=dev --audit-level=moderate --prefix functions
+
+  passed:
+    name: CI passed
+    if: always()
+    needs: [app, rules, audit]
+    runs-on: ubuntu-latest
+    steps:
+      - name: All jobs succeeded
+        run: |
+          if [ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" = "true" ]; then
+            echo "A required job failed or was cancelled." && exit 1
+          fi

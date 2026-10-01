@@ -22,7 +22,9 @@ export function FamilySetup({ user, onCreated }: Props) {
     try {
       onCreated(await createFamily(user, name.trim() || 'Our Family'))
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
+      // Only approved accounts can start a family (firestore.rules → canCreateFamily); say so plainly.
+      const denied = (err as { code?: string })?.code === 'permission-denied'
+      setError(denied ? "This account can't start a new family. Ask your family's organizer to invite this email in Settings → Family." : err instanceof Error ? err.message : String(err))
       setBusy(false)
     }
   }

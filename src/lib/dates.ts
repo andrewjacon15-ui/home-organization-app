@@ -18,14 +18,6 @@ export function addDays(key: string, days: number): string {
   return toDateKey(date)
 }
 
-/** Human label for a due date relative to today: "Today", "Tomorrow", "Yesterday", or "Mon, Oct 5". */
-export function relativeDayLabel(key: string, todayKey: string): string {
-  if (key === todayKey) return 'Today'
-  if (key === addDays(todayKey, 1)) return 'Tomorrow'
-  if (key === addDays(todayKey, -1)) return 'Yesterday'
-  return fromDateKey(key).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
-}
-
 /** The device's IANA timezone, e.g. "America/New_York". */
 export function detectTimezone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'

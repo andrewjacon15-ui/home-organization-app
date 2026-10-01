@@ -26,7 +26,7 @@ function ownerBackground(colors: string[], multi: boolean): string {
 export function EventChip({ event, members, calendars, now, today, compact, onDelete }: Props) {
   const { settings } = useSettings()
   const owners = event.ownerIds.map((id) => members.get(id)).filter((m) => m !== undefined)
-  const personColors = owners.length ? owners.map((m) => m.color) : ['var(--muted)']
+  const personColors = owners.length ? owners.map((m) => m.color) : ['var(--ink-2)']
   // "By calendar" uses each source calendar's color (e.g. a purple Work calendar); hand-entered events keep the person's color.
   const calendarColors = [...new Set(event.calendarKeys.map((k) => calendars?.get(k)?.color).filter((c): c is string => !!c))]
   const colors = settings.colorEventsBy === 'calendar' && calendarColors.length ? calendarColors : personColors

@@ -17,11 +17,7 @@ import type { Family, Invite, Member } from '../types'
 import { PERSON_COLORS } from './colors'
 import { detectTimezone } from './dates'
 
-export const MEMBER_COLORS = PERSON_COLORS.map((c) => c.hex.toLowerCase())
-
-export function pickColor(taken: string[]): string {
-  return MEMBER_COLORS.find((c) => !taken.includes(c)) ?? MEMBER_COLORS[taken.length % MEMBER_COLORS.length]
-}
+const MEMBER_COLORS = PERSON_COLORS.map((c) => c.hex.toLowerCase())
 
 function emailKey(user: User): string {
   if (!user.email) throw new Error('Your Google account has no email address.')
