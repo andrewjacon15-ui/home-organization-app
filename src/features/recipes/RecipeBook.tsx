@@ -45,6 +45,8 @@ export interface BookProps {
   staples?: string[]
   onFindOnline?: (have: string) => Promise<OnlineResult[]>
   onSaveOnline?: (r: OnlineResult) => Promise<string>
+  /** Opens cooking mode. */
+  onCook?: (recipe: Recipe) => void
 }
 
 const PAGE = 150
@@ -198,6 +200,7 @@ export function RecipeBook(p: BookProps) {
             onMarkReviewed={p.onMarkReviewed ? () => p.onMarkReviewed!(current) : undefined}
             onFavorite={p.onFavorite ? () => p.onFavorite!(current.id, !current.favorite) : undefined}
             onSaveTags={p.onSaveTags ? (tags) => p.onSaveTags!(current, tags) : undefined}
+            onCook={p.onCook ? () => p.onCook!(current) : undefined}
           />
         ) : selected ? (
           <p className="muted" role="status">
@@ -312,9 +315,10 @@ interface ViewProps {
   onMarkReviewed?: () => void
   onFavorite?: () => void
   onSaveTags?: (tags: RecipeTags) => void
+  onCook?: () => void
 }
 
-export function RecipeView({ recipe, today, onEdit, onDelete, onPlan, onAddToGrocery, onMarkReviewed, onFavorite, onSaveTags }: ViewProps) {
+export function RecipeView({ recipe, today, onEdit, onDelete, onPlan, onAddToGrocery, onMarkReviewed, onFavorite, onSaveTags, onCook }: ViewProps) {
   const [grocery, setGrocery] = useState<string | null>(null)
   const [checked, setChecked] = useState<Set<number>>(new Set())
   const [planDate, setPlanDate] = useState(today)
@@ -331,7 +335,14 @@ export function RecipeView({ recipe, today, onEdit, onDelete, onPlan, onAddToGro
       <header className="recipe__head">
         <div className="recipe__title-row">
           <h2 className="recipe__title">{recipe.title}</h2>
-          {onFavorite && <FavoriteButton title={recipe.title} on={!!recipe.favorite} onToggle={onFavorite} />}
+          <div className="row recipe__title-actions">
+            {onCook && (
+              <button type="button" className="button button--primary" onClick={onCook}>
+                Cook this
+              </button>
+            )}
+            {onFavorite && <FavoriteButton title={recipe.title} on={!!recipe.favorite} onToggle={onFavorite} />}
+          </div>
         </div>
         <p className="recipe__meta">
           {[

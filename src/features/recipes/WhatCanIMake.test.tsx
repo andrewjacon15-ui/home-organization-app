@@ -79,9 +79,9 @@ describe('What can I make?', () => {
     expect(onFindOnline).toHaveBeenCalledWith('rice, eggs')
     await user.click(within(card).getByRole('button', { name: 'Easy Fried Rice' }))
     expect(within(card).getByRole('region', { name: 'Steps for Easy Fried Rice' })).toHaveTextContent('Fry the rice.')
-    await user.click(within(card).getByRole('button', { name: 'Save to our recipes' }))
-    await waitFor(() => expect(props.onOpen).toHaveBeenCalledWith('web_1'))
-    expect(onSaveOnline).toHaveBeenCalledWith(web)
+    await user.click(within(card).getByRole('button', { name: 'Cook this' }))
+    await waitFor(() => expect(onSaveOnline).toHaveBeenCalledWith(web))
+    expect(props.onOpen).not.toHaveBeenCalled()
   })
 
   it('explains when online search is unavailable', async () => {

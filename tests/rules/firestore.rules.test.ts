@@ -562,6 +562,25 @@ describe('cookbooks', () => {
   })
 })
 
+describe('cooking sessions', () => {
+  const session = { servings: 6, items: [0, 2], steps: [0], step: 1, startedBy: BOB.uid, expireAt: Timestamp.fromMillis(Date.now() + 86_400_000) }
+  it('lets members share progress and clear it', async () => {
+    const ref = (db: Firestore) => doc(db, `families/${FAM_A}/cookingSessions/r1`)
+    await assertSucceeds(setDoc(ref(dbFor(BOB)), session))
+    await assertSucceeds(getDoc(ref(dbFor(ALICE))))
+    await assertSucceeds(setDoc(ref(dbFor(ALICE)), { ...session, startedBy: ALICE.uid, items: [0, 1, 2] }))
+    await assertSucceeds(deleteDoc(ref(dbFor(ALICE))))
+  })
+  it('checks the shape and keeps other families out', async () => {
+    const ref = (db: Firestore) => doc(db, `families/${FAM_A}/cookingSessions/r2`)
+    await assertFails(setDoc(ref(dbFor(BOB)), { ...session, startedBy: ALICE.uid }))
+    await assertFails(setDoc(ref(dbFor(BOB)), { ...session, items: 'all' }))
+    await assertFails(setDoc(ref(dbFor(BOB)), { ...session, notes: 'x' }))
+    await assertFails(setDoc(ref(dbFor(MALLORY)), { ...session, startedBy: MALLORY.uid }))
+    await assertFails(getDoc(ref(dbFor(MALLORY))))
+  })
+})
+
 describe('kitchen settings', () => {
   it('lets members keep pantry staples and recipe sites, and nothing else', async () => {
     const kitchen = (db: Firestore) => doc(db, `families/${FAM_A}/settings/kitchen`)

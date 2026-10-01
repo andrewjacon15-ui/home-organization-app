@@ -14,7 +14,7 @@ interface Props {
   onOpen: (id: string) => void
   /** Undefined when online search isn't available. */
   onFindOnline?: (have: string) => Promise<OnlineResult[]>
-  /** Saves a web result to the catalog; resolves with its recipe ID. */
+  /** "Cook this" on a web result: saves it to the catalog (only now) and starts cooking it. */
   onSaveOnline?: (r: OnlineResult) => Promise<string>
   onClose: () => void
 }
@@ -130,7 +130,7 @@ export function WhatCanIMake({ entries, staples, onOpen, onFindOnline, onSaveOnl
                   {[pct(r.match), r.rating?.value ? `★ ${r.rating.value.toFixed(1)}${r.rating.count ? ` (${r.rating.count.toLocaleString()})` : ''}` : null, r.credit ?? r.siteName, r.minutes ? `${r.minutes} min` : null].filter(Boolean).join(' · ')}
                 </span>
                 <MatchLines have={r.have} missing={r.missing} />
-                {open === r.url && <OnlinePreview r={r} onSave={onSaveOnline ? async () => onOpen(await onSaveOnline(r)) : undefined} />}
+                {open === r.url && <OnlinePreview r={r} onSave={onSaveOnline ? async () => void (await onSaveOnline(r)) : undefined} />}
               </li>
             ))}
         </ol>
@@ -188,7 +188,7 @@ function OnlinePreview({ r, onSave }: { r: OnlineResult; onSave?: () => Promise<
               }
             }}
           >
-            {saving ? 'Saving…' : 'Save to our recipes'}
+            {saving ? 'Saving…' : 'Cook this'}
           </button>
         )}
         <a href={r.url} target="_blank" rel="noreferrer noopener">
