@@ -1,4 +1,4 @@
-import { ExternalLink, Link2, SlidersHorizontal, Star } from 'lucide-react'
+import { ChefHat, ExternalLink, Link2, SlidersHorizontal, Star } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { TAG_LABELS, TAG_OPTIONS, type RecipeTags } from '@shared/recipes/tagger.js'
 import { ICON_STROKE } from '../../components/Icons'
@@ -15,7 +15,9 @@ import {
   type CatalogFilters,
   type ImportResult,
 } from './catalog'
+import type { OnlineResult } from './kitchenApi'
 import { lines, type Recipe, type RecipeDraft } from './recipesApi'
+import { WhatCanIMake } from './WhatCanIMake'
 
 type PlanSlot = Exclude<MealSlot, 'notes'>
 
@@ -39,6 +41,10 @@ export interface BookProps {
   onImport?: (url: string) => Promise<ImportResult>
   /** Open straight onto the "Needs review" list (from Settings → Cookbooks). */
   initialFilter?: 'all' | 'review'
+  /** "What can I make?": pantry staples, and online search when it's set up. */
+  staples?: string[]
+  onFindOnline?: (have: string) => Promise<OnlineResult[]>
+  onSaveOnline?: (r: OnlineResult) => Promise<string>
 }
 
 const PAGE = 150
@@ -49,6 +55,7 @@ export function RecipeBook(p: BookProps) {
   const [filters, setFilters] = useState<CatalogFilters>({ ...NO_FILTERS, review: initialFilter === 'review' })
   const [showFilters, setShowFilters] = useState(false)
   const [importing, setImporting] = useState(false)
+  const [asking, setAsking] = useState(false)
   const [limit, setLimit] = useState(PAGE)
   const [editing, setEditing] = useState<Recipe | 'new' | null>(null)
   const all = entries ?? []
@@ -76,10 +83,28 @@ export function RecipeBook(p: BookProps) {
 
   return (
     <section className="recipe-book">
+      {asking && (
+        <div className="recipe-book__ask">
+          <WhatCanIMake
+            entries={all}
+            staples={p.staples ?? []}
+            onOpen={(id) => {
+              onSelect(id)
+              setAsking(false)
+            }}
+            onFindOnline={p.onFindOnline}
+            onSaveOnline={p.onSaveOnline}
+            onClose={() => setAsking(false)}
+          />
+        </div>
+      )}
       <div className="recipe-book__list">
         <div className="recipe-book__head">
           <h1 className="page-title">Recipes</h1>
           <div className="row recipe-book__add">
+            <button type="button" className="button" aria-expanded={asking} onClick={() => setAsking((v) => !v)}>
+              <ChefHat size={18} strokeWidth={ICON_STROKE} aria-hidden /> What can I make?
+            </button>
             {p.onImport && (
               <button type="button" className="button" aria-expanded={importing} onClick={() => setImporting((v) => !v)}>
                 <Link2 size={18} strokeWidth={ICON_STROKE} aria-hidden /> Add from link

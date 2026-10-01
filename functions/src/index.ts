@@ -17,7 +17,8 @@ import { INDEX_VERSION } from './shared/recipes/catalogIndex.js'
 import { firestoreStore } from './store.js'
 import { nodeHttpGet } from './web/fetcher.js'
 import * as webRecipes from './webRecipes.js'
-import { firestoreHostStore, firestoreWebRecipeStore } from './webStore.js'
+import * as onlineSearch from './onlineSearch.js'
+import { firestoreHostStore, firestoreSearchStore, firestoreWebRecipeStore } from './webStore.js'
 
 initializeApp()
 
@@ -154,4 +155,26 @@ export const recipeIndexRebuild = onCall({ invoker: 'public', timeoutSeconds: 12
   const meta = await db.doc(`families/${familyId}/recipeIndex/meta`).get()
   if ((meta.get('v') ?? 0) >= INDEX_VERSION) return { rebuilt: false }
   return { rebuilt: true, count: await recipeIndex.rebuildIndex(db, familyId) }
+})
+
+// ---------------------------------------------------------------------------
+// "What can I make?" → Online. Needs the BRAVE_SEARCH_API_KEY secret; until it exists this
+// function isn't deployed (deploy the others by name), and the app says online search is off.
+
+const braveKey = defineSecret('BRAVE_SEARCH_API_KEY')
+
+export const findOnlineRecipes = onCall({ invoker: 'public', timeoutSeconds: 90, memory: '512MiB', secrets: [braveKey], maxInstances: 3 }, async (req) => {
+  const db = getFirestore()
+  const key = braveKey.value()
+  try {
+    return await onlineSearch.findOnlineRecipes(
+      { store: firestoreSearchStore(db), fetcher: { get: nodeHttpGet, hosts: firestoreHostStore(db) }, search: key ? onlineSearch.braveSearch(key) : null },
+      req.auth?.uid,
+      req.data ?? {},
+    )
+  } catch (err) {
+    if (err instanceof onlineSearch.SearchError) throw new HttpsError(err.code, err.message)
+    logger.error('findOnlineRecipes failed', { error: String((err as Error)?.stack ?? err), uid: req.auth?.uid })
+    throw new HttpsError('internal', "Online search didn't work. Please try again.")
+  }
 })

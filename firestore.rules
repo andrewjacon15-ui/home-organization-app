@@ -394,6 +394,13 @@ service cloud.firestore {
           return h is map && h.keys().hasOnly(['phone', 'tablet', 'desktop'])
             && tabList(h, 'phone') && tabList(h, 'tablet') && tabList(h, 'desktop');
         }
+        // Pantry staples and the recipe sites online search may use.
+        function validKitchen() {
+          let d = request.resource.data;
+          return onlyKeys(['staples', 'sites'])
+            && d.staples is list && d.staples.size() <= 60
+            && d.sites is list && d.sites.size() <= 30;
+        }
         function validLock() {
           let d = request.resource.data;
           return onlyKeys(['enabled', 'pinHash', 'salt', 'lockAfterMinutes'])
@@ -404,7 +411,7 @@ service cloud.firestore {
         }
         allow read: if isMember(familyId);
         allow create, update: if isMember(familyId)
-          && ((docId == 'display' && validDisplay()) || (docId == 'lock' && validLock()));
+          && ((docId == 'display' && validDisplay()) || (docId == 'lock' && validLock()) || (docId == 'kitchen' && validKitchen()));
       }
 
       match /reminderPrefs/{userId} {
