@@ -37,6 +37,32 @@ beforeEach(async () => {
   })
 })
 
+describe('cookbook files in Storage', () => {
+  const pdf = new Uint8Array([0x25, 0x50, 0x44, 0x46])
+
+  it('lets members upload EPUB and PDF originals and read them back', async () => {
+    const s = storageFor(BOB)
+    await assertSucceeds(uploadBytes(ref(s, `families/${FAM}/cookbooks/bk1/original.pdf`), pdf, { contentType: 'application/pdf' }))
+    await assertSucceeds(uploadBytes(ref(s, `families/${FAM}/cookbooks/bk2/original.epub`), pdf, { contentType: 'application/epub+zip' }))
+    await assertSucceeds(getBytes(ref(s, `families/${FAM}/cookbooks/bk1/original.pdf`)))
+  })
+
+  it('accepts only the original book file, of the right type, and no deletes from the app', async () => {
+    const s = storageFor(BOB)
+    await assertFails(uploadBytes(ref(s, `families/${FAM}/cookbooks/bk1/cover.png`), pdf, { contentType: 'image/png' }))
+    await assertFails(uploadBytes(ref(s, `families/${FAM}/cookbooks/bk1/original.pdf`), pdf, { contentType: 'text/html' }))
+    await assertFails(uploadBytes(ref(s, `families/${FAM}/cookbooks/bk1/original.exe`), pdf, { contentType: 'application/pdf' }))
+    await uploadBytes(ref(s, `families/${FAM}/cookbooks/bk1/original.pdf`), pdf, { contentType: 'application/pdf' })
+    await assertFails(deleteObject(ref(s, `families/${FAM}/cookbooks/bk1/original.pdf`)))
+  })
+
+  it('keeps other families out', async () => {
+    await uploadBytes(ref(storageFor(BOB), `families/${FAM}/cookbooks/bk1/original.pdf`), pdf, { contentType: 'application/pdf' })
+    await assertFails(getBytes(ref(storageFor(MALLORY), `families/${FAM}/cookbooks/bk1/original.pdf`)))
+    await assertFails(uploadBytes(ref(storageFor(MALLORY), `families/${FAM}/cookbooks/bk3/original.pdf`), pdf, { contentType: 'application/pdf' }))
+  })
+})
+
 describe('family photos in Storage', () => {
   it('lets family members upload, view, and delete photos and videos', async () => {
     const s = storageFor(BOB)

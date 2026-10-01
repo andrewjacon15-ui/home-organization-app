@@ -20,7 +20,11 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+
+    /* Rule-based recipe parsing shared with Cloud Functions */
+    "paths": { "@shared/*": ["./functions/src/shared/*"] }
   },
-  "include": ["src"]
+  "include": ["src", "functions/src/shared"],
+  "exclude": ["functions/src/shared/**/*.test.ts"]
 }

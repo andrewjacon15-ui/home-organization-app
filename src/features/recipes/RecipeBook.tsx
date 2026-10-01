@@ -12,16 +12,22 @@ interface BookProps {
   onPlan: (recipe: Recipe, date: string, slot: PlanSlot) => void
   /** Adds the recipe's ingredients to the grocery list; resolves with how many were added. */
   onAddToGrocery?: (recipe: Recipe) => Promise<number> | number
+  onMarkReviewed?: (recipe: Recipe) => void
+  /** Open straight onto the "Needs review" list (from Settings → Cookbooks). */
+  initialFilter?: 'all' | 'review'
 }
 
 /** List + detail + editor for the family's recipes. */
-export function RecipeBook({ recipes, today, onSave, onDelete, onPlan, onAddToGrocery }: BookProps) {
+export function RecipeBook({ recipes, today, onSave, onDelete, onPlan, onAddToGrocery, onMarkReviewed, initialFilter = 'all' }: BookProps) {
   const [query, setQuery] = useState('')
+  const [filter, setFilter] = useState<'all' | 'review'>(initialFilter)
+  const reviewCount = recipes.filter((r) => r.needsReview).length
   const [selected, setSelected] = useState<string | null>(null)
   const [editing, setEditing] = useState<Recipe | 'new' | null>(null)
 
   const q = query.trim().toLowerCase()
-  const shown = q ? recipes.filter((r) => r.title.toLowerCase().includes(q) || r.ingredients.toLowerCase().includes(q)) : recipes
+  const pool = filter === 'review' ? recipes.filter((r) => r.needsReview) : recipes
+  const shown = q ? pool.filter((r) => r.title.toLowerCase().includes(q) || r.ingredients.toLowerCase().includes(q)) : pool
   const current = recipes.find((r) => r.id === selected) ?? null
 
   if (editing) {
@@ -48,6 +54,16 @@ export function RecipeBook({ recipes, today, onSave, onDelete, onPlan, onAddToGr
           </button>
         </div>
         <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search recipes or ingredients" aria-label="Search recipes" />
+        {(reviewCount > 0 || filter === 'review') && (
+          <div className="segmented recipe-book__filter" role="group" aria-label="Show">
+            <button type="button" className={`segmented__item${filter === 'all' ? ' segmented__item--active' : ''}`} aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>
+              All
+            </button>
+            <button type="button" className={`segmented__item${filter === 'review' ? ' segmented__item--active' : ''}`} aria-pressed={filter === 'review'} onClick={() => setFilter('review')}>
+              Needs review ({reviewCount})
+            </button>
+          </div>
+        )}
         {recipes.length === 0 ? (
           <p className="empty">No recipes yet. Add the family favorites.</p>
         ) : (
@@ -55,21 +71,24 @@ export function RecipeBook({ recipes, today, onSave, onDelete, onPlan, onAddToGr
             {shown.map((r) => (
               <li key={r.id}>
                 <button type="button" className={`recipe-row${r.id === selected ? ' recipe-row--active' : ''}`} aria-current={r.id === selected ? 'true' : undefined} onClick={() => setSelected(r.id)}>
-                  <span className="recipe-row__title">{r.title}</span>
+                  <span className="recipe-row__title">
+                    {r.title}
+                    {r.needsReview && <span className="badge badge--warn">Review</span>}
+                  </span>
                   <span className="recipe-row__meta">
-                    {[r.minutes ? `${r.minutes} min` : null, r.servings ? `serves ${r.servings}` : null].filter(Boolean).join(' · ')}
+                    {[r.source?.type === 'cookbook' ? r.source.bookTitle : null, r.minutes ? `${r.minutes} min` : null, r.servings ? `serves ${r.servings}` : null].filter(Boolean).join(' · ')}
                   </span>
                 </button>
               </li>
             ))}
-            {shown.length === 0 && <li className="muted">No matches.</li>}
+            {shown.length === 0 && <li className="muted">{filter === 'review' && !q ? 'Nothing left to review.' : 'No matches.'}</li>}
           </ul>
         )}
       </div>
 
       <div className="recipe-book__detail">
         {current ? (
-          <RecipeView recipe={current} today={today} onEdit={() => setEditing(current)} onDelete={() => onDelete(current)} onPlan={(date, slot) => onPlan(current, date, slot)} onAddToGrocery={onAddToGrocery ? () => onAddToGrocery(current) : undefined} />
+          <RecipeView recipe={current} today={today} onEdit={() => setEditing(current)} onDelete={() => onDelete(current)} onPlan={(date, slot) => onPlan(current, date, slot)} onAddToGrocery={onAddToGrocery ? () => onAddToGrocery(current) : undefined} onMarkReviewed={onMarkReviewed ? () => onMarkReviewed(current) : undefined} />
         ) : (
           recipes.length > 0 && <p className="empty">Pick a recipe.</p>
         )}
@@ -85,9 +104,10 @@ interface ViewProps {
   onDelete?: () => void
   onPlan?: (date: string, slot: PlanSlot) => void
   onAddToGrocery?: () => Promise<number> | number
+  onMarkReviewed?: () => void
 }
 
-export function RecipeView({ recipe, today, onEdit, onDelete, onPlan, onAddToGrocery }: ViewProps) {
+export function RecipeView({ recipe, today, onEdit, onDelete, onPlan, onAddToGrocery, onMarkReviewed }: ViewProps) {
   const [grocery, setGrocery] = useState<string | null>(null)
   const [checked, setChecked] = useState<Set<number>>(new Set())
   const [planDate, setPlanDate] = useState(today)
@@ -111,7 +131,33 @@ export function RecipeView({ recipe, today, onEdit, onDelete, onPlan, onAddToGro
             </>
           )}
         </p>
+        {recipe.source?.type === 'cookbook' && (
+          <p className="recipe__source">
+            From <cite>{recipe.source.bookTitle}</cite>
+            {recipe.source.location ? `, ${recipe.source.location}` : ''}
+          </p>
+        )}
       </header>
+
+      {recipe.needsReview && (
+        <div className="recipe__review" role="note">
+          <p>
+            <strong>Needs review.</strong> This was read automatically{recipe.source?.location?.includes('OCR') ? ' from a scanned page' : ''} and may have mistakes. Check it against the book.
+          </p>
+          <div className="row">
+            {onMarkReviewed && (
+              <button type="button" className="button button--primary" onClick={onMarkReviewed}>
+                Looks right
+              </button>
+            )}
+            {onEdit && (
+              <button type="button" className="button" onClick={onEdit}>
+                Fix it
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {onPlan && (
         <form

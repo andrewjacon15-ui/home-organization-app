@@ -5,6 +5,8 @@ import { useLock } from '../lock/LockContext'
 import { PinPad } from '../lock/PinPad'
 import { AboutSettings } from './AboutSettings'
 import { AppearanceSettings } from './AppearanceSettings'
+import { CookbookSettings } from '../cookbooks/CookbookSettings'
+import { requestRecipesFilter } from '../recipes/recipesFilter'
 import { CalendarSettings } from './CalendarSettings'
 import { DeviceSettings } from './DeviceSettings'
 import { EmailReminderSettings } from './EmailReminderSettings'
@@ -20,6 +22,8 @@ interface Props {
   family: Family
   members: Member[]
   userId: string
+  /** Opens another section of the app (Cookbooks → review list). */
+  onOpenRecipes?: () => void
 }
 
 const SECTIONS = [
@@ -33,13 +37,14 @@ const SECTIONS = [
   { id: 'calendar', label: 'Calendar' },
   { id: 'reminders', label: 'Reminders' },
   { id: 'email', label: 'Email reminders' },
+  { id: 'cookbooks', label: 'Cookbooks' },
   { id: 'photos', label: 'Photos & screensaver' },
   { id: 'sleep', label: 'Sleep mode' },
   { id: 'lock', label: 'Parental lock' },
   { id: 'about', label: 'About' },
 ]
 
-export function SettingsPage({ family, members, userId }: Props) {
+export function SettingsPage({ family, members, userId, onOpenRecipes }: Props) {
   const { locked, unlock } = useLock()
 
   if (locked) {
@@ -83,6 +88,14 @@ export function SettingsPage({ family, members, userId }: Props) {
         <CalendarSettings familyName={family.name} />
         <ReminderSettings />
         <EmailReminderSettings familyId={family.id} userId={userId} email={members.find((m) => m.id === userId)?.email ?? ''} timezone={family.timezone} />
+        <CookbookSettings
+          familyId={family.id}
+          userId={userId}
+          onReview={() => {
+            requestRecipesFilter('review')
+            onOpenRecipes?.()
+          }}
+        />
         <ScreensaverSettings />
         <SleepSettings />
         <LockSettings save={(c) => saveLock(family.id, c)} />

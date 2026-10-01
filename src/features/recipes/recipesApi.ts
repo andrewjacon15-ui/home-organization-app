@@ -1,10 +1,29 @@
 import { addDoc, collection, deleteDoc, doc, getDoc, onSnapshot, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore'
+import { parseIngredient } from '@shared/recipes/ingredient.js'
 import { db } from '../../firebase'
 import type { MealPlan, MealSlot } from '../../types'
+
+/** Where a recipe came from. Cookbook recipes point back to the book and page. */
+export interface RecipeSource {
+  type: 'manual' | 'cookbook' | 'online'
+  bookId?: string | null
+  bookTitle?: string | null
+  location?: string | null
+  url?: string | null
+  siteName?: string | null
+}
 
 export interface Recipe {
   id: string
   title: string
+  source?: RecipeSource | null
+  /** Parsed from a cookbook with low confidence: check it against the book. */
+  needsReview?: boolean
+  confidence?: number | null
+  yieldText?: string | null
+  /** Changed by the family (re-parsing a book won't overwrite it). */
+  edited?: boolean
+  favorite?: boolean
   servings?: number | null
   minutes?: number | null
   /** One ingredient per line. */
@@ -42,7 +61,13 @@ export function watchRecipes(familyId: string, onChange: (recipes: Recipe[]) => 
         servings: x.servings ?? null,
         minutes: x.minutes ?? null,
         url: x.url ?? null,
-      }
+        source: x.source ?? null,
+        needsReview: !!x.needsReview,
+        confidence: x.confidence ?? null,
+        yieldText: x.yieldText ?? null,
+        edited: !!x.edited,
+        favorite: !!x.favorite,
+      } satisfies Recipe
     })
     list.sort((a, b) => a.title.localeCompare(b.title))
     onChange(list)
@@ -60,13 +85,33 @@ function clean(draft: RecipeDraft) {
   }
 }
 
+/** The structured fields every recipe keeps alongside its text (parsed with the same rules as cookbooks). */
+function structured(draft: RecipeDraft) {
+  return {
+    items: lines(draft.ingredients)
+      .filter((l) => !/:\s*$/.test(l)) // group labels like "For the sauce:"
+      .slice(0, 80)
+      .map((l) => {
+        const i = parseIngredient(l)
+        return { raw: i.raw, qty: i.qty, qtyMax: i.qtyMax, unit: i.unit, name: i.name, note: i.note, key: i.key, family: i.family, known: i.known }
+      }),
+    stepList: lines(draft.steps).slice(0, 80),
+  }
+}
+
+/** Saving an edit also clears "Needs review" and protects the recipe from re-parsing. */
 export async function saveRecipe(familyId: string, userId: string, draft: RecipeDraft, id?: string): Promise<string> {
   if (id) {
-    await updateDoc(doc(recipesCol(familyId), id), { ...clean(draft), updatedAt: serverTimestamp() })
+    await updateDoc(doc(recipesCol(familyId), id), { ...clean(draft), ...structured(draft), needsReview: false, edited: true, updatedAt: serverTimestamp() })
     return id
   }
-  const ref = await addDoc(recipesCol(familyId), { ...clean(draft), createdBy: userId, createdAt: serverTimestamp() })
+  const ref = await addDoc(recipesCol(familyId), { ...clean(draft), ...structured(draft), source: { type: 'manual' }, createdBy: userId, createdAt: serverTimestamp() })
   return ref.id
+}
+
+/** "Looks right": a reviewed cookbook recipe leaves the review list. */
+export function markReviewed(familyId: string, id: string) {
+  return updateDoc(doc(recipesCol(familyId), id), { needsReview: false, edited: true, updatedAt: serverTimestamp() })
 }
 
 export function deleteRecipe(familyId: string, id: string) {

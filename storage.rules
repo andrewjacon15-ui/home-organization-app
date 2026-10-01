@@ -17,6 +17,16 @@ service firebase.storage {
           || (request.resource.contentType.matches('video/.*') && request.resource.size < 200 * 1024 * 1024));
     }
 
+    // Cookbook originals: EPUB or PDF up to 300 MB. Covers are written by the parser;
+    // deletion goes through the cookbookDelete function (file and record together).
+    match /families/{familyId}/cookbooks/{bookId}/{file} {
+      allow read: if isMember(familyId);
+      allow create: if isMember(familyId)
+        && file.matches('original[.](epub|pdf)')
+        && request.resource.size < 300 * 1024 * 1024
+        && request.resource.contentType.matches('application/(pdf|epub[+]zip)');
+    }
+
     match /{allPaths=**} {
       allow read, write: if false;
     }
