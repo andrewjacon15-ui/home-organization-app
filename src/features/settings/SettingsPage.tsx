@@ -13,6 +13,7 @@ import { EmailReminderSettings } from './EmailReminderSettings'
 import { GeneralSettings } from './GeneralSettings'
 import { GoogleCalendarSettings } from './GoogleCalendarSettings'
 import { HomeScreenSettings } from './HomeScreenSettings'
+import { KitchenSettings } from './KitchenSettings'
 import { LockSettings } from './LockSettings'
 import { PeopleViewSettings } from './PeopleViewSettings'
 import { ReminderSettings } from './ReminderSettings'
@@ -40,6 +41,7 @@ const SECTIONS = [
   { id: 'reminders', label: 'Reminders' },
   { id: 'email', label: 'Email reminders' },
   { id: 'cookbooks', label: 'Cookbooks' },
+  { id: 'kitchen', label: 'Kitchen' },
   { id: 'photos', label: 'Photos & screensaver' },
   { id: 'sleep', label: 'Sleep mode' },
   { id: 'lock', label: 'Parental lock' },
@@ -99,6 +101,7 @@ export function SettingsPage({ family, members, userId, onOpenRecipes }: Props) 
             onOpenRecipes?.()
           }}
         />
+        <KitchenSettings familyId={family.id} />
         <ScreensaverSettings />
         <SleepSettings />
         <LockSettings save={(c) => saveLock(family.id, c)} />

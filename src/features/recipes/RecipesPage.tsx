@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useToday } from '../../lib/hooks'
 import { addItems, groceryListId, watchLists, type FamilyList } from '../lists/listsApi'
+import { DEFAULT_KITCHEN } from '@shared/recipes/kitchen.js'
 import { importRecipe, rebuildCatalog, saveTags, setFavorite, watchCatalog, type CatalogEntry } from './catalog'
+import { findOnline, watchKitchen } from './kitchenApi'
 import { deleteRecipe, lines, markReviewed, planRecipe, saveRecipe, watchRecipe, type Recipe } from './recipesApi'
 import { RecipeBook } from './RecipeBook'
 import { takeRecipesFilter } from './recipesFilter'
@@ -16,6 +18,7 @@ export function RecipesPage({ familyId, userId }: { familyId: string; userId: st
   const [initialFilter] = useState<'all' | 'review'>(() => takeRecipesFilter())
   const [lists, setLists] = useState<FamilyList[]>([])
   const rebuilding = useRef(false)
+  const [kitchen, setKitchen] = useState(DEFAULT_KITCHEN)
 
   const report = (e: unknown) => setError(e instanceof Error ? e.message : String(e))
 
@@ -35,6 +38,7 @@ export function RecipesPage({ familyId, userId }: { familyId: string; userId: st
   useEffect(() => {
     if (selected) return watchRecipe(familyId, selected, setCurrent)
   }, [familyId, selected])
+  useEffect(() => watchKitchen(familyId, setKitchen), [familyId])
   // The grocery list is only needed when adding to it; this listener is two small documents.
   useEffect(() => watchLists(familyId, setLists), [familyId])
 
@@ -58,6 +62,9 @@ export function RecipesPage({ familyId, userId }: { familyId: string; userId: st
         onSaveTags={(r, tags) => saveTags(familyId, r.id, tags).catch(report)}
         onImport={(url) => importRecipe(familyId, url)}
         initialFilter={initialFilter}
+        staples={kitchen.staples}
+        onFindOnline={(have) => findOnline(familyId, have)}
+        onSaveOnline={async (r) => (await importRecipe(familyId, r.url)).id}
         onPlan={(r, date, slot) => planRecipe(familyId, userId, date, slot, r.title).catch(report)}
         onAddToGrocery={async (r) => {
           const items = lines(r.ingredients)

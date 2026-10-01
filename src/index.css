@@ -4098,3 +4098,170 @@ thead .sidebar-grid__current {
     min-height: 0;
   }
 }
+
+/* --------------------------------------------------------------------------
+   What can I make?
+   -------------------------------------------------------------------------- */
+
+.recipe-book__ask {
+  grid-column: 1 / -1;
+}
+
+.wcim {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.wcim__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.wcim__head h2 {
+  margin: 0;
+  font-size: var(--fs-lead);
+}
+
+.wcim__form {
+  display: grid;
+  gap: 8px;
+}
+
+.wcim__form p {
+  margin: 0;
+}
+
+.wcim__input {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px;
+}
+
+.wcim__mic {
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--rule);
+}
+
+.wcim__mic--on {
+  color: var(--accent-ink);
+  background: var(--accent);
+}
+
+.wcim__understood {
+  font-size: var(--fs-small);
+  color: var(--ink-2);
+}
+
+.wcim__actions {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.wcim__results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+}
+
+.wcim-card {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+}
+
+.wcim-card:has(.wcim-preview) {
+  grid-column: 1 / -1;
+}
+
+.wcim-card__title {
+  justify-self: start;
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: left;
+  font-size: var(--fs-lead);
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.wcim-card__meta {
+  font-size: var(--fs-small);
+  color: var(--ink-2);
+}
+
+.wcim-card__have {
+  font-size: var(--fs-small);
+  color: #15803d;
+}
+
+.wcim-card__missing {
+  font-size: var(--fs-small);
+  color: #b45309;
+}
+
+.wcim-preview {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--rule);
+}
+
+.wcim-preview__cols {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: 24px;
+}
+
+.wcim-preview h3 {
+  font-size: var(--fs-body);
+}
+
+:root[data-device='phone'] .wcim-preview__cols {
+  grid-template-columns: 1fr;
+}
+
+/* Settings: editable chip lists (pantry staples, recipe sites) */
+.chip-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip-list__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding-right: 4px;
+}
+
+.chip-list__remove {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--ink-2);
+  cursor: pointer;
+}

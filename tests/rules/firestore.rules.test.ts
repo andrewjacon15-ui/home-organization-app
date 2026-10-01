@@ -562,6 +562,23 @@ describe('cookbooks', () => {
   })
 })
 
+describe('kitchen settings', () => {
+  it('lets members keep pantry staples and recipe sites, and nothing else', async () => {
+    const kitchen = (db: Firestore) => doc(db, `families/${FAM_A}/settings/kitchen`)
+    await assertSucceeds(setDoc(kitchen(dbFor(BOB)), { staples: ['salt', 'butter'], sites: ['seriouseats.com'] }))
+    await assertSucceeds(getDoc(kitchen(dbFor(ALICE))))
+    await assertFails(setDoc(kitchen(dbFor(BOB)), { staples: 'salt', sites: [] }))
+    await assertFails(setDoc(kitchen(dbFor(BOB)), { staples: [], sites: [], braveKey: 'x' }))
+    await assertFails(setDoc(kitchen(dbFor(BOB)), { staples: [], sites: Array.from({ length: 31 }, (_, i) => `s${i}.com`) }))
+    await assertFails(getDoc(kitchen(dbFor(MALLORY))))
+  })
+
+  it('keeps the search cache and usage counter server-only', async () => {
+    await assertFails(getDoc(doc(dbFor(BOB), 'webCache/q_1')))
+    await assertFails(setDoc(doc(dbFor(BOB), 'apiUsage/brave_2026-10'), { count: 0 }))
+  })
+})
+
 describe('recipe index', () => {
   it('is readable by members and written only by the server', async () => {
     await assertSucceeds(getDocs(collection(dbFor(BOB), `families/${FAM_A}/recipeIndex`)))
