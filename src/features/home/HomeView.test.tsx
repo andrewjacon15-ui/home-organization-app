@@ -35,8 +35,9 @@ const items: Record<string, ListItem[]> = {
   todo: [{ id: 't1', text: 'Reseal shower', done: false, memberId: 'a', order: 1 }],
 }
 
-function setup() {
+function setup(panels?: ('lists' | 'tasks' | 'calendar')[]) {
   const props = {
+    panels,
     today: TODAY,
     now: local('2026-09-28T07:00'),
     weekStart: '2026-09-27',
@@ -57,6 +58,21 @@ function setup() {
 }
 
 describe('HomeView', () => {
+  it('stacks Lists, then Tasks, then Calendar by default, and follows the Home screen setting', () => {
+    setup()
+    expect(screen.getAllByRole('region').map((r) => r.getAttribute('aria-label'))).toEqual(['Lists', "Today's tasks", 'This week'])
+  })
+
+  it('shows only the chosen panels, in order', () => {
+    setup(['calendar', 'lists'])
+    expect(screen.getAllByRole('region').map((r) => r.getAttribute('aria-label'))).toEqual(['This week', 'Lists'])
+  })
+
+  it('explains an empty Home', () => {
+    setup([])
+    expect(screen.getByText(/Choose panels in Settings/)).toBeInTheDocument()
+  })
+
   it('shows this week as day cells plus a Next Week summary', () => {
     setup()
     const cal = screen.getByRole('region', { name: 'This week' })

@@ -1,11 +1,31 @@
+import { ExternalLink, Link2, SlidersHorizontal, Star } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
+import { TAG_LABELS, TAG_OPTIONS, type RecipeTags } from '@shared/recipes/tagger.js'
+import { ICON_STROKE } from '../../components/Icons'
 import type { MealSlot } from '../../types'
+import {
+  activeFilterCount,
+  facetOptions,
+  filterCatalog,
+  NO_FILTERS,
+  SOURCE_LABELS,
+  TIME_LABELS,
+  titleCase,
+  type CatalogEntry,
+  type CatalogFilters,
+  type ImportResult,
+} from './catalog'
 import { lines, type Recipe, type RecipeDraft } from './recipesApi'
 
 type PlanSlot = Exclude<MealSlot, 'notes'>
 
-interface BookProps {
-  recipes: Recipe[]
+export interface BookProps {
+  /** The catalog index; null while it loads. */
+  entries: CatalogEntry[] | null
+  /** The open recipe, loaded in full. */
+  selected: string | null
+  current: Recipe | null
+  onSelect: (id: string | null) => void
   today: string
   onSave: (draft: RecipeDraft, id?: string) => Promise<string | void> | void
   onDelete: (recipe: Recipe) => void
@@ -13,22 +33,32 @@ interface BookProps {
   /** Adds the recipe's ingredients to the grocery list; resolves with how many were added. */
   onAddToGrocery?: (recipe: Recipe) => Promise<number> | number
   onMarkReviewed?: (recipe: Recipe) => void
+  onFavorite?: (id: string, favorite: boolean) => void
+  onSaveTags?: (recipe: Recipe, tags: RecipeTags) => void
+  /** Reads a recipe page on the server and adds it. */
+  onImport?: (url: string) => Promise<ImportResult>
   /** Open straight onto the "Needs review" list (from Settings → Cookbooks). */
   initialFilter?: 'all' | 'review'
 }
 
-/** List + detail + editor for the family's recipes. */
-export function RecipeBook({ recipes, today, onSave, onDelete, onPlan, onAddToGrocery, onMarkReviewed, initialFilter = 'all' }: BookProps) {
-  const [query, setQuery] = useState('')
-  const [filter, setFilter] = useState<'all' | 'review'>(initialFilter)
-  const reviewCount = recipes.filter((r) => r.needsReview).length
-  const [selected, setSelected] = useState<string | null>(null)
-  const [editing, setEditing] = useState<Recipe | 'new' | null>(null)
+const PAGE = 150
 
-  const q = query.trim().toLowerCase()
-  const pool = filter === 'review' ? recipes.filter((r) => r.needsReview) : recipes
-  const shown = q ? pool.filter((r) => r.title.toLowerCase().includes(q) || r.ingredients.toLowerCase().includes(q)) : pool
-  const current = recipes.find((r) => r.id === selected) ?? null
+/** The family's recipe catalog: search, filters, favorites, import from a link; detail and editor. */
+export function RecipeBook(p: BookProps) {
+  const { entries, selected, current, onSelect, initialFilter = 'all' } = p
+  const [filters, setFilters] = useState<CatalogFilters>({ ...NO_FILTERS, review: initialFilter === 'review' })
+  const [showFilters, setShowFilters] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [limit, setLimit] = useState(PAGE)
+  const [editing, setEditing] = useState<Recipe | 'new' | null>(null)
+  const all = entries ?? []
+  const reviewCount = all.filter((e) => e.r).length
+  const shown = filterCatalog(all, filters)
+  const set = (changes: Partial<CatalogFilters>) => {
+    setFilters((f) => ({ ...f, ...changes }))
+    setLimit(PAGE)
+  }
+  const active = activeFilterCount(filters)
 
   if (editing) {
     return (
@@ -36,9 +66,9 @@ export function RecipeBook({ recipes, today, onSave, onDelete, onPlan, onAddToGr
         initial={editing === 'new' ? null : editing}
         onCancel={() => setEditing(null)}
         onSubmit={async (draft) => {
-          const id = await onSave(draft, editing === 'new' ? undefined : editing.id)
+          const id = await p.onSave(draft, editing === 'new' ? undefined : editing.id)
           setEditing(null)
-          if (typeof id === 'string') setSelected(id)
+          if (typeof id === 'string') onSelect(id)
         }}
       />
     )
@@ -49,51 +79,201 @@ export function RecipeBook({ recipes, today, onSave, onDelete, onPlan, onAddToGr
       <div className="recipe-book__list">
         <div className="recipe-book__head">
           <h1 className="page-title">Recipes</h1>
-          <button type="button" className="button button--primary" onClick={() => setEditing('new')}>
-            New recipe
-          </button>
-        </div>
-        <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search recipes or ingredients" aria-label="Search recipes" />
-        {(reviewCount > 0 || filter === 'review') && (
-          <div className="segmented recipe-book__filter" role="group" aria-label="Show">
-            <button type="button" className={`segmented__item${filter === 'all' ? ' segmented__item--active' : ''}`} aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>
-              All
-            </button>
-            <button type="button" className={`segmented__item${filter === 'review' ? ' segmented__item--active' : ''}`} aria-pressed={filter === 'review'} onClick={() => setFilter('review')}>
-              Needs review ({reviewCount})
+          <div className="row recipe-book__add">
+            {p.onImport && (
+              <button type="button" className="button" aria-expanded={importing} onClick={() => setImporting((v) => !v)}>
+                <Link2 size={18} strokeWidth={ICON_STROKE} aria-hidden /> Add from link
+              </button>
+            )}
+            <button type="button" className="button button--primary" onClick={() => setEditing('new')}>
+              New recipe
             </button>
           </div>
+        </div>
+        {importing && p.onImport && (
+          <ImportForm
+            onImport={p.onImport}
+            onDone={(id) => {
+              onSelect(id)
+              setFilters(NO_FILTERS)
+            }}
+            onClose={() => setImporting(false)}
+          />
         )}
-        {recipes.length === 0 ? (
-          <p className="empty">No recipes yet. Add the family favorites.</p>
+
+        <input type="search" value={filters.q} onChange={(e) => set({ q: e.target.value })} placeholder="Search titles, ingredients, books" aria-label="Search recipes" />
+        <div className="row catalog-bar">
+          <button type="button" className={`chip${filters.favorites ? ' chip--active' : ''}`} aria-pressed={filters.favorites} onClick={() => set({ favorites: !filters.favorites })}>
+            <Star size={16} strokeWidth={ICON_STROKE} fill={filters.favorites ? 'currentColor' : 'none'} aria-hidden /> Favorites
+          </button>
+          <button type="button" className={`chip${active - (filters.favorites ? 1 : 0) > 0 ? ' chip--active' : ''}`} aria-expanded={showFilters} onClick={() => setShowFilters((v) => !v)}>
+            <SlidersHorizontal size={16} strokeWidth={ICON_STROKE} aria-hidden /> Filters
+            {active - (filters.favorites ? 1 : 0) > 0 ? ` (${active - (filters.favorites ? 1 : 0)})` : ''}
+          </button>
+          {(reviewCount > 0 || filters.review) && (
+            <button type="button" className={`chip${filters.review ? ' chip--active' : ''}`} aria-pressed={filters.review} onClick={() => set({ review: !filters.review })}>
+              Needs review ({reviewCount})
+            </button>
+          )}
+          {active > 0 && (
+            <button type="button" className="link" onClick={() => set({ ...NO_FILTERS, q: filters.q, review: filters.review })}>
+              Clear
+            </button>
+          )}
+        </div>
+        {showFilters && <FilterPanel entries={all} filters={filters} onChange={set} />}
+
+        {entries === null ? (
+          <p className="muted" role="status">
+            Loading recipes…
+          </p>
+        ) : all.length === 0 ? (
+          <p className="empty">No recipes yet. Add the family favorites, paste a link, or upload a cookbook in Settings.</p>
         ) : (
-          <ul className="recipe-list" aria-label="Recipes">
-            {shown.map((r) => (
-              <li key={r.id}>
-                <button type="button" className={`recipe-row${r.id === selected ? ' recipe-row--active' : ''}`} aria-current={r.id === selected ? 'true' : undefined} onClick={() => setSelected(r.id)}>
-                  <span className="recipe-row__title">
-                    {r.title}
-                    {r.needsReview && <span className="badge badge--warn">Review</span>}
-                  </span>
-                  <span className="recipe-row__meta">
-                    {[r.source?.type === 'cookbook' ? r.source.bookTitle : null, r.minutes ? `${r.minutes} min` : null, r.servings ? `serves ${r.servings}` : null].filter(Boolean).join(' · ')}
-                  </span>
-                </button>
-              </li>
-            ))}
-            {shown.length === 0 && <li className="muted">{filter === 'review' && !q ? 'Nothing left to review.' : 'No matches.'}</li>}
-          </ul>
+          <>
+            <p className="muted catalog-count">
+              {shown.length === all.length ? `${all.length} recipe${all.length === 1 ? '' : 's'}` : `${shown.length} of ${all.length}`}
+            </p>
+            <ul className="recipe-list" aria-label="Recipes">
+              {shown.slice(0, limit).map((e) => (
+                <li key={e.id} className="recipe-item">
+                  <button type="button" className={`recipe-row${e.id === selected ? ' recipe-row--active' : ''}`} aria-current={e.id === selected ? 'true' : undefined} onClick={() => onSelect(e.id)}>
+                    <span className="recipe-row__title">
+                      {e.t}
+                      {e.r && <span className="badge badge--warn">Review</span>}
+                    </span>
+                    <span className="recipe-row__meta">{rowMeta(e)}</span>
+                  </button>
+                  {p.onFavorite && <FavoriteButton title={e.t} on={e.f} onToggle={() => p.onFavorite!(e.id, !e.f)} />}
+                </li>
+              ))}
+              {shown.length === 0 && <li className="muted">{filters.review && !filters.q && active === 0 ? 'Nothing left to review.' : 'No matches.'}</li>}
+            </ul>
+            {shown.length > limit && (
+              <button type="button" className="button" onClick={() => setLimit((l) => l + PAGE)}>
+                Show more ({shown.length - limit})
+              </button>
+            )}
+          </>
         )}
       </div>
 
       <div className="recipe-book__detail">
-        {current ? (
-          <RecipeView recipe={current} today={today} onEdit={() => setEditing(current)} onDelete={() => onDelete(current)} onPlan={(date, slot) => onPlan(current, date, slot)} onAddToGrocery={onAddToGrocery ? () => onAddToGrocery(current) : undefined} onMarkReviewed={onMarkReviewed ? () => onMarkReviewed(current) : undefined} />
+        {current && current.id === selected ? (
+          <RecipeView
+            recipe={current}
+            today={p.today}
+            onEdit={() => setEditing(current)}
+            onDelete={() => {
+              p.onDelete(current)
+              onSelect(null)
+            }}
+            onPlan={(date, slot) => p.onPlan(current, date, slot)}
+            onAddToGrocery={p.onAddToGrocery ? () => p.onAddToGrocery!(current) : undefined}
+            onMarkReviewed={p.onMarkReviewed ? () => p.onMarkReviewed!(current) : undefined}
+            onFavorite={p.onFavorite ? () => p.onFavorite!(current.id, !current.favorite) : undefined}
+            onSaveTags={p.onSaveTags ? (tags) => p.onSaveTags!(current, tags) : undefined}
+          />
+        ) : selected ? (
+          <p className="muted" role="status">
+            Opening…
+          </p>
         ) : (
-          recipes.length > 0 && <p className="empty">Pick a recipe.</p>
+          all.length > 0 && <p className="empty">Pick a recipe.</p>
         )}
       </div>
     </section>
+  )
+}
+
+function rowMeta(e: CatalogEntry): string {
+  const tag = e.g.cuisine[0] ?? e.g.meal[0] ?? null
+  return [e.b, e.m ? `${e.m} min` : null, tag ? titleCase(tag) : null].filter(Boolean).join(' · ')
+}
+
+function FavoriteButton({ title, on, onToggle }: { title: string; on: boolean; onToggle: () => void }) {
+  return (
+    <button type="button" className={`icon-button favorite${on ? ' favorite--on' : ''}`} aria-pressed={on} aria-label={`Favorite ${title}`} title={on ? 'Remove from favorites' : 'Add to favorites'} onClick={onToggle}>
+      <Star size={20} strokeWidth={ICON_STROKE} fill={on ? 'currentColor' : 'none'} aria-hidden />
+    </button>
+  )
+}
+
+function FilterPanel({ entries, filters, onChange }: { entries: CatalogEntry[]; filters: CatalogFilters; onChange: (c: Partial<CatalogFilters>) => void }) {
+  const facets = [
+    { key: 'meal', label: 'Meal', any: 'Any meal', name: titleCase },
+    { key: 'cuisine', label: 'Cuisine', any: 'Any cuisine', name: titleCase },
+    { key: 'main', label: 'Main ingredient', any: 'Any main ingredient', name: titleCase },
+    { key: 'time', label: 'Time', any: 'Any time', name: (v: string) => TIME_LABELS[v as keyof typeof TIME_LABELS] },
+    { key: 'diet', label: 'Diet', any: 'Any diet', name: titleCase },
+    { key: 'source', label: 'Source', any: 'Any source', name: (v: string) => SOURCE_LABELS[v as keyof typeof SOURCE_LABELS] },
+  ] as const
+  return (
+    <div className="catalog-filters" role="group" aria-label="Filters">
+      {facets.map((f) => {
+        const options = facetOptions(entries, filters, f.key)
+        return (
+          <label key={f.key} className="field catalog-filters__field">
+            {f.label}
+            <select value={filters[f.key]} onChange={(e) => onChange({ [f.key]: e.target.value })} disabled={options.length === 0 && !filters[f.key]}>
+              <option value="">{f.any}</option>
+              {options.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {f.name(o.value)} ({o.count})
+                </option>
+              ))}
+            </select>
+          </label>
+        )
+      })}
+      <p className="settings-note catalog-filters__note">Tags are added automatically from each recipe; fix any on the recipe. Always check labels for allergies.</p>
+    </div>
+  )
+}
+
+function ImportForm({ onImport, onDone, onClose }: { onImport: (url: string) => Promise<ImportResult>; onDone: (id: string) => void; onClose: () => void }) {
+  const [url, setUrl] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
+  const valid = /^https?:\/\/\S+\.\S+/.test(url.trim())
+
+  async function submit(e: FormEvent) {
+    e.preventDefault()
+    if (!valid || busy) return
+    setBusy(true)
+    setMessage(null)
+    try {
+      const r = await onImport(url.trim())
+      setMessage({ kind: 'ok', text: r.existed ? `“${r.title}” was already in your recipes — refreshed it.` : `Added “${r.title}”.${r.needsReview ? ' Give it a quick check.' : ''}` })
+      setUrl('')
+      onDone(r.id)
+    } catch (err) {
+      setMessage({ kind: 'error', text: err instanceof Error ? err.message : String(err) })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <form className="import-form" onSubmit={submit} aria-label="Add a recipe from a link">
+      <label className="field">
+        Recipe link
+        <input type="url" inputMode="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Paste a link to a recipe page" autoFocus maxLength={2000} disabled={busy} />
+      </label>
+      <div className="row">
+        <button className="button button--primary" disabled={!valid || busy}>
+          {busy ? 'Reading the recipe…' : 'Add recipe'}
+        </button>
+        <button type="button" className="button" onClick={onClose} disabled={busy}>
+          Close
+        </button>
+      </div>
+      {message && (
+        <p className={message.kind === 'error' ? 'error' : 'muted'} role={message.kind === 'error' ? 'alert' : 'status'}>
+          {message.text}
+        </p>
+      )}
+    </form>
   )
 }
 
@@ -105,24 +285,38 @@ interface ViewProps {
   onPlan?: (date: string, slot: PlanSlot) => void
   onAddToGrocery?: () => Promise<number> | number
   onMarkReviewed?: () => void
+  onFavorite?: () => void
+  onSaveTags?: (tags: RecipeTags) => void
 }
 
-export function RecipeView({ recipe, today, onEdit, onDelete, onPlan, onAddToGrocery, onMarkReviewed }: ViewProps) {
+export function RecipeView({ recipe, today, onEdit, onDelete, onPlan, onAddToGrocery, onMarkReviewed, onFavorite, onSaveTags }: ViewProps) {
   const [grocery, setGrocery] = useState<string | null>(null)
   const [checked, setChecked] = useState<Set<number>>(new Set())
   const [planDate, setPlanDate] = useState(today)
   const [planSlot, setPlanSlot] = useState<PlanSlot>('dinner')
   const [planned, setPlanned] = useState<string | null>(null)
+  const [editingTags, setEditingTags] = useState(false)
   const ingredients = lines(recipe.ingredients)
   const steps = lines(recipe.steps)
+  const online = recipe.source?.type === 'online'
+  const tagList = recipe.tags ? (Object.keys(TAG_OPTIONS) as (keyof RecipeTags)[]).flatMap((k) => recipe.tags![k]) : []
 
   return (
     <article className="recipe" aria-label={recipe.title}>
       <header className="recipe__head">
-        <h2 className="recipe__title">{recipe.title}</h2>
+        <div className="recipe__title-row">
+          <h2 className="recipe__title">{recipe.title}</h2>
+          {onFavorite && <FavoriteButton title={recipe.title} on={!!recipe.favorite} onToggle={onFavorite} />}
+        </div>
         <p className="recipe__meta">
-          {[recipe.minutes ? `${recipe.minutes} minutes` : null, recipe.servings ? `Serves ${recipe.servings}` : null].filter(Boolean).join(' · ')}
-          {recipe.url && (
+          {[
+            recipe.minutes ? `${recipe.minutes} minutes` : null,
+            recipe.servings ? `Serves ${recipe.servings}` : recipe.yieldText,
+            recipe.rating?.value ? `★ ${recipe.rating.value.toFixed(1)}${recipe.rating.count ? ` (${recipe.rating.count.toLocaleString()})` : ''}` : null,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+          {recipe.url && !online && (
             <>
               {' · '}
               <a href={recipe.url} target="_blank" rel="noreferrer noopener">
@@ -137,12 +331,50 @@ export function RecipeView({ recipe, today, onEdit, onDelete, onPlan, onAddToGro
             {recipe.source.location ? `, ${recipe.source.location}` : ''}
           </p>
         )}
+        {online && (
+          <p className="recipe__source">
+            From <cite>{recipe.credit || recipe.source?.siteName}</cite>
+            {recipe.url && (
+              <>
+                {' · '}
+                <a href={recipe.url} target="_blank" rel="noreferrer noopener" className="recipe__original">
+                  View original <ExternalLink size={14} strokeWidth={ICON_STROKE} aria-hidden />
+                </a>
+              </>
+            )}
+          </p>
+        )}
+        {editingTags && onSaveTags ? (
+          <TagEditor
+            initial={recipe.tags}
+            onCancel={() => setEditingTags(false)}
+            onSave={(tags) => {
+              onSaveTags(tags)
+              setEditingTags(false)
+            }}
+          />
+        ) : (
+          (tagList.length > 0 || onSaveTags) && (
+            <div className="recipe__tags" aria-label="Tags">
+              {tagList.map((t) => (
+                <span key={t} className="tag">
+                  {titleCase(t)}
+                </span>
+              ))}
+              {onSaveTags && (
+                <button type="button" className="link" onClick={() => setEditingTags(true)}>
+                  {tagList.length ? 'Edit tags' : 'Add tags'}
+                </button>
+              )}
+            </div>
+          )
+        )}
       </header>
 
       {recipe.needsReview && (
         <div className="recipe__review" role="note">
           <p>
-            <strong>Needs review.</strong> This was read automatically{recipe.source?.location?.includes('OCR') ? ' from a scanned page' : ''} and may have mistakes. Check it against the book.
+            <strong>Needs review.</strong> This was read automatically{recipe.source?.location?.includes('OCR') ? ' from a scanned page' : ''} and may have mistakes. Check it against {online ? 'the original page' : 'the book'}.
           </p>
           <div className="row">
             {onMarkReviewed && (
@@ -268,6 +500,35 @@ export function RecipeView({ recipe, today, onEdit, onDelete, onPlan, onAddToGro
   )
 }
 
+function TagEditor({ initial, onSave, onCancel }: { initial?: RecipeTags; onSave: (t: RecipeTags) => void; onCancel: () => void }) {
+  const [tags, setTags] = useState<RecipeTags>(initial ?? { meal: [], cuisine: [], main: [], diet: [] })
+  const toggle = (k: keyof RecipeTags, v: string) => setTags((t) => ({ ...t, [k]: t[k].includes(v) ? t[k].filter((x) => x !== v) : [...t[k], v] }))
+  return (
+    <div className="tag-editor" role="group" aria-label="Edit tags">
+      {(Object.keys(TAG_OPTIONS) as (keyof RecipeTags)[]).map((k) => (
+        <fieldset key={k} className="tag-editor__group">
+          <legend>{TAG_LABELS[k]}</legend>
+          <div className="row">
+            {TAG_OPTIONS[k].map((v) => (
+              <button key={v} type="button" className={`chip${tags[k].includes(v) ? ' chip--active' : ''}`} aria-pressed={tags[k].includes(v)} onClick={() => toggle(k, v)}>
+                {titleCase(v)}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+      ))}
+      <div className="row">
+        <button type="button" className="button button--primary" onClick={() => onSave(tags)}>
+          Save tags
+        </button>
+        <button type="button" className="button" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function RecipeForm({ initial, onSubmit, onCancel }: { initial: Recipe | null; onSubmit: (d: RecipeDraft) => void; onCancel: () => void }) {
   const [title, setTitle] = useState(initial?.title ?? '')
   const [servings, setServings] = useState(initial?.servings ? String(initial.servings) : '')
@@ -287,6 +548,7 @@ function RecipeForm({ initial, onSubmit, onCancel }: { initial: Recipe | null; o
       servings: servings ? Math.max(1, Math.floor(Number(servings))) : null,
       minutes: minutes ? Math.max(0, Math.floor(Number(minutes))) : null,
       url: url.trim() || null,
+      tagsEdited: initial?.tagsEdited ?? false,
     })
   }
 

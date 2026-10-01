@@ -12,7 +12,12 @@ import { firestoreCookbookStore, storageBookFiles } from './cookbookStore.js'
 import { googleApi } from './google.js'
 import * as reminders from './reminders.js'
 import { firestoreReminderStore, gmailMailer } from './reminderStore.js'
+import * as recipeIndex from './recipeIndex.js'
+import { INDEX_VERSION } from './shared/recipes/catalogIndex.js'
 import { firestoreStore } from './store.js'
+import { nodeHttpGet } from './web/fetcher.js'
+import * as webRecipes from './webRecipes.js'
+import { firestoreHostStore, firestoreWebRecipeStore } from './webStore.js'
 
 initializeApp()
 
@@ -116,4 +121,37 @@ export const processCookbook = onDocumentWritten(
 export const cookbookWatchdog = onSchedule({ schedule: 'every 15 minutes', timeoutSeconds: 120 }, async () => {
   const kicked = await cookbooks.kickStalled(cookbookDeps())
   if (kicked) logger.warn('restarted stalled cookbook parses', { kicked })
+})
+
+// ---------------------------------------------------------------------------
+// Recipe catalog: import from a link, and the compact index the app browses.
+
+export const importRecipeUrl = onCall({ invoker: 'public', timeoutSeconds: 60, memory: '512MiB' }, async (req) => {
+  const db = getFirestore()
+  try {
+    return await webRecipes.importRecipeUrl({ store: firestoreWebRecipeStore(db), fetcher: { get: nodeHttpGet, hosts: firestoreHostStore(db) } }, req.auth?.uid, req.data ?? {})
+  } catch (err) {
+    if (err instanceof webRecipes.ImportError) throw new HttpsError(err.code, err.message)
+    logger.error('importRecipeUrl failed', { error: String((err as Error)?.stack ?? err), uid: req.auth?.uid })
+    throw new HttpsError('internal', "Couldn't import that recipe. Please try again.")
+  }
+})
+
+/** Every recipe write updates its one-line entry in the index (skipped when nothing it shows changed). */
+export const indexRecipe = onDocumentWritten({ document: 'families/{familyId}/recipes/{recipeId}', maxInstances: 5 }, async (event) => {
+  const change = recipeIndex.indexChange(event.data?.before.data() ?? null, event.data?.after.data() ?? null)
+  await recipeIndex.applyIndexChange(getFirestore(), event.params.familyId, event.params.recipeId, change)
+})
+
+/** Builds the index once for a family that predates it (or after its format changes). */
+export const recipeIndexRebuild = onCall({ invoker: 'public', timeoutSeconds: 120 }, async (req) => {
+  const db = getFirestore()
+  const uid = req.auth?.uid
+  const familyId = (req.data ?? {}).familyId
+  if (!uid) throw new HttpsError('permission-denied', 'Sign in first.')
+  if (typeof familyId !== 'string' || !familyId || familyId.length > 100) throw new HttpsError('invalid-argument', 'familyId is required.')
+  if (!(await db.doc(`families/${familyId}/members/${uid}`).get()).exists) throw new HttpsError('permission-denied', 'Not a member of this family.')
+  const meta = await db.doc(`families/${familyId}/recipeIndex/meta`).get()
+  if ((meta.get('v') ?? 0) >= INDEX_VERSION) return { rebuilt: false }
+  return { rebuilt: true, count: await recipeIndex.rebuildIndex(db, familyId) }
 })

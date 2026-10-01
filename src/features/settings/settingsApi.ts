@@ -40,6 +40,8 @@ export interface DisplaySettings {
   screensaverShuffle: boolean
   /** Side-bar sections hidden on each kind of device. */
   hiddenTabs: Partial<Record<Device, string[]>>
+  /** Home screen panels shown on each kind of device, top to bottom (unset = Lists, Tasks, Calendar). */
+  homePanels: Partial<Record<Device, string[]>>
 }
 
 /** Mirrors the Skylight defaults from the user's tablet. */
@@ -74,6 +76,7 @@ export const DEFAULT_SETTINGS: DisplaySettings = {
   screensaverSeconds: 12,
   screensaverShuffle: true,
   hiddenTabs: {},
+  homePanels: {},
 }
 
 const displayRef = (familyId: string) => doc(db, 'families', familyId, 'settings', 'display')

@@ -352,14 +352,23 @@ export async function sendDueEmails(deps: { store: ReminderStore; mailer: Mailer
     const prefs = await store.listPrefs(family.id)
     const wantsAny = [...prefs.values()].some((p) => p.eventEmailsEnabled || p.dailyDigestEnabled)
     if (!wantsAny) continue
-    const [people, calendarOwners] = await Promise.all([store.listMembers(family.id), store.listCalendarOwners(family.id)])
+    const people = await store.listMembers(family.id)
 
-    const upcoming = await store.listEvents(family.id, new Date(now.getTime() - GRACE_MS), new Date(now.getTime() + MAX_LEAD_MS + GRACE_MS))
-    for (const r of dueEventReminders(upcoming, people, prefs, calendarOwners, family.timezone, now)) {
+    // Only the events whose reminder is due now: one narrow window per lead time in use
+    // (this job runs every 5 minutes, so reading the whole week each time would add up).
+    const leads = [...new Set([...prefs.values()].filter((p) => p.eventEmailsEnabled).map((p) => Math.min(MAX_LEAD_MS, Math.max(0, p.leadTimeMinutes) * 60_000)))]
+    const found = new Map<string, ReminderEvent>()
+    for (const lead of leads) {
+      for (const e of await store.listEvents(family.id, new Date(now.getTime() + lead - GRACE_MS), new Date(now.getTime() + lead + 1))) found.set(e.id, e)
+    }
+    const digests = dueDigests(people, prefs, family.timezone, now)
+    if (!found.size && !digests.length) continue
+    const calendarOwners = await store.listCalendarOwners(family.id)
+
+    for (const r of dueEventReminders([...found.values()], people, prefs, calendarOwners, family.timezone, now)) {
       if (await send(family.id, r.key, eventReminderEmail(r))) result.eventEmails++
     }
 
-    const digests = dueDigests(people, prefs, family.timezone, now)
     if (digests.length) {
       // Multi-day events can start well before today.
       const recent = await store.listEvents(family.id, new Date(now.getTime() - 14 * 86_400_000), new Date(now.getTime() + 2 * 86_400_000))

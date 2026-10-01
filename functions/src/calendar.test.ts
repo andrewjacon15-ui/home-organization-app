@@ -37,7 +37,15 @@ class FakeStore implements CalendarStore {
   async listGoogleEventIds(_f: string, u: string) {
     return [...this.events].filter(([, e]) => e.sourceUserId === u && e.source === 'google').map(([id]) => id)
   }
+  writes = 0
+  async listGoogleEvents(_f: string, u: string) {
+    return new Map([...this.events].filter(([, e]) => e.sourceUserId === u && e.source === 'google'))
+  }
+  async getCalendarStatus(f: string, u: string) {
+    return this.status.get(this.key(f, u)) ?? null
+  }
   async upsertEvents(_f: string, events: { id: string; data: EventDoc }[]) {
+    this.writes += events.length
     for (const { id, data } of events) this.events.set(id, data)
   }
   async deleteEvents(_f: string, ids: string[]) {
@@ -104,6 +112,28 @@ describe('syncMember', () => {
     expect([...store.events.keys()].sort()).toEqual(['g_alice_keep', eventDocId(primaryKey, 'e1'), eventDocId(primaryKey, 'e2')].sort())
     expect(store.events.get(eventDocId(primaryKey, 'e1'))?.calendarKey).toBe(primaryKey)
     expect(store.status.get(`${FAM}/bob`)).toEqual({ status: 'connected', email: 'bob@example.com', lastSyncAt: NOW, eventCount: 2, calendarCount: 1 })
+  })
+
+  it('writes only events that changed, and refreshes the status hourly when nothing did', async () => {
+    let events = [timed('e1'), timed('e2')]
+    const google = stubGoogle({ listEvents: vi.fn(async () => events) })
+    await syncMember({ store, google, now: NOW }, FAM, 'bob', tokens)
+    expect(store.writes).toBe(2)
+
+    const later = new Date(NOW.getTime() + 15 * 60_000)
+    expect(await syncMember({ store, google, now: later }, FAM, 'bob', tokens)).toEqual({ upserted: 0, deleted: 0, status: 'connected' })
+    expect(store.writes).toBe(2)
+    expect((store.status.get(`${FAM}/bob`) as { lastSyncAt: Date }).lastSyncAt).toEqual(NOW)
+
+    events = [timed('e1', 'Renamed'), timed('e2')]
+    expect(await syncMember({ store, google, now: later }, FAM, 'bob', tokens)).toMatchObject({ upserted: 1 })
+    expect(store.writes).toBe(3)
+    expect((store.status.get(`${FAM}/bob`) as { lastSyncAt: Date }).lastSyncAt).toEqual(later)
+
+    const hourLater = new Date(later.getTime() + 61 * 60_000)
+    await syncMember({ store, google, now: hourLater }, FAM, 'bob', tokens)
+    expect(store.writes).toBe(3)
+    expect((store.status.get(`${FAM}/bob`) as { lastSyncAt: Date }).lastSyncAt).toEqual(hourLater)
   })
 
   it('asks Google for 30 days back through 120 days ahead, per calendar', async () => {

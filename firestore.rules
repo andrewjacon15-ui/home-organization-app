@@ -312,6 +312,13 @@ service cloud.firestore {
         }
       }
 
+      // The catalog index: a few shard docs with one short entry per recipe, so browsing
+      // reads a handful of documents. Cloud Functions keep it in sync (functions/src/recipeIndex.ts).
+      match /recipeIndex/{shard} {
+        allow read: if isMember(familyId);
+        allow write: if false;
+      }
+
       match /rewards/{rewardId} {
         function validReward() {
           let d = request.resource.data;
@@ -356,7 +363,7 @@ service cloud.firestore {
               'showPhotosTab', 'theme', 'accentColor', 'colorEventsBy',
               'sleepEnabled', 'sleepFrom', 'sleepTo',
               'screensaverEnabled', 'screensaverAfterMinutes', 'screensaverSeconds', 'screensaverShuffle',
-              'hiddenTabs'])
+              'hiddenTabs', 'homePanels'])
             && (!('calendarName' in d) || (d.calendarName is string && d.calendarName.size() <= 80))
             && optIntIn(d, 'weekStartsOn', 0, 6)
             && optOneOf(d, 'showCountdowns', ['always', 'never'])
@@ -376,9 +383,10 @@ service cloud.firestore {
             && optBool(d, 'screensaverEnabled') && optIntIn(d, 'screensaverAfterMinutes', 1, 120)
             && optIntIn(d, 'screensaverSeconds', 3, 300) && optBool(d, 'screensaverShuffle')
             && (!('accentColor' in d) || isHexColor(d.accentColor))
-            && (!('hiddenTabs' in d) || validHiddenTabs(d.hiddenTabs));
+            && (!('hiddenTabs' in d) || validHiddenTabs(d.hiddenTabs))
+            && (!('homePanels' in d) || validHiddenTabs(d.homePanels));
         }
-        // Side-bar sections hidden on each kind of device: { phone?: [...], tablet?: [...], desktop?: [...] }.
+        // Per-device lists: side-bar sections hidden, and Home panels shown ({ phone?: [...], tablet?: [...], desktop?: [...] }).
         function tabList(h, k) {
           return !(k in h) || (h[k] is list && h[k].size() <= 12);
         }

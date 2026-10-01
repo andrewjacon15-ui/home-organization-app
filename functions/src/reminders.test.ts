@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   choreOccursOn,
   choresForDay,
@@ -195,6 +195,23 @@ describe('sendDueEmails', () => {
     expect(await sendDueEmails({ store, mailer }, NOW)).toEqual({ eventEmails: 1, digests: 1, failures: 0 })
     expect(await sendDueEmails({ store, mailer }, new Date(NOW.getTime() + 5 * 60_000))).toEqual({ eventEmails: 0, digests: 0, failures: 0 })
     expect(sent.map((m) => m.subject)).toEqual(['Dentist · 7:30 AM (in 30 minutes)', 'Today: 1 event, 0 chores · Thursday, October 1'])
+  })
+
+  it('reads only the narrow window of events whose reminder is due, not the whole week', async () => {
+    const store = new FakeStore(new Map([['a', prefs()], ['l', prefs({ leadTimeMinutes: 60 })]]), [ev('Dentist', '2026-10-01T11:30:00Z')])
+    const windows: number[] = []
+    const list = store.listEvents.bind(store)
+    store.listEvents = async (f, from, to) => (windows.push(to.getTime() - from.getTime()), list(f, from, to))
+    const owners = vi.spyOn(store, 'listCalendarOwners')
+    await sendDueEmails({ store, mailer: { send: async () => undefined } }, NOW)
+    // One window per lead time in use (30 and 60 minutes), each just the 15-minute grace period.
+    expect(windows).toEqual([15 * 60_000 + 1, 15 * 60_000 + 1])
+    expect(owners).toHaveBeenCalledTimes(1)
+
+    // Nothing due and no digest: the calendar list isn't read at all.
+    owners.mockClear()
+    await sendDueEmails({ store, mailer: { send: async () => undefined } }, new Date(NOW.getTime() + 3 * 3600_000))
+    expect(owners).not.toHaveBeenCalled()
   })
 
   it('does nothing for families where nobody opted in', async () => {
