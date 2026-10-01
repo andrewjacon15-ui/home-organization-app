@@ -1,23 +1,15 @@
 import type { User } from 'firebase/auth'
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { FamilySetup } from './components/FamilySetup'
 import { NavRail } from './components/NavRail'
 import { navFor, TABS, type Tab } from './components/navTabs'
 import { SignIn } from './components/SignIn'
-import { CalendarPage } from './features/calendar/CalendarPage'
-import { ChoresPage } from './features/chores/ChoresPage'
-import { MealsPage } from './features/meals/MealsPage'
 import { HomePage } from './features/home/HomePage'
-import { ListsPage } from './features/lists/ListsPage'
 import { LockProvider } from './features/lock/LockContext'
 import { SleepProvider } from './features/sleep/SleepContext'
-import { PhotosPage } from './features/photos/PhotosPage'
 import { ScreensaverProvider } from './features/photos/ScreensaverContext'
-import { RecipesPage } from './features/recipes/RecipesPage'
 import { ReminderCenter } from './features/reminders/ReminderCenter'
-import { RewardsPage } from './features/rewards/RewardsPage'
 import { SettingsProvider, useSettings } from './features/settings/SettingsContext'
-import { SettingsPage } from './features/settings/SettingsPage'
 import { CurrentWeather } from './features/weather/WeatherBadges'
 import { WeatherProvider } from './features/weather/WeatherContext'
 import { DEFAULT_ACCENT, isHex, mixHex, readableOn, withAlpha } from './lib/colors'
@@ -26,6 +18,16 @@ import { resolveFamily } from './lib/family'
 import { useAuthUser, useFamily, useNow } from './lib/hooks'
 import { reloadToLatest, useUpdateCheck } from './lib/version'
 
+// Home loads with the app (it's the wall display's start page); every other section loads
+// the first time it's opened, which keeps the first load small.
+const CalendarPage = lazy(() => import('./features/calendar/CalendarPage').then((m) => ({ default: m.CalendarPage })))
+const ChoresPage = lazy(() => import('./features/chores/ChoresPage').then((m) => ({ default: m.ChoresPage })))
+const MealsPage = lazy(() => import('./features/meals/MealsPage').then((m) => ({ default: m.MealsPage })))
+const ListsPage = lazy(() => import('./features/lists/ListsPage').then((m) => ({ default: m.ListsPage })))
+const PhotosPage = lazy(() => import('./features/photos/PhotosPage').then((m) => ({ default: m.PhotosPage })))
+const RecipesPage = lazy(() => import('./features/recipes/RecipesPage').then((m) => ({ default: m.RecipesPage })))
+const RewardsPage = lazy(() => import('./features/rewards/RewardsPage').then((m) => ({ default: m.RewardsPage })))
+const SettingsPage = lazy(() => import('./features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })))
 const TAB_KEY = 'last-tab'
 
 function initialTab(): Tab {
@@ -153,6 +155,7 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
           <span className="masthead__name">{settings.calendarName || family.name}</span>
         </header>
         <main className="content">
+          <Suspense fallback={<p className="muted">Loading…</p>}>
           {shown === 'home' && <HomePage familyId={familyId} userId={userId} members={members} onNavigate={setTab} />}
           {shown === 'calendar' && <CalendarPage familyId={familyId} userId={userId} members={members} />}
           {shown === 'lists' && <ListsPage familyId={familyId} userId={userId} members={members} />}
@@ -162,6 +165,7 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
           {shown === 'recipes' && <RecipesPage familyId={familyId} userId={userId} />}
           {shown === 'photos' && <PhotosPage familyId={familyId} userId={userId} />}
           {shown === 'settings' && <SettingsPage family={family} members={members} userId={userId} />}
+          </Suspense>
         </main>
       </div>
       <ReminderCenter familyId={familyId} members={members} />

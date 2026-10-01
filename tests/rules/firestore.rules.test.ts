@@ -70,6 +70,9 @@ beforeEach(async () => {
     await setDoc(doc(db, `families/${FAM_B}`), { name: 'B', ownerId: MALLORY.uid, timezone: 'UTC' })
     await setDoc(doc(db, `families/${FAM_B}/members/${MALLORY.uid}`), { displayName: 'Mallory', email: MALLORY.email, color: '#000000' })
     await setDoc(doc(db, `invites/${MALLORY.email}`), { familyId: FAM_B, invitedBy: MALLORY.uid })
+
+    // Who may start a new family (server-managed; everyone else joins by invite).
+    await setDoc(doc(db, 'config/access'), { familyCreators: ['dave@example.com'] })
   })
 })
 
@@ -122,6 +125,20 @@ describe('family creation and joining', () => {
     batch.set(doc(db, `families/famD/members/${dave.uid}`), { displayName: 'Dave', email: dave.email, color: '#123456' })
     batch.set(doc(db, `invites/${dave.email}`), { familyId: 'famD', invitedBy: dave.uid })
     await assertSucceeds(batch.commit())
+  })
+
+  it('only lets allowlisted, verified accounts start a family', async () => {
+    const eve = { uid: 'eve', email: 'eve@example.com' }
+    await assertFails(setDoc(doc(dbFor(eve), 'families/famE'), { name: 'E', ownerId: eve.uid, timezone: 'UTC' }))
+    const dave = { uid: 'dave', email: 'dave@example.com' }
+    await assertFails(setDoc(doc(dbFor(dave, false), 'families/famD'), { name: 'D', ownerId: dave.uid, timezone: 'UTC' }))
+    await assertSucceeds(setDoc(doc(dbFor(dave), 'families/famD'), { name: 'D', ownerId: dave.uid, timezone: 'UTC' }))
+  })
+
+  it('keeps the access allowlist away from every client', async () => {
+    await assertFails(getDoc(doc(dbFor(ALICE), 'config/access')))
+    await assertFails(setDoc(doc(dbFor(ALICE), 'config/access'), { familyCreators: ['alice@example.com'] }))
+    await assertFails(setDoc(doc(dbFor(MALLORY), 'config/access'), { familyCreators: ['mallory@example.com'] }))
   })
 
   it('rejects creating a family owned by someone else', async () => {
@@ -342,11 +359,19 @@ describe('reminder prefs', () => {
 })
 
 describe('photos', () => {
-  it('lets members add photos as themselves and only the uploader or owner delete', async () => {
+  it('lets members add photos as themselves', async () => {
     const photo = { storagePath: 'families/famA/photos/p1.jpg', uploadedBy: BOB.uid, caption: '', createdAt: 1 }
     await assertSucceeds(setDoc(doc(dbFor(BOB), `families/${FAM_A}/photos/p1`), photo))
     await assertFails(setDoc(doc(dbFor(BOB), `families/${FAM_A}/photos/p2`), { ...photo, uploadedBy: ALICE.uid }))
-    await assertSucceeds(deleteDoc(doc(dbFor(ALICE), `families/${FAM_A}/photos/p1`)))
+  })
+
+  it('lets anyone in the household remove any photo, but nobody outside it', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore() as unknown as Firestore, `families/${FAM_A}/photos/byAlice`), { storagePath: 'families/famA/photos/a.jpg', uploadedBy: ALICE.uid, caption: '' })
+    })
+    await assertFails(deleteDoc(doc(dbFor(MALLORY), `families/${FAM_A}/photos/byAlice`)))
+    // Bob is neither the uploader nor the owner.
+    await assertSucceeds(deleteDoc(doc(dbFor(BOB), `families/${FAM_A}/photos/byAlice`)))
   })
 })
 

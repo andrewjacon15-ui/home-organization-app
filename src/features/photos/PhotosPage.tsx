@@ -36,7 +36,7 @@ export function PhotosPage({ familyId, userId }: { familyId: string; userId: str
         progress={progress}
         onUpload={(files) => void upload(files)}
         onCaption={(p, caption) => updateCaption(familyId, p.id, caption).catch(report)}
-        onDelete={(p) => deletePhoto(familyId, p).catch(report)}
+        onDelete={(list) => void Promise.all(list.map((p) => deletePhoto(familyId, p))).catch(report)}
         onStart={startNow}
       />
     </>

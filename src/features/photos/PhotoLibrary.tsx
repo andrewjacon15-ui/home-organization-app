@@ -1,4 +1,6 @@
+import { Check } from 'lucide-react'
 import { useRef, useState } from 'react'
+import { ICON_STROKE } from '../../components/Icons'
 import type { Photo } from './photosApi'
 
 interface Props {
@@ -7,7 +9,8 @@ interface Props {
   progress: { done: number; total: number; fraction: number } | null
   onUpload: (files: File[]) => void
   onCaption: (photo: Photo, caption: string) => void
-  onDelete: (photo: Photo) => void
+  /** Removes photos (anyone in the household may remove any photo). */
+  onDelete: (photos: Photo[]) => void
   onStart: () => void
 }
 
@@ -15,12 +18,47 @@ export function PhotoLibrary({ photos, progress, onUpload, onCaption, onDelete, 
   const input = useRef<HTMLInputElement>(null)
   const [open, setOpen] = useState<Photo | null>(null)
   const selected = open && photos.find((p) => p.id === open.id)
+  // Select mode: tap photos to pick several, then remove them together.
+  const [picking, setPicking] = useState(false)
+  const [picked, setPicked] = useState<Set<string>>(new Set())
+  const togglePick = (id: string) =>
+    setPicked((cur) => {
+      const next = new Set(cur)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  const stopPicking = () => {
+    setPicking(false)
+    setPicked(new Set())
+  }
+  const removePicked = () => {
+    const chosen = photos.filter((p) => picked.has(p.id))
+    if (chosen.length && confirm(`Remove ${chosen.length === 1 ? 'this photo' : `these ${chosen.length} photos`} for everyone?`)) {
+      onDelete(chosen)
+      stopPicking()
+    }
+  }
 
   return (
     <div className="photos">
       <header className="photos__head">
         <h1 className="page-title">Photos</h1>
+        {picking ? (
+          <div className="row">
+            <span className="muted">{picked.size} selected</span>
+            <button type="button" className="button" onClick={stopPicking}>
+              Cancel
+            </button>
+            <button type="button" className="button button--danger" disabled={picked.size === 0} onClick={removePicked}>
+              Remove
+            </button>
+          </div>
+        ) : (
         <div className="row">
+          <button type="button" className="button" disabled={photos.length === 0} onClick={() => setPicking(true)}>
+            Select
+          </button>
           <button type="button" className="button" disabled={photos.length === 0} onClick={onStart}>
             Start slideshow
           </button>
@@ -41,6 +79,7 @@ export function PhotoLibrary({ photos, progress, onUpload, onCaption, onDelete, 
             }}
           />
         </div>
+        )}
       </header>
 
       {progress && (
@@ -56,9 +95,16 @@ export function PhotoLibrary({ photos, progress, onUpload, onCaption, onDelete, 
         <ul className="photos__grid">
           {photos.map((p) => (
             <li key={p.id}>
-              <button type="button" className="photos__thumb" aria-label={p.caption || (p.kind === 'video' ? 'Video' : 'Photo')} onClick={() => setOpen(p)}>
+              <button
+                type="button"
+                className={`photos__thumb${picked.has(p.id) ? ' photos__thumb--picked' : ''}`}
+                aria-label={p.caption || (p.kind === 'video' ? 'Video' : 'Photo')}
+                aria-pressed={picking ? picked.has(p.id) : undefined}
+                onClick={() => (picking ? togglePick(p.id) : setOpen(p))}
+              >
                 {p.kind === 'video' ? <video src={p.url} muted preload="metadata" /> : <img src={p.url} alt="" loading="lazy" />}
                 {p.kind === 'video' && <span className="photos__badge">Video</span>}
+                {picking && <span className="photos__check" aria-hidden>{picked.has(p.id) && <Check size={16} strokeWidth={ICON_STROKE + 0.75} />}</span>}
               </button>
             </li>
           ))}
@@ -76,7 +122,7 @@ export function PhotoLibrary({ photos, progress, onUpload, onCaption, onDelete, 
                 className="link photos__delete"
                 onClick={() => {
                   if (confirm('Delete this from the family photos?')) {
-                    onDelete(selected)
+                    onDelete([selected])
                     setOpen(null)
                   }
                 }}

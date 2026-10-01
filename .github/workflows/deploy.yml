@@ -1,0 +1,57 @@
+# Continuous deployment: after CI passes on main, deploy the web app and the
+# Firestore/Storage rules. Cloud Functions stay a manual deploy (they need secrets
+# and broader permissions); see docs/DEPLOY.md.
+#
+# Dormant until the repository secret FIREBASE_SERVICE_ACCOUNT exists (JSON key of a
+# deploy-only service account). Without it, the job reports "skipped" and passes.
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy hosting + rules
+    # Only a CI run that passed on a push to main (or a manual run).
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    env:
+      HAS_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' }}
+    steps:
+      - name: Skip when no deploy key is configured
+        if: env.HAS_KEY != 'true'
+        run: echo "::notice::FIREBASE_SERVICE_ACCOUNT is not set; skipping deploy. See docs/DEPLOY.md."
+      - uses: actions/checkout@v7
+        if: env.HAS_KEY == 'true'
+        with:
+          # The exact commit CI tested.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: actions/setup-node@v7
+        if: env.HAS_KEY == 'true'
+        with:
+          node-version: 22
+          cache: npm
+      - if: env.HAS_KEY == 'true'
+        run: npm ci
+      - if: env.HAS_KEY == 'true'
+        run: npm run build
+      - uses: google-github-actions/auth@v3
+        if: env.HAS_KEY == 'true'
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - name: Deploy
+        if: env.HAS_KEY == 'true'
+        run: npx firebase deploy --only hosting,firestore,storage --project home-organization-app-dkcbl --non-interactive

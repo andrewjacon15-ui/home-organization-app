@@ -54,6 +54,16 @@ service cloud.firestore {
       return value is string && value.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
     }
 
+    // config/access: { familyCreators: [lowercase emails] }. Managed with admin credentials only.
+    function canCreateFamily() {
+      return verifiedEmail()
+        && myEmail() in get(/databases/$(database)/documents/config/access).data.familyCreators;
+    }
+
+    match /config/{doc} {
+      allow read, write: if false;
+    }
+
     // Keyed by lowercase email. One family per email.
     match /invites/{email} {
       allow get: if (verifiedEmail() && myEmail() == email) || isMember(resource.data.familyId);
@@ -67,7 +77,9 @@ service cloud.firestore {
 
     match /families/{familyId} {
       allow read: if isMember(familyId);
-      allow create: if signedIn()
+      // Only allowlisted accounts can start a family; everyone else joins by invite.
+      // Stops any Google account from using this project (storage, calendar sync, email).
+      allow create: if canCreateFamily()
         && request.resource.data.ownerId == request.auth.uid
         && onlyKeys(['name', 'ownerId', 'timezone', 'createdAt']);
       allow update: if isOwner(familyId)
@@ -176,8 +188,8 @@ service cloud.firestore {
           && validPhoto()
           && resource.data.uploadedBy == request.auth.uid
           && request.resource.data.uploadedBy == resource.data.uploadedBy;
-        allow delete: if isMember(familyId)
-          && (resource.data.uploadedBy == request.auth.uid || isOwner(familyId));
+        // Anyone in the household can remove any photo (and its file; see storage.rules).
+        allow delete: if isMember(familyId);
       }
 
       // Star ledger: +stars when a chore is completed, -stars when a reward is redeemed.

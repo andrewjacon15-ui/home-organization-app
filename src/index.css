@@ -45,12 +45,6 @@
   --fs-display: 1.875rem; /* page titles, the header date and clock */
   --fs-hero: 3rem; /* slideshow clock */
 
-  /* Legacy aliases used by inline styles */
-  --muted: var(--ink-2);
-  --border: var(--rule);
-  --bg: var(--paper);
-  --text: var(--ink);
-  --radius: var(--r);
 
   color-scheme: light;
   font-family: var(--sans);
@@ -610,17 +604,6 @@ textarea:focus {
   flex: 1;
 }
 
-/* --------------------------------------------------------------------------
-   Shared controls: tags, segmented tabs, switches, swatches
-   -------------------------------------------------------------------------- */
-
-.scoreboard {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 14px;
-}
-
 .chip {
   display: inline-flex;
   align-items: center;
@@ -649,11 +632,6 @@ textarea:focus {
   width: 10px;
   height: 10px;
   background: var(--pill);
-}
-
-.chip__score {
-  color: var(--ink-2);
-  font-variant-numeric: tabular-nums;
 }
 
 .pill {
@@ -1261,7 +1239,6 @@ letter-spacing: -0.015em;
   font-size: var(--fs-lead);
 }
 
-
 /* --------------------------------------------------------------------------
    Chores
    -------------------------------------------------------------------------- */
@@ -1277,17 +1254,6 @@ letter-spacing: -0.015em;
 :root[data-device='phone'] .chore-form {
   grid-template-columns: 1fr 1fr;
 }
-:root[data-device='phone'] .chore-form__title {
-  grid-column: 1 / -1;
-}
-
-
-.chore-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  border-top: 1px solid var(--rule);
-}
 
 .chore {
   display: flex;
@@ -1297,78 +1263,6 @@ letter-spacing: -0.015em;
   border-bottom: 1px solid var(--rule);
   padding: 4px 0 4px 4px;
   min-height: 60px;
-}
-
-.chore__check {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex: 1;
-  cursor: pointer;
-  min-height: var(--tap);
-  min-width: 0;
-}
-
-.chore__check input {
-  appearance: none;
-  width: 26px;
-  height: 26px;
-  min-height: 0;
-  padding: 0;
-  border: 1.5px solid var(--ink-2);
-  border-radius: var(--r);
-  background: transparent;
-  flex: none;
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-}
-
-.chore__check input:checked {
-  background: var(--accent);
-  border-color: var(--accent);
-}
-
-.chore__check input:checked::after {
-  content: '';
-  width: 7px;
-  height: 13px;
-  border: solid var(--accent-ink);
-  border-width: 0 2.5px 2.5px 0;
-  transform: translateY(-2px) rotate(45deg);
-}
-
-.chore__title {
-  overflow-wrap: anywhere;
-  font-size: var(--fs-body);
-}
-
-.chore--done .chore__title {
-  text-decoration: line-through;
-  color: var(--ink-2);
-}
-
-.chore__meta {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  font-size: var(--fs-small);
-}
-
-.chore__due {
-  color: var(--ink-2);
-}
-
-.chore__due--overdue {
-  color: var(--danger);
-  font-weight: 600;
-}
-
-.chore__points {
-  color: var(--ink-2);
-  font-variant-numeric: tabular-nums;
 }
 
 /* --------------------------------------------------------------------------
@@ -1424,7 +1318,6 @@ letter-spacing: -0.015em;
 :root[data-device='phone'] .reward-form {
   grid-template-columns: 70px 1fr;
 }
-
 
 .reward-columns {
   display: grid;
@@ -1855,7 +1748,6 @@ letter-spacing: -0.015em;
 :root[data-device='phone'] .recipe__body {
   grid-template-columns: 1fr;
 }
-
 
 .recipe__body h3 {
   font-size: var(--fs-lead);
@@ -3004,7 +2896,6 @@ font-weight: 600;
   grid-auto-columns: auto;
 }
 
-
 /* --------------------------------------------------------------------------
    Home dashboard
    -------------------------------------------------------------------------- */
@@ -3433,7 +3324,6 @@ letter-spacing: -0.015em;
   gap: 10px;
 }
 
-
 /* More: a sheet of the remaining sections, above the bottom bar. */
 .more-sheet__backdrop {
   position: fixed;
@@ -3742,4 +3632,38 @@ thead .sidebar-grid__current {
   height: 8px;
   border-radius: 50%;
   background: var(--pill);
+}
+
+/* Destructive action: danger fill, white text. */
+.button--danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* Photos → Select: a check circle on each thumbnail; picked ones get an accent ring. */
+.photos__check {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  background: rgb(0 0 0 / 0.25);
+  color: #ffffff;
+  box-shadow: var(--shadow-sm);
+}
+
+.photos__thumb--picked {
+  outline: 3px solid var(--accent);
+  outline-offset: -3px;
+}
+
+.photos__thumb--picked .photos__check {
+  background: var(--accent);
+  border-color: var(--accent);
 }
