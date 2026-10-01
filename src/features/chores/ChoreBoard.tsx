@@ -5,6 +5,7 @@ import { useFitHeight } from '../../lib/useFitHeight'
 import type { Chore, Member, NewChore } from '../../types'
 import { ChoreForm } from './ChoreForm'
 import { dueLabel, occurrencesOn, repeatLabel, type Occurrence } from './schedule'
+import { AddIcon, BackIcon, NextIcon } from '../../components/Icons'
 
 const GRABS = '__grabs__'
 
@@ -37,11 +38,11 @@ export function ChoreBoard({ chores, members, stars, today, now, weekStartsOn, o
       {view === 'day' ? (
         <div className="week-nav">
           <button type="button" className="button" onClick={() => setOffset(offset - 1)} aria-label="Previous day">
-            ‹
+            <BackIcon />
           </button>
           <h2 className="week-nav__label">{fromDateKey(day).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</h2>
           <button type="button" className="button" onClick={() => setOffset(offset + 1)} aria-label="Next day">
-            ›
+            <NextIcon />
           </button>
           {offset !== 0 && (
             <button type="button" className="link" onClick={() => setOffset(0)}>
@@ -60,7 +61,8 @@ export function ChoreBoard({ chores, members, stars, today, now, weekStartsOn, o
         ))}
       </div>
       <button type="button" className="button add-event-toggle" onClick={() => setAdding({ assignee: null })}>
-        + Add chore
+        <AddIcon />
+        Add chore
       </button>
     </div>
   )

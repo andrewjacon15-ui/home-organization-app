@@ -1,45 +1,49 @@
 /* ==========================================================================
-   Family Organizer — "Editorial" design
-   Paper and ink: a serif display face, hairline rules instead of boxes,
-   near-square corners, one highlight color. Light / dark / match-device.
+   Family Organizer — design system (see docs/STYLE-GUIDE.md)
+   One typeface (Inter) in three weights, a cool neutral palette in light and
+   dark, soft 8–14px corners, quiet borders, and one accent color.
    ========================================================================== */
 
 :root {
-  --serif: 'Newsreader Variable', 'Iowan Old Style', Georgia, serif;
-  --sans: 'Instrument Sans Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --sans: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
-  /* Light paper */
-  --paper: #f6f4ee;
-  --paper-2: #ece8de;
-  --surface: #fbfaf6;
-  --ink: #1b1a17;
-  --ink-2: #5d5950;
-  --rule: #d6d0c2;
-  --rule-strong: #1b1a17;
-  --danger: #b42318;
+  /* Neutrals (light) */
+  --paper: #f4f5f7; /* app background */
+  --paper-2: #eceef2; /* hover and subtle fills */
+  --surface: #ffffff; /* cards and panels */
+  --ink: #111318; /* text */
+  --ink-2: #5b6270; /* secondary text */
+  --ink-3: #98a0ad; /* placeholders, disabled */
+  --rule: #e2e5ea; /* borders and dividers */
+  --rule-strong: #cfd4dc; /* input borders, hover borders */
+  --danger: #d92d20;
 
-  /* Overridden from settings at runtime */
+  /* Accent: set from settings at runtime (App.tsx), with a soft tint and a dark-mode text variant */
   --accent: #1d4ed8;
   --accent-ink: #ffffff;
-  /* The highlight used as text; lifted toward white in dark mode so it stays readable. */
+  --accent-soft: #1d4ed81f;
   --accent-text: var(--accent);
 
-  --r: 2px;
+  /* Shape and depth */
+  --r: 8px; /* controls, chips */
+  --r-lg: 14px; /* cards, panels */
+  --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.05);
+  --shadow: 0 1px 3px rgb(16 24 40 / 0.07), 0 1px 2px rgb(16 24 40 / 0.04);
+  --shadow-lg: 0 16px 40px rgb(16 24 40 / 0.16), 0 2px 6px rgb(16 24 40 / 0.06);
+
   --tap: 48px;
   --gutter: 24px;
+  --rail: 88px;
 
-  /* Type. Two roles: the serif names things (page and section titles, dates, day
-     numbers); the sans is everything you read or tap. Every size in this file is
-     one of these steps, and weights are 400 or 600. */
-  --fs-micro: 0.6rem; /* initials inside tiny badges */
-  --fs-label: 0.75rem; /* uppercase labels */
-  --fs-small: 0.85rem; /* meta: times, hints, counts */
-  --fs-body: 1rem;
-  --fs-lead: 1.25rem; /* small titles */
-  --fs-title: 1.6rem; /* section titles, day numbers */
-  --fs-display: 2.4rem; /* page titles, the masthead */
-  --fs-hero: 3rem;
-  --label-tracking: 0.08em;
+  /* Type: one family; weights 400 / 500 / 600. Every size is one of these steps. */
+  --fs-micro: 0.625rem; /* initials in tiny badges */
+  --fs-label: 0.75rem; /* captions, nav labels */
+  --fs-small: 0.8125rem; /* meta: times, hints, counts */
+  --fs-body: 0.9375rem;
+  --fs-lead: 1.0625rem; /* card and item titles */
+  --fs-title: 1.375rem; /* section titles, day numbers */
+  --fs-display: 1.875rem; /* page titles, the header date and clock */
+  --fs-hero: 3rem; /* slideshow clock */
 
   /* Legacy aliases used by inline styles */
   --muted: var(--ink-2);
@@ -50,49 +54,61 @@
 
   color-scheme: light;
   font-family: var(--sans);
-  font-size: 18px;
-  line-height: 1.45;
+  font-size: 16px;
+  line-height: 1.5;
   color: var(--ink);
   background: var(--paper);
   -webkit-font-smoothing: antialiased;
-  font-feature-settings: 'ss01', 'cv11';
+  /* Inter: straight-sided 1, open digits, tabular-friendly. */
+  font-feature-settings: 'cv05', 'cv08', 'ss03';
 }
 
 :root[data-theme='dark'] {
-  --paper: #141412;
-  --paper-2: #1e1d1a;
-  --surface: #191816;
-  --ink: #ece8de;
-  --ink-2: #9d978a;
-  --rule: #34322d;
-  --rule-strong: #ece8de;
-  --danger: #ff7a6b;
-  --accent-text: color-mix(in srgb, var(--accent) 55%, #ffffff);
+  --paper: #0e1014;
+  --paper-2: #1c2027;
+  --surface: #161920;
+  --ink: #eef0f3;
+  --ink-2: #a2a9b5;
+  --ink-3: #6b7280;
+  --rule: #262b33;
+  --rule-strong: #353b46;
+  --danger: #f97066;
+  --accent-text: var(--accent-text-dark, #8fb0ff);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow: 0 1px 3px rgb(0 0 0 / 0.5);
+  --shadow-lg: 0 16px 40px rgb(0 0 0 / 0.55);
   color-scheme: dark;
 }
 
 @media (prefers-color-scheme: dark) {
   :root[data-theme='system'],
   :root:not([data-theme]) {
-    --paper: #141412;
-    --paper-2: #1e1d1a;
-    --surface: #191816;
-    --ink: #ece8de;
-    --ink-2: #9d978a;
-    --rule: #34322d;
-    --rule-strong: #ece8de;
-    --danger: #ff7a6b;
-    --accent-text: color-mix(in srgb, var(--accent) 55%, #ffffff);
+    --paper: #0e1014;
+  --paper-2: #1c2027;
+  --surface: #161920;
+  --ink: #eef0f3;
+  --ink-2: #a2a9b5;
+  --ink-3: #6b7280;
+  --rule: #262b33;
+  --rule-strong: #353b46;
+  --danger: #f97066;
+  --accent-text: var(--accent-text-dark, #8fb0ff);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow: 0 1px 3px rgb(0 0 0 / 0.5);
+  --shadow-lg: 0 16px 40px rgb(0 0 0 / 0.55);
     color-scheme: dark;
   }
 }
 
 /* Text size & density */
+:root[data-device='tablet'] {
+  font-size: 17px;
+}
 :root[data-text-size='small'] {
-  font-size: 16px;
+  font-size: 15px;
 }
 :root[data-text-size='large'] {
-  font-size: 21px;
+  font-size: 19px;
 }
 :root[data-density='compact'] {
   --tap: 40px;
@@ -111,17 +127,29 @@
   box-sizing: border-box;
 }
 
+html {
+  height: 100%;
+  overflow: hidden;
+  /* No pull-to-refresh or rubber-band stretch: panels scroll, the page doesn't. */
+  overscroll-behavior: none;
+}
+
+#root {
+  height: 100%;
+}
+
 body {
   margin: 0;
   background: var(--paper);
-  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 h1,
 h2,
 h3 {
-  font-family: var(--serif);
-  font-weight: 400;
+  font-weight: 600;
   letter-spacing: -0.01em;
   line-height: 1.15;
   margin: 0 0 0.5em;
@@ -167,10 +195,24 @@ textarea {
   padding: 8px 12px;
 }
 
-input:hover,
-select:hover,
-textarea:hover {
-  border-color: var(--ink-2);
+@media (hover: hover) {
+  input:hover,
+  select:hover,
+  textarea:hover {
+    border-color: var(--rule-strong);
+  }
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+::placeholder {
+  color: var(--ink-3);
 }
 
 :focus-visible {
@@ -209,17 +251,18 @@ textarea:hover {
 
 /* A "card" is a ruled panel, not a floating box. */
 .card {
-  background: transparent;
+  background: var(--surface);
   border: 1px solid var(--rule);
-  border-radius: var(--r);
+  border-radius: var(--r-lg);
   padding: 16px;
+  box-shadow: var(--shadow-sm);
 }
 
 .card--narrow {
   max-width: 460px;
   width: 100%;
   background: var(--surface);
-  border-top: 3px solid var(--ink);
+  border-top: 1px solid var(--rule);
 }
 
 .card--narrow h1 {
@@ -251,29 +294,40 @@ textarea:hover {
 
 /* Buttons: rectangles with a rule, or filled with the highlight. */
 .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   min-height: var(--tap);
-  padding: 0 18px;
+  padding: 0 16px;
   border-radius: var(--r);
-  border: 1px solid var(--rule-strong);
-  background: transparent;
+  border: 1px solid var(--rule);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
-  font-weight: 600;
-  letter-spacing: 0.01em;
+  font-weight: 500;
+  transition: background 0.12s, border-color 0.12s;
 }
 
-.button:hover {
-  background: var(--paper-2);
+@media (hover: hover) {
+  .button:hover {
+    background: var(--paper-2);
+    border-color: var(--rule-strong);
+  }
 }
 
 .button--primary {
   background: var(--accent);
   border-color: var(--accent);
   color: var(--accent-ink);
+  font-weight: 600;
 }
 
-.button--primary:hover {
-  background: var(--accent);
-  filter: brightness(1.08);
+@media (hover: hover) {
+  .button--primary:hover {
+    background: var(--accent);
+    filter: brightness(1.08);
+  }
 }
 
 .button--large {
@@ -293,8 +347,8 @@ textarea:hover {
   color: var(--accent-text);
   cursor: pointer;
   padding: 8px;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  font-weight: 500;
+  text-decoration: none;
 }
 
 .icon-button {
@@ -308,49 +362,37 @@ textarea:hover {
   font-size: var(--fs-body);
 }
 
-.icon-button:hover {
-  background: var(--paper-2);
-  color: var(--ink);
+@media (hover: hover) {
+  .icon-button:hover {
+    background: var(--paper-2);
+    color: var(--ink);
+  }
 }
 
 /* --------------------------------------------------------------------------
-   Shell: navigation rail + masthead
+   Shell: two independent panels. The side bar and the main panel each fill
+   the screen height and scroll on their own; the page itself never scrolls.
    -------------------------------------------------------------------------- */
 
 .shell {
   display: grid;
-  grid-template-columns: 92px 1fr;
-  min-height: 100dvh;
+  grid-template-columns: var(--rail) minmax(0, 1fr);
+  height: 100dvh;
+  overflow: hidden;
 }
 
 .rail {
-  position: sticky;
-  top: 0;
   height: 100dvh;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 2px;
-  padding: 16px 8px;
+  gap: 4px;
+  padding: 14px 10px;
   border-right: 1px solid var(--rule);
-  background: var(--paper);
+  background: var(--surface);
   z-index: 10;
-}
-
-.rail__mark {
-  font-family: var(--serif);
-  font-size: var(--fs-display);
-  text-align: center;
-  line-height: 1;
-  padding: 4px 0 18px;
-  border-bottom: 1px solid var(--rule);
-  margin-bottom: 10px;
-}
-
-/* Tall lists of sections scroll inside the rail instead of stretching the page. */
-.rail {
   overflow-y: auto;
-  overscroll-behavior: contain;
+  overscroll-behavior: none;
   scrollbar-width: none;
 }
 
@@ -358,102 +400,142 @@ textarea:hover {
   display: none;
 }
 
+/* The family's initial as an app mark. */
+.rail__mark {
+  align-self: center;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 10px;
+  border-radius: 12px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: var(--fs-lead);
+  font-weight: 600;
+}
+
 .rail__item {
   display: grid;
   justify-items: center;
   gap: 4px;
-  padding: 12px 4px;
+  flex: none;
+  padding: 10px 4px 9px;
   border: none;
-  border-left: 3px solid transparent;
+  border-radius: 12px;
   background: none;
   color: var(--ink-2);
   font-size: var(--fs-label);
-  font-weight: 600;
-  letter-spacing: var(--label-tracking);
-  text-transform: uppercase;
+  font-weight: 500;
   cursor: pointer;
+  transition: background 0.12s, color 0.12s;
 }
 
-.rail__item:hover {
-  color: var(--ink);
+@media (hover: hover) {
+  .rail__item:hover {
+    background: var(--paper-2);
+    color: var(--ink);
+  }
 }
 
-.rail__item--active {
-  color: var(--ink);
-  border-left-color: var(--accent);
-  background: var(--paper-2);
-}
-
-.rail__item--active svg {
+.rail__item--active,
+.rail__item--active:hover {
+  background: var(--accent-soft);
   color: var(--accent-text);
+  font-weight: 600;
 }
 
+/* The main panel: its own scroller, content centred up to a comfortable width. */
 .app {
+  height: 100dvh;
   min-width: 0;
-  padding: var(--gutter) calc(var(--gutter) + 8px) 48px;
-  padding-top: max(var(--gutter), env(safe-area-inset-top));
-  max-width: 1320px;
-  width: 100%;
+  overflow-y: auto;
+  overscroll-behavior: none;
+  padding: max(20px, env(safe-area-inset-top)) max(var(--gutter), calc((100% - 1360px) / 2)) 32px;
+}
+
+:root[data-device='tablet'] .app {
+  scrollbar-width: none;
+}
+
+:root[data-device='tablet'] .app::-webkit-scrollbar {
+  display: none;
 }
 
 .masthead {
   display: grid;
   grid-template-columns: 1fr auto;
-  align-items: end;
-  gap: 4px 24px;
-  padding-bottom: 14px;
+  align-items: center;
+  gap: 2px 24px;
   margin-bottom: 20px;
-  border-bottom: 2px solid var(--rule-strong);
 }
 
 .masthead__date {
   display: flex;
   align-items: baseline;
-  gap: 14px;
+  gap: 10px;
   flex-wrap: wrap;
-  font-family: var(--serif);
 }
 
 .masthead__day {
   font-size: var(--fs-display);
-  line-height: 1;
+  font-weight: 600;
+  line-height: 1.1;
   letter-spacing: -0.02em;
 }
 
 .masthead__full {
-  font-size: var(--fs-title);
+  font-size: var(--fs-display);
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
   color: var(--ink-2);
 }
 
 .masthead__meta {
   display: flex;
-  align-items: baseline;
-  gap: 14px;
+  align-items: center;
+  gap: 16px;
   justify-self: end;
 }
 
 .masthead__time {
-  font-family: var(--serif);
   font-size: var(--fs-display);
-  font-weight: 400;
-  font-variant-numeric: lining-nums tabular-nums;
-  letter-spacing: -0.01em;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
 
 .masthead__name {
   grid-column: 1 / -1;
-  font-size: var(--fs-label);
-  font-weight: 600;
-  letter-spacing: var(--label-tracking);
-  text-transform: uppercase;
+  font-size: var(--fs-small);
+  font-weight: 500;
   color: var(--ink-2);
 }
 
 .current-weather {
-  font-size: var(--fs-lead);
-  font-weight: 400;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  font-size: var(--fs-body);
+  font-weight: 500;
   white-space: nowrap;
+}
+
+.weather-icon {
+  flex: none;
   color: var(--ink-2);
+}
+
+.day-weather {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
 }
 
 .content {
@@ -470,15 +552,44 @@ textarea:hover {
   gap: 12px;
   padding: 8px 8px 8px 16px;
   margin-bottom: 16px;
-  border: 1px solid var(--accent);
-  border-left-width: 4px;
-  font-weight: 600;
+  border-radius: var(--r-lg);
+  background: var(--accent-soft);
+  font-weight: 500;
 }
 
-/* Phones: rail becomes a bottom bar */
-/* Phone layout (data-device is set by DeviceContext: real phones, and narrow windows). */
+/* --------------------------------------------------------------------------
+   Tints: person and calendar colors as a soft wash behind the content.
+   A ::after layer at low opacity instead of color-mix(), which the wall
+   tablet's browser (Chrome 109) doesn't support.
+   -------------------------------------------------------------------------- */
+
+.event,
+.pill,
+.week-chip {
+  position: relative;
+  isolation: isolate;
+}
+
+.event::after,
+.pill::after,
+.week-chip::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--pill);
+  opacity: var(--tint, 0.12);
+  pointer-events: none;
+}
+
+.event--allday {
+  --tint: 0.22;
+}
+
+/* Phone: the side bar becomes a bottom bar; the main panel leaves room for it. */
 :root[data-device='phone'] .shell {
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
 }
 :root[data-device='phone'] .rail {
   position: fixed;
@@ -488,36 +599,16 @@ textarea:hover {
   right: 0;
   height: auto;
   flex-direction: row;
-  padding: 4px 4px max(4px, env(safe-area-inset-bottom));
   border-right: none;
   border-top: 1px solid var(--rule);
+  overflow: visible;
 }
 :root[data-device='phone'] .rail__mark {
   display: none;
 }
 :root[data-device='phone'] .rail__item {
   flex: 1;
-  border-left: none;
-  border-top: 3px solid transparent;
-  padding: 8px 2px;
-  font-size: var(--fs-label);
 }
-:root[data-device='phone'] .rail__item--active {
-  border-top-color: var(--accent);
-}
-:root[data-device='phone'] .app {
-  padding: 16px 16px 96px;
-}
-:root[data-device='phone'] .masthead__day {
-  font-size: var(--fs-display);
-}
-:root[data-device='phone'] .masthead__full {
-  font-size: var(--fs-lead);
-}
-:root[data-device='phone'] .masthead__time {
-  font-size: var(--fs-title);
-}
-
 
 /* --------------------------------------------------------------------------
    Shared controls: tags, segmented tabs, switches, swatches
@@ -543,8 +634,10 @@ textarea:hover {
   font-weight: 600;
 }
 
-.chip:hover {
-  border-color: var(--ink-2);
+@media (hover: hover) {
+  .chip:hover {
+    border-color: var(--ink-2);
+  }
 }
 
 .chip--active {
@@ -568,46 +661,45 @@ textarea:hover {
   padding: 1px 8px;
   border-radius: var(--r);
   border-left: 3px solid var(--pill);
-  background: color-mix(in srgb, var(--pill) 10%, transparent);
   font-weight: 600;
   font-size: var(--fs-small);
 }
 
 .segmented {
   display: inline-flex;
-  gap: 18px;
-  border-bottom: 1px solid var(--rule);
+  gap: 2px;
+  padding: 3px;
+  border-radius: calc(var(--r) + 3px);
+  background: var(--paper-2);
 }
 
 .segmented__item {
-  min-height: 40px;
-  padding: 0 2px;
+  min-height: 36px;
+  padding: 0 14px;
   border: none;
-  border-bottom: 3px solid transparent;
-  margin-bottom: -1px;
+  border-radius: var(--r);
   background: none;
   color: var(--ink-2);
-  font-weight: 600;
+  font-weight: 500;
+  font-size: var(--fs-small);
   cursor: pointer;
-  text-transform: uppercase;
-  letter-spacing: var(--label-tracking);
-  font-size: var(--fs-label);
 }
 
 .segmented__item--active {
   color: var(--ink);
-  border-bottom-color: var(--accent);
+  background: var(--surface);
+  box-shadow: var(--shadow);
 }
 
 .switch {
   appearance: none;
-  width: 48px;
+  width: 44px;
   height: 26px;
   min-height: 0;
   padding: 0;
-  border-radius: var(--r);
-  border: 1px solid var(--ink-2);
-  background: transparent;
+  border-radius: 999px;
+  border: none;
+  background: var(--rule-strong);
   position: relative;
   cursor: pointer;
   flex: none;
@@ -619,9 +711,11 @@ textarea:hover {
   position: absolute;
   top: 3px;
   left: 3px;
-  width: 18px;
-  height: 18px;
-  background: var(--ink-2);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
   transition: transform 0.15s;
 }
 
@@ -631,8 +725,7 @@ textarea:hover {
 }
 
 .switch:checked::after {
-  transform: translateX(22px);
-  background: var(--accent-ink);
+  transform: translateX(18px);
 }
 
 .swatches {
@@ -684,7 +777,6 @@ textarea:hover {
   width: 120px;
   font-family: var(--sans);
   font-variant-numeric: tabular-nums;
-  text-transform: uppercase;
 }
 
 .avatar {
@@ -695,9 +787,10 @@ textarea:hover {
   place-items: center;
   background: var(--pill);
   color: #fff;
-  font-family: var(--serif);
   font-size: var(--fs-lead);
   flex: none;
+font-weight: 600;
+letter-spacing: -0.015em;
 }
 
 .avatar--pending {
@@ -747,9 +840,7 @@ textarea:hover {
   min-height: var(--tap);
   display: flex;
   align-items: center;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: var(--label-tracking);
+  font-weight: 500;
   font-size: var(--fs-label);
 }
 
@@ -850,7 +941,11 @@ textarea:hover {
   padding: 0;
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  border-top: 1px solid var(--rule-strong);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
 }
 
 .week > .day,
@@ -884,7 +979,7 @@ textarea:hover {
 }
 
 .day--today {
-  box-shadow: inset 0 3px 0 var(--accent);
+  background: var(--accent-soft);
 }
 
 .day--weekend,
@@ -895,23 +990,22 @@ textarea:hover {
 
 .day__header {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
+  align-items: center;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
 .day__weekday {
   font-size: var(--fs-label);
-  font-weight: 600;
-  letter-spacing: var(--label-tracking);
-  text-transform: uppercase;
+  font-weight: 500;
   color: var(--ink-2);
 }
 
 .day__date {
-  font-family: var(--serif);
   font-size: var(--fs-title);
   line-height: 1;
+font-weight: 600;
+letter-spacing: -0.015em;
 }
 
 .day--today .day__date,
@@ -922,9 +1016,7 @@ textarea:hover {
 
 .day__today {
   font-size: var(--fs-label);
-  font-weight: 600;
-  letter-spacing: var(--label-tracking);
-  text-transform: uppercase;
+  font-weight: 500;
   color: var(--accent-text);
 }
 
@@ -964,8 +1056,7 @@ textarea:hover {
   align-items: flex-start;
   gap: 4px;
   padding: 5px 4px 5px 10px;
-  background: color-mix(in srgb, var(--pill) 9%, transparent);
-  border-radius: 0 var(--r) var(--r) 0;
+  border-radius: var(--r);
   font-size: var(--fs-small);
 }
 
@@ -976,11 +1067,11 @@ textarea:hover {
   top: 0;
   bottom: 0;
   width: 3px;
+  border-radius: var(--r) 0 0 var(--r);
   background: var(--owner-bar, var(--pill));
 }
 
 .event--allday {
-  background: color-mix(in srgb, var(--pill) 22%, transparent);
 }
 
 .event--past {
@@ -1054,12 +1145,10 @@ textarea:hover {
 
 .month__head {
   font-size: var(--fs-label);
-  font-weight: 600;
-  letter-spacing: var(--label-tracking);
-  text-transform: uppercase;
+  font-weight: 500;
   color: var(--ink-2);
   padding-bottom: 6px;
-  border-bottom: 1px solid var(--rule-strong);
+  border-bottom: 1px solid var(--rule);
 }
 
 .month__head span {
@@ -1092,8 +1181,9 @@ textarea:hover {
 .month-cell__date {
   display: flex;
   align-items: center;
-  font-family: var(--serif);
   font-size: var(--fs-body);
+font-weight: 600;
+letter-spacing: -0.015em;
 }
 
 .month-cell .day-weather {
@@ -1115,7 +1205,11 @@ textarea:hover {
   list-style: none;
   margin: 0;
   padding: 0;
-  border-top: 1px solid var(--rule-strong);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
 }
 
 .schedule-day {
@@ -1192,7 +1286,7 @@ textarea:hover {
   list-style: none;
   margin: 0;
   padding: 0;
-  border-top: 1px solid var(--rule-strong);
+  border-top: 1px solid var(--rule);
 }
 
 .chore {
@@ -1292,9 +1386,7 @@ textarea:hover {
 
 .meal__label {
   font-size: var(--fs-label);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: var(--label-tracking);
+  font-weight: 500;
   color: var(--ink-2);
 }
 
@@ -1341,10 +1433,12 @@ textarea:hover {
 }
 
 .reward-card {
-  border: none;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
   border-top: 3px solid var(--pill);
-  border-radius: 0;
-  padding: 12px 0;
 }
 
 .reward-card__head {
@@ -1357,9 +1451,10 @@ textarea:hover {
 }
 
 .reward-card__name {
-  font-family: var(--serif);
   font-size: var(--fs-title);
   flex: 1;
+font-weight: 600;
+letter-spacing: -0.015em;
 }
 
 .reward-card__balance {
@@ -1435,7 +1530,7 @@ textarea:hover {
   list-style: none;
   padding: 0;
   margin: 0;
-  border-top: 1px solid var(--rule-strong);
+  border-top: 1px solid var(--rule);
 }
 
 .settings-index a {
@@ -1447,8 +1542,10 @@ textarea:hover {
   font-weight: 600;
 }
 
-.settings-index a:hover {
-  color: var(--accent-text);
+@media (hover: hover) {
+  .settings-index a:hover {
+    color: var(--accent-text);
+  }
 }
 
 @media (max-width: 900px) {
@@ -1480,13 +1577,17 @@ textarea:hover {
 
 .settings-section {
   scroll-margin-top: 16px;
+  padding: 18px 20px 6px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .settings-section > h2 {
-  font-size: var(--fs-title);
-  padding-bottom: 8px;
+  font-size: var(--fs-lead);
+  padding-bottom: 6px;
   margin-bottom: 0;
-  border-bottom: 2px solid var(--rule-strong);
 }
 
 .settings-rows {
@@ -1611,10 +1712,10 @@ textarea:hover {
   gap: 8px;
   padding: 12px 8px 12px 16px;
   background: var(--surface);
-  border: 1px solid var(--rule-strong);
+  border: 1px solid var(--rule);
   border-left: 6px solid var(--pill);
   border-radius: var(--r);
-  box-shadow: 6px 6px 0 color-mix(in srgb, var(--ink) 12%, transparent);
+  box-shadow: var(--shadow-lg);
   animation: toast-in 0.25s ease-out;
 }
 
@@ -1625,9 +1726,9 @@ textarea:hover {
 }
 
 .toast__body strong {
-  font-family: var(--serif);
-  font-weight: 400;
+  font-weight: 600;
   font-size: var(--fs-lead);
+letter-spacing: -0.015em;
 }
 
 @keyframes toast-in {
@@ -1680,7 +1781,7 @@ textarea:hover {
   list-style: none;
   margin: 0;
   padding: 0;
-  border-top: 1px solid var(--rule-strong);
+  border-top: 1px solid var(--rule);
 }
 
 .recipe-row {
@@ -1696,8 +1797,10 @@ textarea:hover {
   cursor: pointer;
 }
 
-.recipe-row:hover {
-  background: var(--paper-2);
+@media (hover: hover) {
+  .recipe-row:hover {
+    background: var(--paper-2);
+  }
 }
 
 .recipe-row--active {
@@ -1706,8 +1809,9 @@ textarea:hover {
 }
 
 .recipe-row__title {
-  font-family: var(--serif);
   font-size: var(--fs-lead);
+font-weight: 600;
+letter-spacing: -0.015em;
 }
 
 .recipe-row__meta {
@@ -1716,7 +1820,7 @@ textarea:hover {
 }
 
 .recipe__head {
-  border-bottom: 2px solid var(--rule-strong);
+  border-bottom: 1px solid var(--rule);
   margin-bottom: 16px;
 }
 
@@ -1805,10 +1909,11 @@ textarea:hover {
 
 .steps li::before {
   content: counter(step);
-  font-family: var(--serif);
   font-size: var(--fs-title);
   line-height: 1;
   color: var(--accent-text);
+font-weight: 600;
+letter-spacing: -0.015em;
 }
 
 .recipe__actions {
@@ -1838,7 +1943,6 @@ textarea:hover {
   cursor: pointer;
   font: inherit;
   font-size: var(--fs-label);
-  letter-spacing: var(--label-tracking);
   color: var(--accent-text);
 }
 
@@ -1846,7 +1950,7 @@ textarea:hover {
   position: fixed;
   inset: 0;
   z-index: 60;
-  background: color-mix(in srgb, var(--ink) 45%, transparent);
+  background: rgb(0 0 0 / 0.45);
   display: grid;
   place-items: center;
   padding: 24px;
@@ -1858,9 +1962,9 @@ textarea:hover {
   max-height: calc(100dvh - 48px);
   overflow: auto;
   background: var(--paper);
-  border: 1px solid var(--rule-strong);
+  border: 1px solid var(--rule);
   padding: 28px 32px;
-  box-shadow: 8px 8px 0 color-mix(in srgb, var(--ink) 18%, transparent);
+  box-shadow: var(--shadow-lg);
 }
 
 .overlay__close {
@@ -1901,7 +2005,7 @@ textarea:hover {
 .pinpad__dot {
   width: 16px;
   height: 16px;
-  border: 1.5px solid var(--ink);
+  border: 1px solid var(--rule-strong);
 }
 
 .pinpad__dot--on {
@@ -1923,13 +2027,16 @@ textarea:hover {
   border: 1px solid var(--rule);
   border-radius: var(--r);
   background: transparent;
-  font-family: var(--serif);
   font-size: var(--fs-title);
   cursor: pointer;
+font-weight: 600;
+letter-spacing: -0.015em;
 }
 
-.pinpad__key:hover {
-  background: var(--paper-2);
+@media (hover: hover) {
+  .pinpad__key:hover {
+    background: var(--paper-2);
+  }
 }
 
 .pinpad__key:active {
@@ -1957,7 +2064,7 @@ textarea:hover {
   min-height: 0;
   align-content: start;
   overflow-y: auto;
-  overscroll-behavior: contain;
+  overscroll-behavior: none;
   scrollbar-width: none;
 }
 
@@ -2048,8 +2155,8 @@ textarea:hover {
   max-height: 70vh;
   overflow: auto;
   background: var(--surface);
-  border: 1px solid var(--rule-strong);
-  box-shadow: 6px 6px 0 color-mix(in srgb, var(--ink) 12%, transparent);
+  border: 1px solid var(--rule);
+  box-shadow: var(--shadow-lg);
   padding: 12px 14px;
 }
 
@@ -2061,9 +2168,7 @@ textarea:hover {
 
 .filter__menu legend {
   font-size: var(--fs-label);
-  font-weight: 600;
-  letter-spacing: var(--label-tracking);
-  text-transform: uppercase;
+  font-weight: 500;
   color: var(--ink-2);
   padding: 0 0 6px;
 }
@@ -2108,7 +2213,7 @@ textarea:hover {
   list-style: none;
   margin: 10px 0 0;
   padding: 0;
-  border-top: 1px solid var(--rule-strong);
+  border-top: 1px solid var(--rule);
 }
 
 .calendar-item {
@@ -2160,8 +2265,6 @@ textarea:hover {
 .sleep__hint {
   color: #fff;
   font-size: var(--fs-label);
-  letter-spacing: var(--label-tracking);
-  text-transform: uppercase;
   opacity: 0;
   animation: sleep-hint 6s ease-out;
 }
@@ -2194,7 +2297,7 @@ textarea:hover {
   flex-wrap: wrap;
   gap: 12px;
   padding-bottom: 12px;
-  border-bottom: 1px solid var(--rule-strong);
+  border-bottom: 1px solid var(--rule);
   margin-bottom: 16px;
 }
 
@@ -2250,8 +2353,6 @@ textarea:hover {
   background: rgb(0 0 0 / 0.6);
   color: #fff;
   font-size: var(--fs-label);
-  letter-spacing: var(--label-tracking);
-  text-transform: uppercase;
 }
 
 .photos__backdrop {
@@ -2269,7 +2370,7 @@ textarea:hover {
   max-height: calc(100vh - 32px);
   overflow: auto;
   background: var(--surface);
-  border: 1px solid var(--rule-strong);
+  border: 1px solid var(--rule);
   border-radius: var(--r);
   padding: 16px;
   display: grid;
@@ -2356,9 +2457,10 @@ textarea:hover {
 }
 
 .slideshow__time {
-  font-family: var(--serif);
   font-size: var(--fs-hero);
   line-height: 1;
+font-weight: 600;
+letter-spacing: -0.015em;
 }
 
 .slideshow__date {
@@ -2402,13 +2504,16 @@ textarea:hover {
 }
 
 .list-col {
-  border-top: 3px solid var(--rule-strong);
-  padding-top: 6px;
   min-width: 0;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .list-col--grocery {
-  border-top-color: #15803d;
+  border-top: 3px solid #15803d;
 }
 
 .list-col__head {
@@ -2447,8 +2552,8 @@ textarea:hover {
   min-width: 210px;
   display: grid;
   background: var(--surface);
-  border: 1px solid var(--rule-strong);
-  box-shadow: 6px 6px 0 color-mix(in srgb, var(--ink) 12%, transparent);
+  border: 1px solid var(--rule);
+  box-shadow: var(--shadow-lg);
 }
 
 .menu button {
@@ -2461,8 +2566,10 @@ textarea:hover {
   font-weight: 600;
 }
 
-.menu button:hover:not(:disabled) {
-  background: var(--paper-2);
+@media (hover: hover) {
+  .menu button:hover:not(:disabled) {
+    background: var(--paper-2);
+  }
 }
 
 .menu button:disabled {
@@ -2554,8 +2661,10 @@ textarea:hover {
   opacity: 0.5;
 }
 
-.list-item__delete:hover {
-  opacity: 1;
+@media (hover: hover) {
+  .list-item__delete:hover {
+    opacity: 1;
+  }
 }
 
 .list-section {
@@ -2565,9 +2674,7 @@ textarea:hover {
 .list-section__title {
   font-family: var(--sans);
   font-size: var(--fs-label);
-  font-weight: 600;
-  letter-spacing: var(--label-tracking);
-  text-transform: uppercase;
+  font-weight: 500;
   margin: 0 0 4px;
   padding-left: 8px;
   border-left: 3px solid var(--pill);
@@ -2655,8 +2762,12 @@ textarea:hover {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
   border-top: 3px solid var(--pill);
-  padding-top: 10px;
 }
 
 .chore-col--grabs {
@@ -2684,9 +2795,10 @@ textarea:hover {
 }
 
 .chore-col__name {
-  font-family: var(--serif);
   font-size: var(--fs-title);
   line-height: 1.1;
+font-weight: 600;
+letter-spacing: -0.015em;
 }
 
 .chore-col__progress {
@@ -2721,7 +2833,7 @@ textarea:hover {
   margin: 0;
   padding: 0;
   overflow-y: auto;
-  overscroll-behavior: contain;
+  overscroll-behavior: none;
 }
 
 .chore-card {
@@ -2731,6 +2843,7 @@ textarea:hover {
   padding: 10px 0 10px 12px;
   border-bottom: 1px solid var(--rule);
   border-left: 3px solid transparent;
+  border-radius: 2px;
 }
 
 .chore-card--late {
@@ -2776,8 +2889,10 @@ textarea:hover {
   opacity: 0.4;
 }
 
-.chore-card__delete:hover {
-  opacity: 1;
+@media (hover: hover) {
+  .chore-card__delete:hover {
+    opacity: 1;
+  }
 }
 
 .check-circle {
@@ -2818,7 +2933,7 @@ textarea:hover {
 
 .chore-week {
   display: grid;
-  border-top: 1px solid var(--rule-strong);
+  border-top: 1px solid var(--rule);
   overflow-x: auto;
 }
 
@@ -2830,9 +2945,7 @@ textarea:hover {
 
 .chore-week__row--head {
   font-size: var(--fs-label);
-  font-weight: 600;
-  letter-spacing: var(--label-tracking);
-  text-transform: uppercase;
+  font-weight: 500;
   color: var(--ink-2);
 }
 
@@ -2841,10 +2954,10 @@ textarea:hover {
 }
 
 .chore-week__row--head b {
-  font-family: var(--serif);
   font-size: var(--fs-body);
   color: var(--ink);
   letter-spacing: 0;
+font-weight: 600;
 }
 
 .chore-week__today b {
@@ -2873,7 +2986,6 @@ textarea:hover {
   text-align: left;
   border: none;
   border-left: 3px solid var(--pill);
-  background: color-mix(in srgb, var(--pill) 10%, transparent);
   padding: 4px 6px;
   font-size: var(--fs-label);
   font-weight: 600;
@@ -2916,7 +3028,11 @@ textarea:hover {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  border-top: 2px solid var(--rule-strong);
+  padding: 12px 14px 14px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .home-panel--calendar {
@@ -2931,12 +3047,9 @@ textarea:hover {
 }
 
 .home-panel__head h2 {
-  font-family: var(--sans);
-  font-size: var(--fs-label);
+  font-size: var(--fs-body);
   font-weight: 600;
-  letter-spacing: var(--label-tracking);
-  text-transform: uppercase;
-  color: var(--ink-2);
+  color: var(--ink);
   margin: 0;
 }
 
@@ -2946,8 +3059,9 @@ textarea:hover {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   grid-template-rows: repeat(2, minmax(0, 1fr));
-  border-left: 1px solid var(--rule);
-  border-top: 1px solid var(--rule);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  overflow: hidden;
 }
 
 .home-day {
@@ -2966,7 +3080,7 @@ textarea:hover {
 }
 
 .home-day--today {
-  box-shadow: inset 0 3px 0 var(--accent);
+  background: var(--accent-soft);
 }
 
 .home-day--weekend {
@@ -2981,15 +3095,12 @@ textarea:hover {
 
 .home-day__name {
   font-size: var(--fs-label);
-  font-weight: 600;
-  letter-spacing: var(--label-tracking);
-  text-transform: uppercase;
+  font-weight: 500;
   color: var(--ink-2);
 }
 
 .home-day__name b {
-  font-family: var(--serif);
-  font-weight: 400;
+  font-weight: 600;
   font-size: var(--fs-title);
   letter-spacing: 0;
   color: var(--ink);
@@ -3004,7 +3115,7 @@ textarea:hover {
   overflow-y: auto;
   min-height: 0;
   scrollbar-width: thin;
-  overscroll-behavior: contain;
+  overscroll-behavior: none;
 }
 
 .home-day--next {
@@ -3012,8 +3123,9 @@ textarea:hover {
 }
 
 .home-day__next-title {
-  font-family: var(--serif);
   font-size: var(--fs-title);
+font-weight: 600;
+letter-spacing: -0.015em;
 }
 
 .home-next {
@@ -3076,11 +3188,11 @@ textarea:hover {
 
 .home-person__name,
 .home-list__head h3 {
-  font-family: var(--serif);
-  font-weight: 400;
+  font-weight: 600;
   font-size: var(--fs-lead);
   flex: 1;
   margin: 0;
+letter-spacing: -0.015em;
 }
 
 .home-person__count {
@@ -3155,7 +3267,7 @@ textarea:hover {
 :root[data-device='phone'] .rail {
   gap: 0;
   padding: 0 max(6px, env(safe-area-inset-left)) env(safe-area-inset-bottom);
-  background: color-mix(in srgb, var(--paper) 92%, transparent);
+  background: var(--surface);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   z-index: 40;
@@ -3208,9 +3320,10 @@ textarea:hover {
 }
 :root[data-device='phone'] .masthead__short {
   display: inline;
-  font-family: var(--serif);
   font-size: var(--fs-lead);
   line-height: 1.2;
+font-weight: 600;
+letter-spacing: -0.015em;
 }
 :root[data-device='phone'] .masthead__meta {
   gap: 8px;
@@ -3332,27 +3445,29 @@ textarea:hover {
 
 .more-sheet {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: calc(57px + env(safe-area-inset-bottom));
-  padding: 16px 16px 12px;
+  left: 8px;
+  right: 8px;
+  bottom: calc(64px + env(safe-area-inset-bottom));
+  padding: 16px 12px 12px;
   background: var(--surface);
-  border-top: 2px solid var(--rule-strong);
+  border: 1px solid var(--rule);
+  border-radius: 18px;
+  box-shadow: var(--shadow-lg);
   animation: sheet-up 180ms ease-out;
 }
 
 .more-sheet__title {
   display: block;
-  font-family: var(--serif);
   font-size: var(--fs-lead);
   margin-bottom: 10px;
+font-weight: 600;
+letter-spacing: -0.015em;
 }
 
 .more-sheet__grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-  border-top: 1px solid var(--rule);
-  border-left: 1px solid var(--rule);
+  gap: 6px;
 }
 
 .more-sheet__item {
@@ -3361,13 +3476,10 @@ textarea:hover {
   gap: 6px;
   padding: 16px 6px;
   border: none;
-  border-right: 1px solid var(--rule);
-  border-bottom: 1px solid var(--rule);
+  border-radius: 12px;
   background: none;
   font-size: var(--fs-label);
-  font-weight: 600;
-  letter-spacing: var(--label-tracking);
-  text-transform: uppercase;
+  font-weight: 500;
   color: var(--ink-2);
   cursor: pointer;
 }
@@ -3378,8 +3490,8 @@ textarea:hover {
 }
 
 .more-sheet__item--active {
-  color: var(--ink);
-  background: var(--paper-2);
+  color: var(--accent-text);
+  background: var(--accent-soft);
 }
 
 .more-sheet__item--active svg {
@@ -3460,9 +3572,7 @@ textarea:hover {
 
 .sidebar-grid thead th {
   font-size: var(--fs-label);
-  font-weight: 600;
-  letter-spacing: var(--label-tracking);
-  text-transform: uppercase;
+  font-weight: 500;
   color: var(--ink-2);
   vertical-align: bottom;
 }
@@ -3520,9 +3630,7 @@ thead .sidebar-grid__current {
   bottom: 0;
   padding: 5px 0 6px;
   font-size: var(--fs-label);
-  font-weight: 600;
-  letter-spacing: var(--label-tracking);
-  text-transform: uppercase;
+  font-weight: 500;
   color: var(--ink-2);
   text-align: center;
   pointer-events: none;
@@ -3541,4 +3649,76 @@ thead .sidebar-grid__current {
   :root:not([data-device='phone']) .content {
     gap: 12px;
   }
+}
+
+/* --------------------------------------------------------------------------
+   Calendar surfaces (see docs/STYLE-GUIDE.md → Calendar)
+   -------------------------------------------------------------------------- */
+
+/* Day columns inside the week card: no card of their own, just a hairline between. */
+.week > .card {
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 10px 8px;
+}
+
+.week > .card + .card {
+  border-left: 1px solid var(--rule);
+}
+
+.week > .day--today {
+  background: var(--accent-soft);
+}
+
+.schedule-day--today {
+  box-shadow: none;
+  background: var(--accent-soft);
+}
+
+.schedule-day:last-child {
+  border-bottom: none;
+}
+
+/* Today's date sits in a filled circle, the way every modern calendar marks it. */
+.day--today .day__date,
+.schedule-day--today .day__date,
+.month-cell--today .month-cell__date,
+.home-day--today .home-day__name b {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.6em;
+  height: 1.6em;
+  padding: 0 0.3em;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.day__count,
+.home-day .day__count {
+  color: var(--ink-3);
+}
+
+/* Home day cells: hairlines inside the panel's own box (and no default button border on Next Week). */
+.home-day {
+  border: 0;
+  border-right: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+
+/* Touch screens scroll by swiping; scrollbars are just clutter there. */
+:root[data-device='tablet'] *,
+:root[data-device='phone'] * {
+  scrollbar-width: none;
+}
+
+:root[data-device='tablet'] *::-webkit-scrollbar,
+:root[data-device='phone'] *::-webkit-scrollbar {
+  display: none;
+}
+
+.setting-row:last-child {
+  border-bottom: none;
 }

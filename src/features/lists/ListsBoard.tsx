@@ -1,6 +1,7 @@
 import { useState, type CSSProperties, type FormEvent } from 'react'
 import type { Member } from '../../types'
 import type { FamilyList, ListItem } from './listsApi'
+import { AddIcon } from '../../components/Icons'
 
 export interface ListActions {
   onAdd: (list: FamilyList, text: string, memberId: string | null) => void
@@ -51,7 +52,8 @@ export function ListsBoard({ lists, items, members, onCreateList, ...actions }: 
           </form>
         ) : (
           <button type="button" className="button" onClick={() => setAdding(true)}>
-            + New list
+            <AddIcon />
+            New list
           </button>
         )}
       </div>

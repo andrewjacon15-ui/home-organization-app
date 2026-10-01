@@ -91,12 +91,14 @@ describe('adding chores', () => {
 
   it('adds a weekly chore on chosen days', async () => {
     const { props, user } = setup([])
-    await user.click(screen.getByRole('button', { name: '+ Add chore' }))
+    // The toolbar button (the empty Up for Grabs column has its own "Add chore" link too).
+    await user.click(screen.getAllByRole('button', { name: 'Add chore' })[0])
     await user.type(screen.getByLabelText('Chore'), 'Take out recycling')
     await user.selectOptions(screen.getByLabelText('Who'), 'Andrew Jacon')
     await user.selectOptions(screen.getByLabelText('Repeat'), 'Every week')
     await user.click(screen.getByRole('button', { name: 'Thursday' }))
-    await user.click(screen.getByRole('button', { name: 'Add chore' }))
+    // Submit: the form's own "Add chore" button.
+    await user.click(screen.getAllByRole('button', { name: 'Add chore' }).find((b) => b.closest('form'))!)
     expect(props.onAdd).toHaveBeenCalledWith({ title: 'Take out recycling', assigneeId: 'a', dueDate: TODAY, points: 1, repeat: { freq: 'weekly', interval: 1, days: [1, 4] } })
   })
 

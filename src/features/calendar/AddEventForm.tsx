@@ -1,6 +1,7 @@
 import { useState, type CSSProperties, type FormEvent } from 'react'
 import type { Member, NewManualEvent } from '../../types'
 import { buildManualEvent } from './events'
+import { AddIcon } from '../../components/Icons'
 
 interface Props {
   defaultDate: string
@@ -37,7 +38,8 @@ export function AddEventForm({ defaultDate, members, userId, onAdd }: Props) {
           setOpen(true)
         }}
       >
-        + Add event
+        <AddIcon />
+        Add event
       </button>
     )
   }

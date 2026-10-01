@@ -20,7 +20,7 @@ import { SettingsProvider, useSettings } from './features/settings/SettingsConte
 import { SettingsPage } from './features/settings/SettingsPage'
 import { CurrentWeather } from './features/weather/WeatherBadges'
 import { WeatherProvider } from './features/weather/WeatherContext'
-import { DEFAULT_ACCENT, isHex, readableOn } from './lib/colors'
+import { DEFAULT_ACCENT, isHex, mixHex, readableOn, withAlpha } from './lib/colors'
 import { DeviceProvider, useDevice } from './lib/DeviceContext'
 import { resolveFamily } from './lib/family'
 import { useAuthUser, useFamily, useNow } from './lib/hooks'
@@ -97,7 +97,8 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
 
   const setTab = (t: Tab) => {
     setTabState(t)
-    window.scrollTo(0, 0)
+    // The main panel scrolls, not the page.
+    document.querySelector('.app')?.scrollTo?.(0, 0)
     try {
       localStorage.setItem(TAB_KEY, t)
     } catch {
@@ -114,6 +115,9 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
     const accent = isHex(settings.accentColor) ? settings.accentColor : DEFAULT_ACCENT
     root.style.setProperty('--accent', accent)
     root.style.setProperty('--accent-ink', readableOn(accent))
+    root.style.setProperty('--accent-soft', withAlpha(accent, 0.12))
+    // Lifted toward white so accent-colored text stays readable on dark backgrounds.
+    root.style.setProperty('--accent-text-dark', mixHex(accent, '#ffffff', 0.45))
   }, [settings.textSize, settings.density, settings.theme, settings.accentColor])
 
   if (!family) return <Splash />
