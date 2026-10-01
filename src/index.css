@@ -3722,3 +3722,24 @@ thead .sidebar-grid__current {
 .setting-row:last-child {
   border-bottom: none;
 }
+
+/* Lists & Chores: whose items to show (Everyone · Me · a person). */
+.people-filter {
+  justify-self: start;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.people-filter .segmented__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.people-filter__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--pill);
+}

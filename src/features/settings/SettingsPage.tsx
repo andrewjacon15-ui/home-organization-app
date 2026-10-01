@@ -11,6 +11,7 @@ import { EmailReminderSettings } from './EmailReminderSettings'
 import { GeneralSettings } from './GeneralSettings'
 import { GoogleCalendarSettings } from './GoogleCalendarSettings'
 import { LockSettings } from './LockSettings'
+import { PeopleViewSettings } from './PeopleViewSettings'
 import { ReminderSettings } from './ReminderSettings'
 import { ScreensaverSettings } from './ScreensaverSettings'
 import { SleepSettings } from './SleepSettings'
@@ -25,6 +26,7 @@ const SECTIONS = [
   { id: 'family', label: 'Family' },
   { id: 'appearance', label: 'Appearance' },
   { id: 'device', label: 'Device & side bar' },
+  { id: 'people', label: 'Lists & chores' },
   { id: 'general', label: 'General' },
   { id: 'display', label: 'Display' },
   { id: 'google', label: 'Google Calendar' },
@@ -75,6 +77,7 @@ export function SettingsPage({ family, members, userId }: Props) {
         </section>
         <AppearanceSettings />
         <DeviceSettings />
+        <PeopleViewSettings members={members} userId={userId} />
         <GeneralSettings />
         <GoogleCalendarSettings familyId={family.id} me={members.find((m) => m.id === userId)} members={members} />
         <CalendarSettings familyName={family.name} />

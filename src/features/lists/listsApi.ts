@@ -19,6 +19,8 @@ export interface ListItem {
   /** Which person's section; null = the list's shared area. */
   memberId: string | null
   order: number
+  /** Who added it (used for "just my items" on lists without sections). */
+  createdBy?: string
 }
 
 const listsCol = (familyId: string) => collection(db, 'families', familyId, 'lists')
@@ -42,7 +44,7 @@ export function watchItems(familyId: string, listId: string, onChange: (items: L
     onChange(
       snap.docs.map((d) => {
         const x = d.data()
-        return { id: d.id, text: x.text, done: !!x.done, memberId: x.memberId ?? null, order: x.order ?? 0 }
+        return { id: d.id, text: x.text, done: !!x.done, memberId: x.memberId ?? null, order: x.order ?? 0, createdBy: x.createdBy }
       }),
     )
   })

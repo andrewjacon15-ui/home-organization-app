@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
+import { PeopleFilter } from '../../components/PeopleFilter'
 import { useNow, useToday } from '../../lib/hooks'
+import { personFor, readPeopleDefault } from '../../lib/peopleView'
 import type { Chore, Member } from '../../types'
 import { backfillChoreStars, balances, watchStars, type StarEntry } from '../rewards/rewardsApi'
 import { useSettings } from '../settings/SettingsContext'
@@ -19,6 +21,8 @@ export function ChoresPage({ familyId, userId, members }: Props) {
   const today = useToday()
   const now = useNow()
   const { settings } = useSettings()
+  const [view, setView] = useState(() => readPeopleDefault('chores'))
+  const only = personFor(view, userId, members.map((m) => m.id))
 
   useEffect(() => watchChores(familyId, setChores), [familyId])
   useEffect(() => watchStars(familyId, setEntries), [familyId])
@@ -37,7 +41,9 @@ export function ChoresPage({ familyId, userId, members }: Props) {
           {error} <button className="link" onClick={() => setError(null)}>Dismiss</button>
         </p>
       )}
+      <PeopleFilter members={members} userId={userId} value={view} onChange={setView} label="Show chores for" />
       <ChoreBoard
+        only={only}
         chores={chores}
         members={members}
         stars={entries ? balances(entries) : new Map()}
