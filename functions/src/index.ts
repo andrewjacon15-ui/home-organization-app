@@ -17,6 +17,7 @@ import { INDEX_VERSION } from './shared/recipes/catalogIndex.js'
 import { firestoreStore } from './store.js'
 import { nodeHttpGet } from './web/fetcher.js'
 import * as webRecipes from './webRecipes.js'
+import { ONLINE_SEARCH } from './features.js'
 import * as onlineSearch from './onlineSearch.js'
 import { firestoreHostStore, firestoreSearchStore, firestoreWebRecipeStore } from './webStore.js'
 
@@ -158,14 +159,16 @@ export const recipeIndexRebuild = onCall({ invoker: 'public', timeoutSeconds: 12
 })
 
 // ---------------------------------------------------------------------------
-// "What can I make?" → Online. Needs the BRAVE_SEARCH_API_KEY secret; until it exists this
-// function isn't deployed (deploy the others by name), and the app says online search is off.
+// "What can I make?" → Online (Brave Search). Off until ONLINE_SEARCH is true in features.ts AND
+// the BRAVE_SEARCH_API_KEY secret exists: Firebase checks every declared secret on each deploy,
+// so the secret is only declared when the feature is on. While off, the app says online search
+// isn't set up and catalog matching still works.
 
-const braveKey = defineSecret('BRAVE_SEARCH_API_KEY')
+const braveKey = ONLINE_SEARCH ? defineSecret('BRAVE_SEARCH_API_KEY') : null
 
-export const findOnlineRecipes = onCall({ invoker: 'public', timeoutSeconds: 90, memory: '512MiB', secrets: [braveKey], maxInstances: 3 }, async (req) => {
+const onlineHandler = onCall({ invoker: 'public', timeoutSeconds: 90, memory: '512MiB', secrets: braveKey ? [braveKey] : [], maxInstances: 3 }, async (req) => {
   const db = getFirestore()
-  const key = braveKey.value()
+  const key = braveKey?.value()
   try {
     return await onlineSearch.findOnlineRecipes(
       { store: firestoreSearchStore(db), fetcher: { get: nodeHttpGet, hosts: firestoreHostStore(db) }, search: key ? onlineSearch.braveSearch(key) : null },
@@ -178,3 +181,6 @@ export const findOnlineRecipes = onCall({ invoker: 'public', timeoutSeconds: 90,
     throw new HttpsError('internal', "Online search didn't work. Please try again.")
   }
 })
+
+/** Only registered (and deployed) when the feature is on. */
+export const findOnlineRecipes = ONLINE_SEARCH ? onlineHandler : undefined
