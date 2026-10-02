@@ -226,8 +226,9 @@ service cloud.firestore {
       match /lists/{listId} {
         function validList() {
           let d = request.resource.data;
-          return onlyKeys(['title', 'kind', 'sections', 'order', 'createdBy', 'createdAt'])
+          return onlyKeys(['title', 'kind', 'sections', 'order', 'createdBy', 'createdAt', 'categories'])
             && d.title is string && d.title.size() > 0 && d.title.size() <= 80
+            && (!('categories' in d) || (d.categories is list && d.categories.size() <= 30))
             && d.kind in ['grocery', 'todo', 'custom']
             && d.sections is bool
             && d.order is number;
@@ -238,10 +239,13 @@ service cloud.firestore {
         match /items/{itemId} {
           function validItem() {
             let d = request.resource.data;
-            return onlyKeys(['text', 'done', 'memberId', 'order', 'createdBy', 'createdAt', 'doneAt'])
+            // expireAt: set when checked off; a TTL policy deletes the item then (firestore.indexes.json).
+            return onlyKeys(['text', 'done', 'memberId', 'order', 'createdBy', 'createdAt', 'doneAt', 'updatedAt', 'categoryId', 'expireAt'])
               && d.text is string && d.text.size() > 0 && d.text.size() <= 300
               && d.done is bool
-              && (d.memberId == null || d.memberId is string)
+              && (!('memberId' in d) || d.memberId == null || d.memberId is string)
+              && (!('categoryId' in d) || d.categoryId == null || (d.categoryId is string && d.categoryId.size() <= 40))
+              && (!('expireAt' in d) || d.expireAt is timestamp)
               && d.order is number;
           }
           allow read, delete: if isMember(familyId);
@@ -380,7 +384,7 @@ service cloud.firestore {
               'showPhotosTab', 'theme', 'accentColor', 'colorEventsBy',
               'sleepEnabled', 'sleepFrom', 'sleepTo',
               'screensaverEnabled', 'screensaverAfterMinutes', 'screensaverSeconds', 'screensaverShuffle',
-              'hiddenTabs', 'homePanels'])
+              'hiddenTabs', 'homePanels', 'listDoneDays'])
             && (!('calendarName' in d) || (d.calendarName is string && d.calendarName.size() <= 80))
             && optIntIn(d, 'weekStartsOn', 0, 6)
             && optOneOf(d, 'showCountdowns', ['always', 'never'])
@@ -401,7 +405,8 @@ service cloud.firestore {
             && optIntIn(d, 'screensaverSeconds', 3, 300) && optBool(d, 'screensaverShuffle')
             && (!('accentColor' in d) || isHexColor(d.accentColor))
             && (!('hiddenTabs' in d) || validHiddenTabs(d.hiddenTabs))
-            && (!('homePanels' in d) || validHiddenTabs(d.homePanels));
+            && (!('homePanels' in d) || validHiddenTabs(d.homePanels))
+            && optIntIn(d, 'listDoneDays', 0, 365);
         }
         // Per-device lists: side-bar sections hidden, and Home panels shown ({ phone?: [...], tablet?: [...], desktop?: [...] }).
         function tabList(h, k) {

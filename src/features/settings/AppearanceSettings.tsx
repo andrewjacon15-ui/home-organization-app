@@ -12,8 +12,8 @@ export function AppearanceSettings() {
         value={settings.theme}
         options={[
           { value: 'system', label: 'Match device' },
-          { value: 'light', label: 'Light' },
-          { value: 'dark', label: 'Dark' },
+          { value: 'light', label: 'Paperwhite' },
+          { value: 'dark', label: 'Night' },
         ]}
         onChange={(v) => save({ theme: v })}
       />
