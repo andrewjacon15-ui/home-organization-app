@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useNow } from '../../lib/hooks'
 import { shuffled, type Photo } from './photosApi'
+import { clockLayout } from './slideshowLayout'
 
 interface Props {
   photos: Photo[]
@@ -22,8 +23,20 @@ export function Slideshow({ photos, seconds, shuffle, onExit }: Props) {
   const [slots, setSlots] = useState<(Photo | null)[]>([order[0] ?? null, null])
   const now = useNow(30_000)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Each picture's width/height, learned when it loads (Firestore doesn't store it).
+  const [aspects, setAspects] = useState<Record<string, number>>({})
+  const [screen, setScreen] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }))
+  useEffect(() => {
+    const onResize = () => setScreen({ w: window.innerWidth, h: window.innerHeight })
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+  // Saved dimensions first (no layout jump); measured on load for older photos without them.
+  const aspectOf = (p: Photo) => aspects[p.id] ?? (p.width && p.height ? p.width / p.height : undefined)
+  const learn = (id: string, w: number, h: number) => w > 0 && h > 0 && setAspects((a) => (a[id] ? a : { ...a, [id]: w / h }))
 
   const current = slots[layer]
+  const side = clockLayout(current ? aspectOf(current) : undefined, screen.w, screen.h)
 
   const advance = () => {
     if (order.length < 2) return
@@ -57,16 +70,20 @@ export function Slideshow({ photos, seconds, shuffle, onExit }: Props) {
     <div className="slideshow" role="dialog" aria-label="Photo slideshow. Tap to close." onClick={onExit}>
       {slots.map((p, i) =>
         p ? (
-          <div key={`${i}-${p.id}`} className={`slideshow__layer${i === layer ? ' slideshow__layer--on' : ''}`}>
+          <div key={`${i}-${p.id}`} className={`slideshow__layer${i === layer ? ' slideshow__layer--on' : ''}${clockLayout(aspectOf(p), screen.w, screen.h).side ? ' slideshow__layer--side' : ''}`}>
             {p.kind === 'video' ? (
-              <video className="slideshow__media" src={p.url} autoPlay={i === layer} muted playsInline onEnded={() => i === layer && advance()} />
+              <video className="slideshow__media" src={p.url} autoPlay={i === layer} muted playsInline onEnded={() => i === layer && advance()} onLoadedMetadata={(e) => learn(p.id, e.currentTarget.videoWidth, e.currentTarget.videoHeight)} />
             ) : (
-              <img className="slideshow__media slideshow__media--drift" src={p.url} alt={p.caption || 'Family photo'} />
+              <img className="slideshow__media slideshow__media--drift" src={p.url} alt={p.caption || 'Family photo'} onLoad={(e) => learn(p.id, e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)} />
             )}
           </div>
         ) : null,
       )}
-      <div className="slideshow__overlay" aria-hidden>
+      <div
+        className={`slideshow__overlay${side.side ? ' slideshow__overlay--side' : ''}`}
+        style={side.side ? ({ '--band': `${side.band}px` } as CSSProperties) : undefined}
+        aria-hidden
+      >
         <span className="slideshow__time">{now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span>
         <span className="slideshow__date">{now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</span>
         {current?.caption && <span className="slideshow__caption">{current.caption}</span>}

@@ -5,6 +5,7 @@ import { PhotoLibrary } from './PhotoLibrary'
 import { fitWithin, shuffled, type Photo } from './photosApi'
 import { ScreensaverProvider } from './ScreensaverContext'
 import { Slideshow } from './Slideshow'
+import { clockLayout } from './slideshowLayout'
 
 let library: Photo[] = []
 vi.mock('./photosApi', async (importActual) => ({
@@ -51,6 +52,30 @@ describe('Slideshow', () => {
     expect(visible()).toBe('https://img/a.jpg')
     fireEvent.click(screen.getByRole('dialog', { name: /photo slideshow/i }))
     expect(onExit).toHaveBeenCalled()
+  })
+
+  it('puts the clock beside tall photos (in the black band), and along the bottom of wide ones', () => {
+    // The wall tablet: 1280×720.
+    expect(clockLayout(3 / 4, 1280, 720)).toEqual({ side: true, band: 1280 - 540 - 24 })
+    expect(clockLayout(9 / 16, 1280, 720).side).toBe(true)
+    expect(clockLayout(4 / 3, 1280, 720).side).toBe(false)
+    expect(clockLayout(16 / 9, 1280, 720).side).toBe(false)
+    // A phone held upright has no side band.
+    expect(clockLayout(3 / 4, 375, 812).side).toBe(false)
+    expect(clockLayout(undefined, 1280, 720).side).toBe(false)
+
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1280 })
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 720 })
+    const { container } = render(<Slideshow photos={[photo('a')]} seconds={5} shuffle={false} onExit={vi.fn()} />)
+    const overlay = () => container.querySelector('.slideshow__overlay')!
+    expect(overlay()).not.toHaveClass('slideshow__overlay--side')
+    const img = container.querySelector('.slideshow__layer--on img')!
+    Object.defineProperty(img, 'naturalWidth', { value: 3000 })
+    Object.defineProperty(img, 'naturalHeight', { value: 4000 })
+    fireEvent.load(img)
+    expect(overlay()).toHaveClass('slideshow__overlay--side')
+    expect(container.querySelector('.slideshow__layer--on')).toHaveClass('slideshow__layer--side')
+    expect((overlay() as HTMLElement).style.getPropertyValue('--band')).toBe('716px')
   })
 })
 
