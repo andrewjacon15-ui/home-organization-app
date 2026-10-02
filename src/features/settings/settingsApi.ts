@@ -42,6 +42,8 @@ export interface DisplaySettings {
   hiddenTabs: Partial<Record<Device, string[]>>
   /** Home screen panels shown on each kind of device, top to bottom (unset = Lists, Tasks, Calendar). */
   homePanels: Partial<Record<Device, string[]>>
+  /** Checked-off list items delete themselves after this many days (0 = keep until cleared). */
+  listDoneDays: number
 }
 
 /** Mirrors the Skylight defaults from the user's tablet. */
@@ -65,7 +67,7 @@ export const DEFAULT_SETTINGS: DisplaySettings = {
   remindBeforeMinutes: 30,
   remindChoresDue: false,
   reminderSound: true,
-  theme: 'system',
+  theme: 'light',
   accentColor: DEFAULT_ACCENT,
   colorEventsBy: 'calendar',
   sleepEnabled: true,
@@ -77,6 +79,7 @@ export const DEFAULT_SETTINGS: DisplaySettings = {
   screensaverShuffle: true,
   hiddenTabs: {},
   homePanels: {},
+  listDoneDays: 30,
 }
 
 const displayRef = (familyId: string) => doc(db, 'families', familyId, 'settings', 'display')

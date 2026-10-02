@@ -79,7 +79,9 @@ export function RecipesPage({ familyId, userId }: { familyId: string; userId: st
         onAddToGrocery={async (r) => {
           const items = lines(r.ingredients)
           try {
-            await addItems(familyId, await groceryListId(familyId, userId, lists), userId, items)
+            const listId = await groceryListId(familyId, userId, lists)
+            // Grocery lists with store aisles file each ingredient under its aisle.
+            await addItems(familyId, listId, userId, items, null, { categories: lists.find((l) => l.id === listId)?.categories })
             return items.length
           } catch (e) {
             report(e)

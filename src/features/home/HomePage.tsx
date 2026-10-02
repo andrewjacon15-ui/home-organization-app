@@ -88,8 +88,8 @@ export function HomePage({ familyId, userId, members, onNavigate }: Props) {
         panels={panels}
         onToggleChore={(o, done, doneBy) => setOccurrenceDone(familyId, o, done, doneBy, userId, today).catch(report)}
         onDeleteChore={(c) => deleteChore(familyId, c.id).catch(report)}
-        onAddItem={(l, text) => addItems(familyId, l.id, userId, [text]).catch(report)}
-        onToggleItem={(l, i) => setItemDone(familyId, l.id, i.id, !i.done).catch(report)}
+        onAddItem={(l, text) => addItems(familyId, l.id, userId, [text], null, { categories: l.categories }).catch(report)}
+        onToggleItem={(l, i) => setItemDone(familyId, l.id, i.id, !i.done, settings.listDoneDays).catch(report)}
       />
     </div>
   )
