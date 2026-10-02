@@ -1,22 +1,23 @@
 /* ==========================================================================
    Family Organizer — design system (see docs/STYLE-GUIDE.md)
-   One typeface (Inter) in three weights, a cool neutral palette in light and
-   dark, soft 8–14px corners, quiet borders, and one accent color.
+   Paperwhite: warm e-reader paper, near-black ink, hairline rules instead of
+   shadows, and color only where it means something (people, today, status).
+   One typeface (Inter) in three weights; a warm "Night" variant for dark.
    ========================================================================== */
 
 :root {
   --sans: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
-  /* Neutrals (light) */
-  --paper: #f4f5f7; /* app background */
-  --paper-2: #eceef2; /* hover and subtle fills */
-  --surface: #ffffff; /* cards and panels */
-  --ink: #111318; /* text */
-  --ink-2: #5b6270; /* secondary text */
-  --ink-3: #98a0ad; /* placeholders, disabled */
-  --rule: #e2e5ea; /* borders and dividers */
-  --rule-strong: #cfd4dc; /* input borders, hover borders */
-  --danger: #d92d20;
+  /* Neutrals (paperwhite): warm paper, near-black ink */
+  --paper: #f3f0e8; /* app background: the "page" */
+  --paper-2: #e9e5da; /* hover and subtle fills */
+  --surface: #faf8f2; /* cards and panels: a shade lighter than the page */
+  --ink: #1c1b18; /* text */
+  --ink-2: #5a564d; /* secondary text */
+  --ink-3: #9a9588; /* placeholders, disabled */
+  --rule: #dfdacd; /* borders and dividers */
+  --rule-strong: #c8c1b2; /* input borders, hover borders */
+  --danger: #b42318;
 
   /* Accent: set from settings at runtime (App.tsx), with a soft tint and a dark-mode text variant */
   --accent: #1d4ed8;
@@ -27,9 +28,11 @@
   /* Shape and depth */
   --r: 8px; /* controls, chips */
   --r-lg: 14px; /* cards, panels */
-  --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.05);
-  --shadow: 0 1px 3px rgb(16 24 40 / 0.07), 0 1px 2px rgb(16 24 40 / 0.04);
-  --shadow-lg: 0 16px 40px rgb(16 24 40 / 0.16), 0 2px 6px rgb(16 24 40 / 0.06);
+  /* Paper doesn't cast shadows: cards are drawn with hairlines. Only things that float
+     above the page (menus, dialogs) get a soft shadow. */
+  --shadow-sm: none;
+  --shadow: 0 0 0 1px var(--rule);
+  --shadow-lg: 0 12px 32px rgb(60 50 30 / 0.14), 0 0 0 1px var(--rule);
 
   --tap: 48px;
   --gutter: 24px;
@@ -58,38 +61,38 @@
 }
 
 :root[data-theme='dark'] {
-  --paper: #0e1014;
-  --paper-2: #1c2027;
-  --surface: #161920;
-  --ink: #eef0f3;
-  --ink-2: #a2a9b5;
-  --ink-3: #6b7280;
-  --rule: #262b33;
-  --rule-strong: #353b46;
+  --paper: #151412;
+  --paper-2: #23211d;
+  --surface: #1c1b18;
+  --ink: #ece7dc;
+  --ink-2: #aca596;
+  --ink-3: #736d61;
+  --rule: #2e2c27;
+  --rule-strong: #3d3a33;
   --danger: #f97066;
   --accent-text: var(--accent-text-dark, #8fb0ff);
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
-  --shadow: 0 1px 3px rgb(0 0 0 / 0.5);
-  --shadow-lg: 0 16px 40px rgb(0 0 0 / 0.55);
+  --shadow-sm: none;
+  --shadow: 0 0 0 1px var(--rule);
+  --shadow-lg: 0 16px 40px rgb(0 0 0 / 0.55), 0 0 0 1px var(--rule);
   color-scheme: dark;
 }
 
 @media (prefers-color-scheme: dark) {
   :root[data-theme='system'],
   :root:not([data-theme]) {
-    --paper: #0e1014;
-  --paper-2: #1c2027;
-  --surface: #161920;
-  --ink: #eef0f3;
-  --ink-2: #a2a9b5;
-  --ink-3: #6b7280;
-  --rule: #262b33;
-  --rule-strong: #353b46;
-  --danger: #f97066;
-  --accent-text: var(--accent-text-dark, #8fb0ff);
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
-  --shadow: 0 1px 3px rgb(0 0 0 / 0.5);
-  --shadow-lg: 0 16px 40px rgb(0 0 0 / 0.55);
+    --paper: #151412;
+    --paper-2: #23211d;
+    --surface: #1c1b18;
+    --ink: #ece7dc;
+    --ink-2: #aca596;
+    --ink-3: #736d61;
+    --rule: #2e2c27;
+    --rule-strong: #3d3a33;
+    --danger: #f97066;
+    --accent-text: var(--accent-text-dark, #8fb0ff);
+    --shadow-sm: none;
+    --shadow: 0 0 0 1px var(--rule);
+    --shadow-lg: 0 16px 40px rgb(0 0 0 / 0.55), 0 0 0 1px var(--rule);
     color-scheme: dark;
   }
 }
@@ -346,6 +349,9 @@ textarea:focus {
 }
 
 .icon-button {
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
   width: var(--tap);
   height: var(--tap);
   border: none;
@@ -408,6 +414,7 @@ textarea:focus {
   color: var(--accent-ink);
   font-size: var(--fs-lead);
   font-weight: 600;
+  line-height: 1;
 }
 
 .rail__item {
@@ -1205,7 +1212,8 @@ letter-spacing: -0.015em;
 .schedule-day__header {
   display: grid;
   align-content: start;
-  gap: 2px;
+  justify-items: center;
+  gap: 4px;
 }
 
 .legend {
@@ -2509,7 +2517,8 @@ letter-spacing: -0.015em;
   min-width: 0;
 }
 
-.list-item__check input {
+.list-item__check input,
+.list-item__box {
   appearance: none;
   width: 22px;
   height: 22px;
@@ -2524,12 +2533,14 @@ letter-spacing: -0.015em;
   cursor: pointer;
 }
 
-.list-item__check input:checked {
+.list-item__check input:checked,
+.list-item__box:checked {
   background: var(--accent);
   border-color: var(--accent);
 }
 
-.list-item__check input:checked::after {
+.list-item__check input:checked::after,
+.list-item__box:checked::after {
   content: '';
   width: 6px;
   height: 11px;
@@ -2731,8 +2742,8 @@ letter-spacing: -0.015em;
 .chore-card {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 10px 0 10px 12px;
+  gap: 10px;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--rule);
   border-left: 3px solid transparent;
   border-radius: 2px;
@@ -2806,13 +2817,13 @@ letter-spacing: -0.015em;
 .check-circle--on::after {
   content: '';
   position: absolute;
-  left: 13px;
-  top: 7px;
-  width: 9px;
-  height: 17px;
+  left: 50%;
+  top: 46%;
+  width: 22%;
+  height: 42%;
   border: solid #fff;
   border-width: 0 3px 3px 0;
-  transform: rotate(45deg);
+  transform: translate(-50%, -50%) rotate(45deg);
 }
 
 .who-did-it {
@@ -2978,11 +2989,14 @@ font-weight: 600;
 
 .home-day__head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 6px;
 }
 
 .home-day__name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: var(--fs-label);
   font-weight: 500;
   color: var(--ink-2);
@@ -2991,9 +3005,9 @@ font-weight: 600;
 .home-day__name b {
   font-weight: 600;
   font-size: var(--fs-title);
+  line-height: 1;
   letter-spacing: 0;
   color: var(--ink);
-  margin-left: 2px;
 }
 
 .home-day--today .home-day__name b {
@@ -3109,10 +3123,7 @@ letter-spacing: -0.015em;
 }
 
 .home-person .check-circle--on::after {
-  left: 10px;
-  top: 5px;
-  width: 7px;
-  height: 14px;
+  border-width: 0 2.5px 2.5px 0;
 }
 
 .home-list .list-item__check {
@@ -3414,8 +3425,7 @@ letter-spacing: -0.015em;
   }
   :root:not([data-device='phone']) .rail__mark {
     font-size: var(--fs-title);
-    padding-bottom: 6px;
-    margin-bottom: 2px;
+    margin-bottom: 6px;
   }
   :root:not([data-device='phone']) .rail__item {
     padding: 7px 2px;
@@ -3571,11 +3581,16 @@ thead .sidebar-grid__current {
 .schedule-day--today .day__date,
 .month-cell--today .month-cell__date,
 .home-day--today .home-day__name b {
-  display: inline-grid;
-  place-items: center;
-  min-width: 1.6em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: start;
+  width: 1.6em;
   height: 1.6em;
-  padding: 0 0.3em;
+  padding: 0;
+  line-height: 1;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
   border-radius: 999px;
   background: var(--accent);
   color: var(--accent-ink);
@@ -4491,4 +4506,93 @@ thead .sidebar-grid__current {
 :root[data-device='phone'] .cooking__ingredients,
 :root[data-device='phone'] .cooking__steps {
   overflow: visible;
+}
+
+/* Lists: tap the box to check off, tap the words to edit; categories inside a list. */
+.list-item {
+  gap: 12px;
+}
+
+.list-item__edit {
+  flex: 1;
+  min-width: 0;
+  min-height: 52px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: text;
+}
+
+.list-item--editing {
+  display: block;
+  padding: 8px 0 10px;
+}
+
+.item-edit {
+  display: grid;
+  gap: 8px;
+}
+
+.item-edit__actions {
+  gap: 8px;
+  align-items: center;
+}
+
+.list-category {
+  margin-top: 16px;
+}
+
+.list-category__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 6px 0 4px;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--ink-2);
+  border-bottom: 1px solid var(--rule-strong);
+}
+
+.list-category__title > span:first-child {
+  flex: 1;
+}
+
+.list-category__count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.list-category__edit-btn {
+  width: 32px;
+  height: 32px;
+  opacity: 0.6;
+}
+
+.list-category__edit {
+  display: grid;
+  gap: 6px;
+  padding: 6px 0;
+}
+
+.list-category .add-item input {
+  min-height: 40px;
+  font-size: var(--fs-small);
+}
+
+.name-form {
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.name-form input {
+  flex: 1 1 140px;
+}
+
+.done-section__note {
+  font-weight: 400;
+  color: var(--ink-3);
 }

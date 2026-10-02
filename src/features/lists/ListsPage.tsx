@@ -2,13 +2,15 @@ import { useEffect, useState } from 'react'
 import { PeopleFilter } from '../../components/PeopleFilter'
 import { itemOwner, personFor, readPeopleDefault } from '../../lib/peopleView'
 import type { Member } from '../../types'
-import { addItems, clearCompleted, createList, deleteItem, deleteList, ensureDefaultLists, setItemDone, updateList, watchItems, watchLists, type FamilyList, type ListItem } from './listsApi'
+import { useSettings } from '../settings/SettingsContext'
+import { addAisles, addCategories, addItems, clearCompleted, createList, deleteCategory, deleteItem, deleteList, ensureDefaultLists, moveCategory, renameCategory, setItemDone, updateItem, updateList, watchItems, watchLists, type FamilyList, type ListItem } from './listsApi'
 import { ListsBoard } from './ListsBoard'
 
 export function ListsPage({ familyId, userId, members }: { familyId: string; userId: string; members: Member[] }) {
   const [lists, setLists] = useState<FamilyList[]>([])
   const [items, setItems] = useState<Record<string, ListItem[]>>({})
   const [error, setError] = useState<string | null>(null)
+  const { settings } = useSettings()
   const report = (e: unknown) => setError(e instanceof Error ? e.message : String(e))
   const [view, setView] = useState(() => readPeopleDefault('lists'))
   const only = personFor(view, userId, members.map((m) => m.id))
@@ -40,8 +42,15 @@ export function ListsPage({ familyId, userId, members }: { familyId: string; use
         lists={lists}
         items={shownItems}
         members={shownMembers}
-        onAdd={(l, text, memberId) => addItems(familyId, l.id, userId, [text], memberId).catch(report)}
-        onToggle={(l, i) => setItemDone(familyId, l.id, i.id, !i.done).catch(report)}
+        doneDays={settings.listDoneDays}
+        onAdd={(l, text, memberId, categoryId) => addItems(familyId, l.id, userId, [text], memberId, { categoryId, categories: l.categories }).catch(report)}
+        onToggle={(l, i) => setItemDone(familyId, l.id, i.id, !i.done, settings.listDoneDays).catch(report)}
+        onEditItem={(l, i, changes) => updateItem(familyId, l.id, i.id, changes).catch(report)}
+        onAddCategory={(l, name) => addCategories(familyId, l, [name]).catch(report)}
+        onAddAisles={(l) => addAisles(familyId, l, items[l.id] ?? []).catch(report)}
+        onRenameCategory={(l, id, name) => renameCategory(familyId, l, id, name).catch(report)}
+        onMoveCategory={(l, id, by) => moveCategory(familyId, l, id, by).catch(report)}
+        onDeleteCategory={(l, id) => deleteCategory(familyId, l, id, items[l.id] ?? []).catch(report)}
         onDelete={(l, i) => deleteItem(familyId, l.id, i.id).catch(report)}
         onClearDone={(l) => clearCompleted(familyId, l.id, items[l.id] ?? []).catch(report)}
         onRename={(l, title) => updateList(familyId, l.id, { title }).catch(report)}

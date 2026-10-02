@@ -10,8 +10,9 @@ color keep working.
    event titles get the weight; everything else steps back.
 2. **One of everything.** One typeface, one icon set, one accent color, one corner
    radius per size of thing. Consistency is what makes it feel designed.
-3. **Content is the color.** Neutrals for the chrome; color comes from people and
-   calendars (events, avatars) and the single accent (selection, today, primary action).
+3. **Content is the color.** Paperwhite neutrals for the chrome, like an e-reader page;
+   color comes only from people and calendars (events, avatars) and the single accent
+   (selection, today, primary action).
 4. **Panels, not pages.** The side bar and the main panel are separate surfaces that
    scroll on their own. The page itself never scrolls or stretches.
 5. **Fit the device.** Phone, tablet, and computer each get their own layout
@@ -41,19 +42,20 @@ No serif, no italics, no all-caps labels.
 
 ## Color
 
-Neutral, slightly cool grays. Every color has a light and a dark value.
+**Paperwhite**: warm e-reader paper and near-black ink (the default), with a warm
+**Night** variant for dark. Every color has both values.
 
-| Token | Light | Dark | Use |
+| Token | Paperwhite | Night | Use |
 |---|---|---|---|
-| `--paper` | `#f4f5f7` | `#0e1014` | App background behind panels |
-| `--surface` | `#ffffff` | `#161920` | Cards, side bar, sheets |
-| `--paper-2` | `#eceef2` | `#1c2027` | Hover, segmented track, subtle fills |
-| `--ink` | `#111318` | `#eef0f3` | Primary text |
-| `--ink-2` | `#5b6270` | `#a2a9b5` | Secondary text, icons |
-| `--ink-3` | `#98a0ad` | `#6b7280` | Placeholders, counts, disabled |
-| `--rule` | `#e2e5ea` | `#262b33` | Borders, dividers |
-| `--rule-strong` | `#cfd4dc` | `#353b46` | Input borders, hover borders |
-| `--danger` | `#d92d20` | `#f97066` | Late chores, destructive actions |
+| `--paper` | `#f3f0e8` | `#151412` | The page behind panels |
+| `--surface` | `#faf8f2` | `#1c1b18` | Cards, side bar, sheets (a shade lighter than the page) |
+| `--paper-2` | `#e9e5da` | `#23211d` | Hover, segmented track, subtle fills |
+| `--ink` | `#1c1b18` | `#ece7dc` | Primary text |
+| `--ink-2` | `#5a564d` | `#aca596` | Secondary text, icons |
+| `--ink-3` | `#9a9588` | `#736d61` | Placeholders, counts, disabled |
+| `--rule` | `#dfdacd` | `#2e2c27` | Borders, dividers |
+| `--rule-strong` | `#c8c1b2` | `#3d3a33` | Input borders, hover borders |
+| `--danger` | `#b42318` | `#f97066` | Late chores, destructive actions |
 
 **Accent** (`--accent`, chosen in Settings → Appearance) marks *selection and now*:
 the active nav item, today's date, primary buttons, focus rings, links.
@@ -75,9 +77,13 @@ or white text for anything filled with a person or accent color.
 - **Radius:** `--r` 8px for controls, chips, inputs, events; `--r-lg` 14px for cards and
   panels; 12px for nav items; `999px` for pills, avatars, and today's date.
 - **Borders:** 1px `--rule`. No heavy rules, no double lines.
-- **Shadows:** `--shadow-sm` on resting cards and buttons, `--shadow` on the raised
-  segment, `--shadow-lg` on floating things (sheets, dialogs, menus). Never offset
-  "block" shadows.
+- **Depth:** paper doesn't cast shadows. Resting cards and buttons are drawn with
+  hairlines (`--shadow-sm` is none; `--shadow` is a 1px rule ring). Only things that
+  float above the page (sheets, dialogs, menus) get `--shadow-lg`.
+- **Centering:** anything that floats in a shape (the family letter, today's date,
+  avatars, counts, icons in buttons, ticks in circles) is centered on both axes with
+  flex/grid, `line-height: 1`, and equal width/height. Never nudge with padding or
+  pixel offsets. A control at the edge of a card gets the same space on every side.
 - **Spacing:** a 4px grid — 4, 8, 12, 16, 20, 24, 32. Page gutter `--gutter` (24px;
   16px on phones). Cards pad 12–16px; settings sections 18–20px.
 - **Touch targets:** `--tap` (48px; 52px on tablets) for anything tappable.
