@@ -760,6 +760,16 @@ describe('side bar settings', () => {
     await assertSucceeds(setDoc(display(dbFor(BOB)), { homePanels: { tablet: ['lists', 'tasks', 'calendar'], phone: ['tasks'] } }, { merge: true }))
     await assertFails(setDoc(display(dbFor(BOB)), { homePanels: { tv: [] } }, { merge: true }))
   })
+
+  it('accepts weather tab choices and rejects bad ones', async () => {
+    await assertSucceeds(
+      setDoc(display(dbFor(BOB)), { weatherDetails: ['precip', 'wind'], weatherAlerts: false, weatherOnCalendar: true, weatherView: { phone: 'day', tablet: 'threeDay', desktop: 'week' } }, { merge: true }),
+    )
+    await assertFails(setDoc(display(dbFor(BOB)), { weatherView: { phone: 'month' } }, { merge: true }))
+    await assertFails(setDoc(display(dbFor(BOB)), { weatherView: { tv: 'day' } }, { merge: true }))
+    await assertFails(setDoc(display(dbFor(BOB)), { weatherDetails: 'precip' }, { merge: true }))
+    await assertFails(setDoc(display(dbFor(BOB)), { weatherAlerts: 'yes' }, { merge: true }))
+  })
 })
 
 describe('sleep mode settings', () => {

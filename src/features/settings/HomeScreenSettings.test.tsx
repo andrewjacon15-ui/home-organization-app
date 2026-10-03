@@ -31,14 +31,14 @@ describe('Home screen panels', () => {
   it('reorders and hides panels for one kind of device', () => {
     const onSave = vi.fn()
     render(<Harness onSave={onSave} />)
-    expect(order()).toEqual(['Lists', "Today's tasks", 'Calendar'])
+    expect(order()).toEqual(['Lists', "Today's tasks", 'Calendar', 'Weather'])
     expect(screen.getByRole('button', { name: 'Move Lists up' })).toBeDisabled()
     fireEvent.click(screen.getByRole('button', { name: 'Move Calendar up' }))
     expect(onSave).toHaveBeenLastCalledWith({ tablet: ['lists', 'calendar', 'tasks'] })
     fireEvent.click(screen.getByRole('checkbox', { name: 'Lists' }))
     expect(onSave).toHaveBeenLastCalledWith({ tablet: ['calendar', 'tasks'] })
     // Hidden panels sink to the bottom; showing one again adds it at the end.
-    expect(order()).toEqual(['Calendar', "Today's tasks", 'Lists'])
+    expect(order()).toEqual(['Calendar', "Today's tasks", 'Lists', 'Weather'])
     fireEvent.click(screen.getByRole('checkbox', { name: 'Lists' }))
     expect(onSave).toHaveBeenLastCalledWith({ tablet: ['calendar', 'tasks', 'lists'] })
   })

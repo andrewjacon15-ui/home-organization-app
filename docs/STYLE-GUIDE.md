@@ -56,6 +56,7 @@ No serif, no italics, no all-caps labels.
 | `--rule` | `#dfdacd` | `#2e2c27` | Borders, dividers |
 | `--rule-strong` | `#c8c1b2` | `#3d3a33` | Input borders, hover borders |
 | `--danger` | `#b42318` | `#f97066` | Late chores, destructive actions |
+| `--rain` | `#2f6fb3` | `#6aa8e0` | Chance of rain/snow in the forecast (bars, percentages) |
 
 **Accent** (`--accent`, chosen in Settings → Appearance) marks *selection and now*:
 the active nav item, today's date, primary buttons, focus rings, links.
@@ -132,6 +133,9 @@ or white text for anything filled with a person or accent color.
   `--accent-soft` wash.
 - **Events:** rounded chips — 3px left bar + soft tint in the owner's/calendar's color;
   title 600, time in `--ink-2`; past events at reduced opacity.
+- **Views per device:** phones get Day, List, and Month (a grid of dots; tap a day to see
+  its events underneath). Tablets and computers add 3 Day and Week columns. Swipe left or
+  right to page.
 - **Busy days** scroll inside their column with a faded edge and a "Scroll for more"
   cue — never a page scroll.
 

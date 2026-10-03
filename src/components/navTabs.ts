@@ -1,7 +1,7 @@
-import { CalendarIcon, ChoresIcon, HomeIcon, ListsIcon, MealsIcon, PhotosIcon, RecipesIcon, RewardsIcon, SettingsIcon } from './Icons'
+import { CalendarIcon, ChoresIcon, HomeIcon, ListsIcon, MealsIcon, PhotosIcon, RecipesIcon, RewardsIcon, SettingsIcon, WeatherIcon } from './Icons'
 import type { NavTab } from './NavRail'
 
-export type Tab = 'home' | 'calendar' | 'lists' | 'chores' | 'rewards' | 'meals' | 'recipes' | 'photos' | 'settings'
+export type Tab = 'home' | 'calendar' | 'lists' | 'chores' | 'rewards' | 'meals' | 'recipes' | 'photos' | 'weather' | 'settings'
 
 export const TABS: NavTab<Tab>[] = [
   { id: 'home', label: 'Home', Icon: HomeIcon },
@@ -12,6 +12,7 @@ export const TABS: NavTab<Tab>[] = [
   { id: 'meals', label: 'Meals', Icon: MealsIcon },
   { id: 'recipes', label: 'Recipes', Icon: RecipesIcon },
   { id: 'photos', label: 'Photos', Icon: PhotosIcon },
+  { id: 'weather', label: 'Weather', Icon: WeatherIcon },
   { id: 'settings', label: 'Settings', Icon: SettingsIcon },
 ]
 

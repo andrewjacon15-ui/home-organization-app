@@ -29,6 +29,7 @@ const ListsPage = lazy(() => import('./features/lists/ListsPage').then((m) => ({
 const PhotosPage = lazy(() => import('./features/photos/PhotosPage').then((m) => ({ default: m.PhotosPage })))
 const RecipesPage = lazy(() => import('./features/recipes/RecipesPage').then((m) => ({ default: m.RecipesPage })))
 const RewardsPage = lazy(() => import('./features/rewards/RewardsPage').then((m) => ({ default: m.RewardsPage })))
+const WeatherPage = lazy(() => import('./features/weather/WeatherPage').then((m) => ({ default: m.WeatherPage })))
 const SettingsPage = lazy(() => import('./features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })))
 const TAB_KEY = 'last-tab'
 
@@ -154,7 +155,9 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
           </div>
           <div className="masthead__meta">
             <span className="masthead__time">{now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span>
-            <CurrentWeather />
+            <button type="button" className="masthead__weather" onClick={() => setTab('weather')} aria-label="Open the forecast">
+              <CurrentWeather />
+            </button>
             <TimerButton />
           </div>
           <span className="masthead__name">{settings.calendarName || family.name}</span>
@@ -168,6 +171,7 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
           {shown === 'rewards' && <RewardsPage familyId={familyId} userId={userId} members={members} />}
           {shown === 'meals' && <MealsPage familyId={familyId} userId={userId} />}
           {shown === 'recipes' && <RecipesPage familyId={familyId} userId={userId} />}
+          {shown === 'weather' && <WeatherPage />}
           {shown === 'photos' && <PhotosPage familyId={familyId} userId={userId} />}
           {shown === 'settings' && <SettingsPage family={family} members={members} userId={userId} onOpenRecipes={() => setTab('recipes')} />}
           </Suspense>

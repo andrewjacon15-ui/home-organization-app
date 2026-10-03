@@ -95,7 +95,7 @@ describe('GeneralSettings', () => {
         <GeneralSettings search={vi.fn()} />
       </StaticSettings>,
     )
-    await choose(user, screen.getByLabelText('Temperature'), 'Celsius (°C)')
+    await choose(user, screen.getByLabelText('Units'), '°C, mm, km/h')
     expect(update).toHaveBeenLastCalledWith({ temperatureUnit: 'C' })
     await choose(user, screen.getByLabelText('Text size'), 'Small')
     expect(update).toHaveBeenLastCalledWith({ textSize: 'small' })

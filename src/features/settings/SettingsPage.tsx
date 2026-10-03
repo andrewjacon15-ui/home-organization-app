@@ -34,7 +34,7 @@ const SECTIONS = [
   { id: 'device', label: 'Device & side bar' },
   { id: 'home', label: 'Home screen' },
   { id: 'people', label: 'Lists & chores' },
-  { id: 'general', label: 'General' },
+  { id: 'general', label: 'Weather' },
   { id: 'display', label: 'Display' },
   { id: 'google', label: 'Google Calendar' },
   { id: 'calendar', label: 'Calendar' },

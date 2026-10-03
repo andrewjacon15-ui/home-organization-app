@@ -383,7 +383,7 @@ service cloud.firestore {
           return onlyKeys([
               'calendarName', 'weekStartsOn', 'showCountdowns', 'colorCodeMultiProfile', 'shadeWeekends',
               'dimPastEvents', 'weekStartToday', 'monthStartCurrentWeek', 'scheduleDays', 'scheduleStartToday',
-              'temperatureUnit', 'weatherLocation', 'textSize', 'density',
+              'temperatureUnit', 'weatherLocation', 'weatherDetails', 'weatherAlerts', 'weatherView', 'weatherOnCalendar', 'textSize', 'density',
               'remindAtStart', 'remindBeforeEnabled', 'remindBeforeMinutes', 'remindChoresDue', 'reminderSound',
               'showPhotosTab', 'theme', 'accentColor', 'colorEventsBy',
               'sleepEnabled', 'sleepFrom', 'sleepTo',
@@ -397,6 +397,9 @@ service cloud.firestore {
             && optIntIn(d, 'scheduleDays', 1, 14)
             && optOneOf(d, 'temperatureUnit', ['F', 'C'])
             && (!('weatherLocation' in d) || d.weatherLocation == null || validLocation(d.weatherLocation))
+            && (!('weatherDetails' in d) || (d.weatherDetails is list && d.weatherDetails.size() <= 12))
+            && optBool(d, 'weatherAlerts') && optBool(d, 'weatherOnCalendar')
+            && (!('weatherView' in d) || validWeatherView(d.weatherView))
             && optOneOf(d, 'textSize', ['small', 'medium', 'large'])
             && optOneOf(d, 'density', ['compact', 'cozy', 'comfortable'])
             && optBool(d, 'remindAtStart') && optBool(d, 'remindBeforeEnabled')
@@ -411,6 +414,12 @@ service cloud.firestore {
             && (!('hiddenTabs' in d) || validHiddenTabs(d.hiddenTabs))
             && (!('homePanels' in d) || validHiddenTabs(d.homePanels))
             && optIntIn(d, 'listDoneDays', 0, 365);
+        }
+        function validWeatherView(v) {
+          return v is map && v.keys().hasOnly(['phone', 'tablet', 'desktop'])
+            && optOneOf(v, 'phone', ['day', 'threeDay', 'week'])
+            && optOneOf(v, 'tablet', ['day', 'threeDay', 'week'])
+            && optOneOf(v, 'desktop', ['day', 'threeDay', 'week']);
         }
         // Per-device lists: side-bar sections hidden, and Home panels shown ({ phone?: [...], tablet?: [...], desktop?: [...] }).
         function tabList(h, k) {

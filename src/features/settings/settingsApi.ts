@@ -18,6 +18,14 @@ export interface DisplaySettings {
   scheduleStartToday: boolean
   temperatureUnit: 'F' | 'C'
   weatherLocation: { label: string; lat: number; lon: number } | null
+  /** What the Weather tab shows besides the temperature and sky (see WEATHER_DETAILS). */
+  weatherDetails: string[]
+  /** National Weather Service alerts (United States). */
+  weatherAlerts: boolean
+  /** What the Weather tab opens to on each kind of device. */
+  weatherView: Partial<Record<Device, 'day' | 'threeDay' | 'week'>>
+  /** A small icon and high in calendar day headers. */
+  weatherOnCalendar: boolean
   textSize: 'small' | 'medium' | 'large'
   density: 'compact' | 'cozy' | 'comfortable'
   remindAtStart: boolean
@@ -60,6 +68,10 @@ export const DEFAULT_SETTINGS: DisplaySettings = {
   scheduleStartToday: false,
   temperatureUnit: 'F',
   weatherLocation: null,
+  weatherDetails: ['precip', 'hourly', 'feels', 'wind', 'uv', 'sun'],
+  weatherAlerts: true,
+  weatherView: {},
+  weatherOnCalendar: true,
   textSize: 'medium',
   density: 'cozy',
   remindAtStart: false,
