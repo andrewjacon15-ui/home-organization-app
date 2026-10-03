@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:emulators": "firebase emulators:start --only auth,firestore,storage",
+    "prebuild": "node scripts/fetch-voice.mjs",
     "build": "tsc -b && vite build",
     "lint": "oxlint && npm --prefix functions run lint",
     "preview": "vite preview",
@@ -23,7 +24,8 @@
     "firebase": "^12.19.0",
     "lucide-react": "^1.49.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "vosk-browser": "0.0.8"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.2",

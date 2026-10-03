@@ -39,8 +39,21 @@ const problems = []
 const rows = []
 let totalJs = 0
 let css = 0
+// The tablet's voice files (scripts/fetch-voice.mjs) load only on the tablet, the first time
+// someone taps the mic; they have their own budget and must both be there.
+const voice = all.filter((f) => f.slice(dist.length + 1).replace(/\\/g, '/').startsWith('voice/'))
+const voiceSrc = readFileSync(join(root, 'src/lib/voskRecognition.ts'), 'utf8')
+for (const want of [...voiceSrc.matchAll(/'\/(voice\/[^']+)'/g)].map((m) => m[1])) {
+  if (!voice.some((f) => f.replace(/\\/g, '/').endsWith(want))) problems.push(`${want} is missing from the build: the tablet's voice wouldn't load. Run \`npm run build\` (it fetches it).`)
+}
+const voiceJs = voice.filter((f) => f.endsWith('.js')).reduce((n, f) => n + gzipSync(readFileSync(f)).length, 0)
+if (kb(voiceJs) > 2500) problems.push(`voice/: ${kb(voiceJs)} kB gzipped, over the 2500 kB budget for the tablet's recognizer.`)
+const voiceModel = voice.filter((f) => f.endsWith('.tar.gz')).reduce((n, f) => n + statSync(f).size, 0)
+if (voiceModel > 60 * 1024 * 1024) problems.push(`voice/: the speech model is ${Math.round(voiceModel / 1048576)} MB, over 60 MB.`)
+
 for (const f of all) {
   const name = f.slice(dist.length + 1).replace(/\\/g, '/')
+  if (name.startsWith('voice/')) continue
   const raw = readFileSync(f)
   if (name.endsWith('.map')) problems.push(`${name}: source maps shouldn't be deployed.`)
   if (/\.(js|css|html)$/.test(name)) {
@@ -68,6 +81,7 @@ if (kb(css) > BUDGET.css) problems.push(`CSS: ${kb(css)} kB gzipped, over the ${
 rows.sort((a, b) => b.gz - a.gz)
 for (const r of rows.slice(0, 6)) console.log(`  ${String(kb(r.gz)).padStart(6)} kB  ${r.name}`)
 console.log(`  JavaScript ${kb(totalJs)} / ${BUDGET.totalJs} kB · CSS ${kb(css)} / ${BUDGET.css} kB (gzipped)`)
+console.log(`  Tablet voice (loaded on first use): recognizer ${kb(voiceJs)} kB gzipped, model ${Math.round(voiceModel / 1048576)} MB`)
 if (problems.length) {
   console.error(`\nBundle check failed (${problems.length}):`)
   for (const p of problems) console.error(`  ✗ ${p}`)

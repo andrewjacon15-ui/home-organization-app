@@ -38,6 +38,12 @@ jobs:
         run: npm run test:web
       - name: Functions tests
         run: npm run test:functions
+      # The tablet's speech model (~41 MB, checked by SHA-256 in scripts/fetch-voice.mjs) is fetched once, then cached.
+      - name: Cache the tablet voice model
+        uses: actions/cache@v6
+        with:
+          path: .cache/voice
+          key: voice-${{ hashFiles('scripts/fetch-voice.mjs') }}
       - name: Web build (tsc + vite)
         run: npm run build
       - name: Bundle budget (size, no emulator hosts, no source maps)

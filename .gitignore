@@ -31,5 +31,9 @@ ui-debug.log
 emulator-data/
 functions/lib/
 .env
+
+# Tablet voice files: fetched and checked at build time (scripts/fetch-voice.mjs)
+public/voice/
+.cache/
 functions/node_modules/
 functions/.secret.local

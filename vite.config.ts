@@ -77,6 +77,9 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // The tablet's voice files are big and only for the tablet; the app keeps them itself
+        // (src/lib/voskRecognition.ts), so the offline cache never downloads them.
+        globIgnores: ['voice/**'],
         // Firebase's auth handler and the static legal pages must not fall back to the app.
         navigateFallbackDenylist: [/^\/__\//, /^\/(about|privacy|terms)\.html$/],
         // Slideshow photos never change once uploaded; keep them on the device so

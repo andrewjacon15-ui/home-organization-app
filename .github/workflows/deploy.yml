@@ -46,6 +46,12 @@ jobs:
           cache: npm
       - if: env.HAS_KEY == 'true'
         run: npm ci
+      - name: Cache the tablet voice model
+        if: env.HAS_KEY == 'true'
+        uses: actions/cache@v6
+        with:
+          path: .cache/voice
+          key: voice-${{ hashFiles('scripts/fetch-voice.mjs') }}
       - if: env.HAS_KEY == 'true'
         run: npm run build
       - uses: google-github-actions/auth@v3
