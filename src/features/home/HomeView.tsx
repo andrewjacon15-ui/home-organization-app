@@ -11,14 +11,19 @@ import { useSettings } from '../settings/SettingsContext'
 import { DayWeather, WeatherStrip } from '../weather/WeatherBadges'
 import { CountdownPanel } from '../countdowns/Countdowns'
 import type { Countdown } from '../countdowns/countdownsApi'
-import { DEFAULT_HOME, PANEL_WEIGHT, type HomePanel } from './homePanels'
+import { DoneIcon, GrabsIcon, NextIcon } from '../../components/Icons'
+import { useOverflowCue } from '../../lib/useOverflowCue'
+import { DEFAULT_HOME, HOME_CALENDAR_DAYS, PANEL_WEIGHT, type HomeCalendarDays, type HomePanel } from './homePanels'
 
 export type HomeTarget = 'calendar' | 'chores' | 'lists' | 'weather'
 
 interface Props {
   today: string
   now: Date
-  weekStart: string
+  /** The first day the calendar shows, and how many. */
+  start: string
+  calendarDays: HomeCalendarDays
+  onCalendarDays?: (days: HomeCalendarDays) => void
   events: CalendarEvent[]
   calendars: SyncedCalendar[]
   members: Member[]
@@ -37,8 +42,6 @@ interface Props {
   onRemoveCountdown?: (c: Countdown) => void
 }
 
-// Busy days scroll inside their cell; past this many, point to the Calendar tab.
-const CELL_LIMIT = 8
 const GRABS = '__grabs__'
 
 /** Skylight-style home: the main lists, today's tasks by person, and this week's calendar, in the order Settings chooses. */
@@ -46,12 +49,22 @@ export function HomeView(p: Props) {
   const { settings } = useSettings()
   const memberById = useMemo(() => new Map(p.members.map((m) => [m.id, m])), [p.members])
   const calendarByKey = useMemo(() => new Map(p.calendars.map((c) => [c.key, c])), [p.calendars])
-  const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(p.weekStart, i)), [p.weekStart])
-  const nextWeek = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(p.weekStart, 7 + i)), [p.weekStart])
+  const days = useMemo(() => Array.from({ length: p.calendarDays }, (_, i) => addDays(p.start, i)), [p.start, p.calendarDays])
+  // The week after what's shown, summed up in the last tile.
+  const later = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(p.start, p.calendarDays + i)), [p.start, p.calendarDays])
   const owned = useMemo(() => withOwners(p.events, calendarByKey), [p.events, calendarByKey])
-  const byDay = useMemo(() => groupByDay(owned, [...days, ...nextWeek]) as Record<string, OwnedEvent[]>, [owned, days, nextWeek])
-  const nextWeekEvents = [...new Map(nextWeek.flatMap((d) => byDay[d]).map((e) => [e.id, e])).values()]
-  const range = (a: string, b: string) => `${fromDateKey(a).toLocaleDateString(undefined, { month: 'long', day: 'numeric' })} – ${fromDateKey(b).getDate()}`
+  const byDay = useMemo(() => groupByDay(owned, [...days, ...later]) as Record<string, OwnedEvent[]>, [owned, days, later])
+  const seen = new Set<string>()
+  const laterEvents = later.flatMap((d) => byDay[d].filter((e) => !seen.has(e.id) && seen.add(e.id)).map((e) => ({ day: d, e })))
+  const range = (a: string, b: string) => {
+    const from = fromDateKey(a)
+    const to = fromDateKey(b)
+    return from.getMonth() === to.getMonth()
+      ? `${from.toLocaleDateString(undefined, { month: 'long', day: 'numeric' })} – ${to.getDate()}`
+      : `${from.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} – ${to.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
+  }
+  const cueRef = useOverflowCue<HTMLDivElement>(':scope > .home-day > .events', 'day--more')
+  const cols = p.calendarDays === 7 ? 'repeat(8, minmax(0, 1fr))' : p.calendarDays === 3 ? 'repeat(3, minmax(0, 1fr)) minmax(0, 0.8fr)' : 'minmax(0, 2.4fr) minmax(0, 1fr)'
 
   const people = [...p.members.map((m) => ({ id: m.id, member: m as Member | null })), { id: GRABS, member: null }]
   const choresFor = (id: string) => p.chores.filter((c) => (id === GRABS ? !c.assigneeId || !memberById.has(c.assigneeId) : c.assigneeId === id))
@@ -59,9 +72,19 @@ export function HomeView(p: Props) {
   const panels = p.panels ?? DEFAULT_HOME
   const shown: Record<HomePanel, () => ReactNode> = {
     calendar: () => (
-        <section className="home-panel home-panel--calendar" aria-label="This week">
-          <PanelHead title="Calendar" onOpen={() => p.onNavigate('calendar')} />
-          <div className="home-week">
+        <section className="home-panel home-panel--calendar" aria-label={p.calendarDays === 1 ? 'Today' : p.calendarDays === 3 ? 'Next 3 days' : 'This week'}>
+          <PanelHead title="Calendar" onOpen={() => p.onNavigate('calendar')}>
+            {p.onCalendarDays && (
+              <div className="segmented segmented--small" role="group" aria-label="Days shown">
+                {HOME_CALENDAR_DAYS.map((n) => (
+                  <button key={n} type="button" className={`segmented__item${n === p.calendarDays ? ' segmented__item--active' : ''}`} aria-pressed={n === p.calendarDays} onClick={() => p.onCalendarDays?.(n)}>
+                    {n === 1 ? '1 day' : `${n} days`}
+                  </button>
+                ))}
+              </div>
+            )}
+          </PanelHead>
+          <div ref={cueRef} className={`home-week home-week--${p.calendarDays}`} style={{ '--home-cols': cols } as CSSProperties}>
             {days.map((d) => {
               const list = byDay[d]
               return (
@@ -74,23 +97,24 @@ export function HomeView(p: Props) {
                   </div>
                   <span className="day__count">{list.length ? `${list.length} event${list.length === 1 ? '' : 's'}` : '—'}</span>
                   <ul className="events">
-                    {list.slice(0, CELL_LIMIT).map((e) => (
+                    {list.map((e) => (
                       <li key={e.id}>
                         <EventChip event={e} members={memberById} calendars={calendarByKey} now={p.now} today={p.today} compact="column" />
                       </li>
                     ))}
                   </ul>
-                  {list.length > CELL_LIMIT && <span className="month-cell__more">+{list.length - CELL_LIMIT} more</span>}
                 </div>
               )
             })}
-            <button type="button" className="home-day home-day--next" onClick={() => p.onNavigate('calendar')} aria-label="Next week">
-              <span className="home-day__next-title">Next Week</span>
-              <span className="muted">{range(nextWeek[0], nextWeek[6])}</span>
-              <span className="day__count">{nextWeekEvents.length ? `${nextWeekEvents.length} event${nextWeekEvents.length === 1 ? '' : 's'}` : 'Nothing yet'}</span>
+            <button type="button" className="home-day home-day--next" onClick={() => p.onNavigate('calendar')} aria-label={p.calendarDays === 7 ? 'Next week' : 'Coming up'}>
+              <span className="home-day__next-title">{p.calendarDays === 7 ? 'Next week' : 'Coming up'}</span>
+              <span className="muted">{range(later[0], later[6])}</span>
+              <span className="day__count">{laterEvents.length ? `${laterEvents.length} event${laterEvents.length === 1 ? '' : 's'}` : 'Nothing yet'}</span>
               <ul className="home-next">
-                {nextWeekEvents.slice(0, 4).map((e) => (
-                  <li key={e.id}>{e.title}</li>
+                {laterEvents.slice(0, p.calendarDays === 1 ? 8 : 5).map(({ day, e }) => (
+                  <li key={e.id}>
+                    <span className="home-next__day">{fromDateKey(day).toLocaleDateString(undefined, { weekday: 'short' })}</span> {e.title}
+                  </li>
                 ))}
               </ul>
             </button>
@@ -110,11 +134,11 @@ export function HomeView(p: Props) {
                 <article key={id} className="home-person" style={{ '--pill': member?.color ?? 'var(--ink-2)' } as CSSProperties} aria-label={name}>
                   <header className="home-person__head">
                     <span className="avatar" aria-hidden>
-                      {member ? member.displayName.charAt(0) : '✦'}
+                      {member ? member.displayName.charAt(0) : <GrabsIcon width={14} height={14} />}
                     </span>
                     <span className="home-person__name">{name}</span>
                     <span className="home-person__count" aria-label={`${done} of ${occ.length} done`}>
-                      ✓ {done}/{occ.length}
+                      <DoneIcon width={14} height={14} aria-hidden /> {done}/{occ.length}
                     </span>
                   </header>
                   {occ.length === 0 ? (
@@ -162,12 +186,13 @@ export function HomeView(p: Props) {
   )
 }
 
-function PanelHead({ title, onOpen }: { title: string; onOpen: () => void }) {
+function PanelHead({ title, onOpen, children }: { title: string; onOpen: () => void; children?: ReactNode }) {
   return (
     <header className="home-panel__head">
       <h2>{title}</h2>
+      {children}
       <button type="button" className="link" onClick={onOpen} aria-label={`Open ${title}`}>
-        Open →
+        Open <NextIcon width={16} height={16} aria-hidden />
       </button>
     </header>
   )

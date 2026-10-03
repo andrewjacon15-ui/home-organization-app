@@ -197,20 +197,20 @@ export function KitchenSearch({ entries, staples, onOpen, onFindOnline, onCookOn
     <section className="finder" aria-label="What's in my kitchen">
       <form className="finder__form" onSubmit={submit}>
         <p className="finder__step">1. What do you have?</p>
-        <div className="finder__input">
-          <label className="field">
-            Ingredients
-            <textarea rows={2} value={text} onChange={(e) => setText(e.target.value)} placeholder="chicken thighs, rice, broccoli…" maxLength={1000} />
-          </label>
-          <button
-            type="button"
-            className={`icon-button finder__mic${speech.listening ? ' finder__mic--on' : ''}`}
-            aria-label={speech.listening ? 'Stop listening' : 'Say what you have'}
-            aria-pressed={speech.listening}
-            onClick={speech.listening ? speech.stop : speech.start}
-          >
-            {speech.supported ? <Mic size={22} strokeWidth={ICON_STROKE} aria-hidden /> : <MicOff size={22} strokeWidth={ICON_STROKE} aria-hidden />}
-          </button>
+        <div className="finder__field">
+          <label htmlFor="finder-ingredients">Ingredients</label>
+          <div className="finder__input">
+            <textarea id="finder-ingredients" rows={2} value={text} onChange={(e) => setText(e.target.value)} placeholder="chicken thighs, rice, broccoli…" maxLength={1000} />
+            <button
+              type="button"
+              className={`icon-button finder__mic${speech.listening ? ' finder__mic--on' : ''}`}
+              aria-label={speech.listening ? 'Stop listening' : 'Say what you have'}
+              aria-pressed={speech.listening}
+              onClick={speech.listening ? speech.stop : speech.start}
+            >
+              {speech.supported ? <Mic size={22} strokeWidth={ICON_STROKE} aria-hidden /> : <MicOff size={22} strokeWidth={ICON_STROKE} aria-hidden />}
+            </button>
+          </div>
         </div>
         {speech.listening && (
           <p className="muted" role="status">

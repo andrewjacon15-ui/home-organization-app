@@ -20,6 +20,8 @@
   --danger: #b42318;
   /* Rain and snow in the forecast. */
   --rain: #2f6fb3;
+  /* Needs attention (a recipe to review, a warning badge) and favorites. */
+  --warn: #b45309;
 
   /* Accent: set from settings at runtime (App.tsx), with a soft tint and a dark-mode text variant */
   --accent: #1d4ed8;
@@ -73,6 +75,7 @@
   --rule-strong: #3d3a33;
   --danger: #f97066;
   --rain: #6aa8e0;
+  --warn: #f5a524;
   --accent-text: var(--accent-text-dark, #8fb0ff);
   --shadow-sm: none;
   --shadow: 0 0 0 1px var(--rule);
@@ -92,7 +95,8 @@
     --rule: #2e2c27;
     --rule-strong: #3d3a33;
     --danger: #f97066;
-  --rain: #6aa8e0;
+    --rain: #6aa8e0;
+    --warn: #f5a524;
     --accent-text: var(--accent-text-dark, #8fb0ff);
     --shadow-sm: none;
     --shadow: 0 0 0 1px var(--rule);
@@ -160,6 +164,16 @@ h2 {
   font-size: var(--fs-title);
 }
 
+h3 {
+  font-size: var(--fs-lead);
+}
+
+/* One typeface: links and versions shown as "code" stay in Inter, not the browser's monospace. */
+code {
+  font-family: var(--sans);
+  font-size: inherit;
+}
+
 a {
   color: var(--accent-text);
 }
@@ -194,6 +208,10 @@ textarea {
 
 textarea {
   padding: 8px 12px;
+  /* Drag only taller, and never past its column or the screen. */
+  resize: vertical;
+  max-width: 100%;
+  max-height: 40vh;
 }
 
 @media (hover: hover) {
@@ -2504,43 +2522,90 @@ letter-spacing: -0.015em;
   display: block;
 }
 
-/* A slow push-in, like a picture frame's "Ken Burns" effect. */
-.slideshow__layer--on .slideshow__media--drift {
-  animation: slideshow-drift 30s ease-out both;
+/* A slow "Ken Burns" drift that lasts the photo's whole time on screen (fades included,
+   --drift-ms from Slideshow.tsx), a different way each photo. Every layer animates from
+   when it appears, so the outgoing photo keeps its place while it fades instead of snapping back. */
+.slideshow__media--drift {
+  animation: var(--drift-name, slideshow-in-left) var(--drift-ms, 15s) linear both;
+  will-change: transform;
+}
+.slideshow__media--in-left {
+  --drift-name: slideshow-in-left;
+}
+.slideshow__media--in-right {
+  --drift-name: slideshow-in-right;
+}
+.slideshow__media--out-up {
+  --drift-name: slideshow-out-up;
+}
+.slideshow__media--in-down {
+  --drift-name: slideshow-in-down;
 }
 
-@keyframes slideshow-drift {
+@keyframes slideshow-in-left {
   from {
-    transform: scale(1);
+    transform: scale(1.02) translate(0, 0);
   }
   to {
-    transform: scale(1.08);
+    transform: scale(1.1) translate(-1.5%, 0);
+  }
+}
+@keyframes slideshow-in-right {
+  from {
+    transform: scale(1.02) translate(0, 0);
+  }
+  to {
+    transform: scale(1.1) translate(1.5%, 0);
+  }
+}
+@keyframes slideshow-out-up {
+  from {
+    transform: scale(1.1) translate(0, 1%);
+  }
+  to {
+    transform: scale(1.02) translate(0, -0.5%);
+  }
+}
+@keyframes slideshow-in-down {
+  from {
+    transform: scale(1.02) translate(0, -0.5%);
+  }
+  to {
+    transform: scale(1.1) translate(0, 1%);
   }
 }
 
+/* The clock and date always sit in the same place, bottom left, over a dark fade; a
+   caption sits to the right so it never moves them. */
 .slideshow__overlay {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 72px 32px 24px;
+  padding: 96px 40px 32px;
   display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 4px 18px;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
   color: #fff;
-  /* A deeper fade plus a soft text shadow keeps the clock readable over bright photos. */
+  /* A deep fade plus a soft text shadow keeps the clock readable over bright photos. */
   background: linear-gradient(transparent, rgb(0 0 0 / 0.45) 45%, rgb(0 0 0 / 0.78));
   text-shadow: 0 1px 2px rgb(0 0 0 / 0.6), 0 0 18px rgb(0 0 0 / 0.45);
-  transition: opacity 0.6s ease;
   pointer-events: none;
+}
+
+.slideshow__clock {
+  display: grid;
+  gap: 6px;
+  flex: none;
 }
 
 .slideshow__time {
   font-size: var(--fs-hero);
   line-height: 1;
-font-weight: 600;
-letter-spacing: -0.015em;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
 }
 
 .slideshow__date {
@@ -2550,57 +2615,18 @@ letter-spacing: -0.015em;
 }
 
 .slideshow__caption {
-  flex-basis: 100%;
+  min-width: 0;
+  max-width: 50%;
   font-size: var(--fs-lead);
+  text-align: right;
   opacity: 0.9;
-}
-
-/* Tall photos: the picture sits to the right and the clock fills the black band on the left. */
-.slideshow__layer--side .slideshow__media {
-  object-position: calc(100% - 24px) 50%;
-}
-
-.slideshow__layer--side .slideshow__media--drift {
-  transform-origin: right center;
-}
-
-.slideshow__overlay--side {
-  top: 0;
-  right: auto;
-  width: var(--band);
-  padding: 40px 32px;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  justify-content: center;
-  flex-wrap: nowrap;
-  gap: 10px;
-  background: none;
-  text-shadow: none;
-}
-
-.slideshow__overlay--side .slideshow__time {
-  font-size: 4.5rem;
-}
-
-.slideshow__overlay--side .slideshow__date {
-  font-size: var(--fs-title);
-  line-height: 1.25;
-  opacity: 0.9;
-}
-
-.slideshow__overlay--side .slideshow__caption {
-  flex-basis: auto;
-  margin-top: 8px;
-  font-size: var(--fs-lead);
-  opacity: 0.8;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .slideshow__layer {
     transition: none;
   }
-  .slideshow__layer--on .slideshow__media--drift {
+  .slideshow__media--drift {
     animation: none;
   }
 }
@@ -3153,6 +3179,7 @@ font-weight: 600;
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
   padding: 12px 14px 14px;
   background: var(--surface);
   border: 1px solid var(--rule);
@@ -3162,9 +3189,25 @@ font-weight: 600;
 
 .home-panel__head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
+  gap: 12px;
   padding: 6px 0;
+}
+
+/* The Home calendar's 1 / 3 / 7 days switch sits beside "Open". */
+.home-panel__head .segmented {
+  margin-left: auto;
+}
+
+.segmented--small {
+  padding: 2px;
+}
+
+.segmented--small .segmented__item {
+  min-height: 30px;
+  padding: 0 12px;
+  font-size: var(--fs-label);
 }
 
 .home-panel__head h2 {
@@ -3174,12 +3217,12 @@ font-weight: 600;
   margin: 0;
 }
 
-/* A full-width row: the seven days and Next Week side by side. */
+/* A full-width row: the days shown and "Next week" / "Coming up" side by side (columns from HomeView). */
 .home-week {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-columns: var(--home-cols, repeat(8, minmax(0, 1fr)));
   grid-template-rows: minmax(0, 1fr);
   border: 1px solid var(--rule);
   border-radius: var(--r);
@@ -3236,11 +3279,38 @@ font-weight: 600;
   color: var(--accent-text);
 }
 
+/* A busy day scrolls inside its own column, with the same fade and cue as the Calendar tab. */
+.home-day {
+  position: relative;
+}
+
 .home-day .events {
+  flex: 1 1 auto;
   overflow-y: auto;
   min-height: 0;
   scrollbar-width: thin;
-  overscroll-behavior: none;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+
+.home-day:has(> .events.day--more)::after {
+  content: 'Scroll for more ↓';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 5px 0 6px;
+  font-size: var(--fs-label);
+  font-weight: 500;
+  color: var(--ink-2);
+  text-align: center;
+  pointer-events: none;
+}
+
+.home-next__day {
+  font-weight: 600;
+  color: var(--ink);
 }
 
 .home-day--next {
@@ -3354,7 +3424,8 @@ letter-spacing: -0.015em;
 
 @media (max-width: 999px) {
   .home {
-    grid-template-columns: 1fr;
+    /* minmax(0, …): a long row of countdowns scrolls inside its panel instead of widening Home. */
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: none;
   }
   .home-week {
@@ -4015,8 +4086,9 @@ thead .sidebar-grid__current {
 
 .badge--warn {
   margin-left: 8px;
-  background: #f79009;
-  color: #ffffff;
+  background: var(--warn);
+  /* Black on the light amber of dark mode, white on the deep amber of light mode. */
+  color: var(--paper);
 }
 
 /* Dialogs: a floating card over a dimmed page. */
@@ -4078,9 +4150,8 @@ thead .sidebar-grid__current {
 .recipe__notes {
   margin: 10px 0 0;
   padding-left: 12px;
-  border-left: 3px solid var(--line);
+  border-left: 3px solid var(--rule);
   color: var(--ink-2);
-  font-style: italic;
   white-space: pre-line;
 }
 
@@ -4095,7 +4166,7 @@ thead .sidebar-grid__current {
   gap: 10px;
   padding: 14px 16px;
   border-radius: var(--r-lg);
-  border: 1px solid #f79009;
+  border: 1px solid var(--warn);
   background: rgb(247 144 9 / 0.1);
 }
 
@@ -4188,7 +4259,7 @@ thead .sidebar-grid__current {
 }
 
 .favorite--on {
-  color: #d97706;
+  color: var(--warn);
 }
 
 .recipe__title-row {
@@ -4497,15 +4568,28 @@ thead .sidebar-grid__current {
   font-weight: 600;
 }
 
+.finder__field {
+  display: grid;
+  gap: 6px;
+  font-weight: 600;
+  font-size: var(--fs-small);
+}
+
+/* The box and the mic share one row, centered on each other. */
 .finder__input {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
+  grid-template-columns: minmax(0, 1fr) var(--tap);
+  align-items: center;
   gap: 8px;
 }
 
+.finder__input textarea {
+  width: 100%;
+}
+
 .finder__mic {
-  border: 1px solid var(--rule);
+  border: 1px solid var(--rule-strong);
+  border-radius: 999px;
 }
 
 .finder__mic--on {
@@ -5215,7 +5299,7 @@ thead .sidebar-grid__current {
   border-radius: 999px;
   background: var(--accent);
   color: var(--accent-ink);
-  font-size: 11px;
+  font-size: var(--fs-micro);
   font-weight: 600;
   line-height: 1;
 }
@@ -6198,9 +6282,6 @@ thead .sidebar-grid__current {
   flex: 1 1 100%;
   margin: 0;
 }
-.countdown__unit {
-  line-height: 1.1;
-}
 .countdowns__add {
   display: inline-flex;
   align-items: center;
@@ -6230,14 +6311,17 @@ thead .sidebar-grid__current {
 .countdowns::-webkit-scrollbar {
   display: none;
 }
+/* The number and its unit in a fixed column on the left; the title and date beside it,
+   both centered on the card's middle line. */
 .countdown {
   position: relative;
   flex: none;
-  display: flex;
+  display: grid;
+  grid-template-columns: 3.25em minmax(0, 1fr);
   align-items: center;
   gap: 10px;
-  min-width: 170px;
-  padding: 6px 30px 6px 10px;
+  min-width: 190px;
+  padding: 6px 30px 6px 6px;
   border: 1px solid var(--rule);
   border-radius: var(--r);
   background: var(--paper);
@@ -6246,27 +6330,38 @@ thead .sidebar-grid__current {
   border-color: var(--accent);
   background: var(--accent-soft);
 }
+.countdown__days {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 4px 0;
+  border-right: 1px solid var(--rule);
+}
 .countdown__count {
   font-size: var(--fs-title);
   font-weight: 600;
   line-height: 1;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.015em;
   font-variant-numeric: tabular-nums;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 .countdown--today .countdown__count {
-  font-size: var(--fs-lead);
+  font-size: var(--fs-body);
 }
 .countdown__text {
   display: grid;
+  gap: 2px;
   min-width: 0;
 }
 .countdown__unit,
 .countdown__date {
   font-size: var(--fs-label);
+  line-height: 1.2;
   color: var(--ink-2);
 }
 .countdown__title {
+  font-size: var(--fs-body);
+  line-height: 1.25;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -6280,6 +6375,20 @@ thead .sidebar-grid__current {
   width: 26px;
   height: 26px;
   color: var(--ink-3);
+}
+
+/* Phones: the heading and Add on one line, the countdowns underneath at full width. */
+:root[data-device='phone'] .home-panel--countdowns {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+}
+:root[data-device='phone'] .home-panel--countdowns .home-panel__head {
+  flex-direction: row;
+  align-items: center;
+}
+:root[data-device='phone'] .home-panel--countdowns .countdowns {
+  flex: none;
 }
 
 /* Settings → Households (admin) */
@@ -6316,4 +6425,31 @@ thead .sidebar-grid__current {
 }
 .admin-list__stats {
   font-size: var(--fs-small);
+}
+
+/* Text with a trailing or leading icon ("Open >", "Recipe >", a done count, a ticked menu item). */
+.home-panel__head .link,
+.meal__recipe,
+.home-person__count,
+.chore-col__progress span,
+.menu [role='menuitemcheckbox'] {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Settings → Households (admin): sub-headings and the fresh link, on the settings scale. */
+/* Sub-headings inside a section sit one step below the section's own title. */
+.settings-section h3 {
+  margin: 12px 0 2px;
+  font-size: var(--fs-body);
+}
+.admin-show {
+  justify-self: start;
+}
+.invite-link code {
+  font-weight: 500;
+}
+.admin-list li > span:first-child {
+  font-size: var(--fs-body);
 }

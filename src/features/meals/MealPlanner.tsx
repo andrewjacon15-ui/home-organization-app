@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { NextIcon } from '../../components/Icons'
 import { WeekNav } from '../../components/WeekNav'
 import { addDays, fromDateKey } from '../../lib/dates'
 import type { MealPlan, MealSlot } from '../../types'
@@ -121,7 +122,7 @@ function MealField({ label, dayLabel, value, multiline, suggest, onOpenRecipe, o
         {label}
         {onOpenRecipe && !editing && (
           <button type="button" className="meal__recipe" onClick={onOpenRecipe} aria-label={`Open recipe for ${dayLabel} ${label.toLowerCase()}`}>
-            Recipe →
+            Recipe <NextIcon width={14} height={14} aria-hidden />
           </button>
         )}
       </span>

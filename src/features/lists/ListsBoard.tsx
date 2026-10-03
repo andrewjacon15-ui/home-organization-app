@@ -3,7 +3,7 @@ import { Select } from '../../components/Select'
 import { useState, type CSSProperties, type FormEvent } from 'react'
 import type { Member } from '../../types'
 import type { FamilyList, ListCategory, ListItem } from './listsApi'
-import { AddIcon, ICON_STROKE } from '../../components/Icons'
+import { AddIcon, DoneIcon, ICON_STROKE } from '../../components/Icons'
 
 export interface ListActions {
   /** categoryId undefined = let the list file it (store aisles); null = the list's top. */
@@ -130,7 +130,7 @@ function ListColumn({ list, items, members, doneDays, ...a }: ColumnProps) {
                 </button>
               )}
               <button type="button" role="menuitemcheckbox" aria-checked={list.sections} onClick={() => (setMenu(false), a.onToggleSections(list))}>
-                {list.sections ? '✓ ' : ''}Sections by person
+                {list.sections && <DoneIcon width={16} height={16} aria-hidden />}Sections by person
               </button>
               <button type="button" role="menuitem" disabled={done.length === 0} onClick={() => (setMenu(false), a.onClearDone(list))}>
                 Clear completed

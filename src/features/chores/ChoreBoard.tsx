@@ -5,7 +5,7 @@ import { useFitHeight } from '../../lib/useFitHeight'
 import type { Chore, Member, NewChore } from '../../types'
 import { ChoreForm } from './ChoreForm'
 import { dueLabel, occurrencesOn, repeatLabel, type Occurrence } from './schedule'
-import { AddIcon, BackIcon, NextIcon } from '../../components/Icons'
+import { AddIcon, BackIcon, DoneIcon, GrabsIcon, NextIcon } from '../../components/Icons'
 
 const GRABS = '__grabs__'
 
@@ -85,7 +85,7 @@ export function ChoreBoard({ chores, members, stars, today, now, weekStartsOn, o
               <article key={id} className={`chore-col${member ? '' : ' chore-col--grabs'}`} style={{ '--pill': member?.color ?? 'var(--ink-2)' } as CSSProperties} aria-label={name}>
                 <header className="chore-col__head">
                   <span className="avatar" aria-hidden>
-                    {member ? member.displayName.charAt(0) : '✦'}
+                    {member ? member.displayName.charAt(0) : <GrabsIcon width={16} height={16} />}
                   </span>
                   <div className="chore-col__who">
                     <span className="chore-col__name">{name}</span>
@@ -94,7 +94,7 @@ export function ChoreBoard({ chores, members, stars, today, now, weekStartsOn, o
                         <div className="progress__fill" style={{ width: list.length ? `${(done / list.length) * 100}%` : 0 }} />
                       </div>
                       <span>
-                        ✓ {done}/{list.length}
+                        <DoneIcon width={14} height={14} aria-hidden /> {done}/{list.length}
                       </span>
                     </div>
                   </div>

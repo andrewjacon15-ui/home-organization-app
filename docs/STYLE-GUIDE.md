@@ -21,7 +21,7 @@ color keep working.
 ## Typography
 
 One family: **Inter** (variable, self-hosted via `@fontsource-variable/inter`).
-No serif, no italics, no all-caps labels.
+No serif, no italics, no all-caps labels, no monospace (`<code>` is set in Inter too).
 
 | Token | Size (at 16px root) | Use |
 |---|---|---|
@@ -33,6 +33,8 @@ No serif, no italics, no all-caps labels.
 | `--fs-label` | 12px | Captions, nav labels, weekday names |
 | `--fs-micro` | 10px | Initials inside tiny badges only |
 
+- **Headings:** `h2` is `--fs-title`, `h3` is `--fs-lead`; inside a settings section a sub-heading is
+  `--fs-body` 600, one step below the section title. Never the browser's default sizes.
 - **Weights:** 400 regular (body), 500 medium (labels, nav, buttons), 600 semibold
   (titles, names, the selected item). Nothing else.
 - **Tracking:** −0.02em on display sizes, −0.015em on titles, 0 elsewhere.
@@ -57,6 +59,7 @@ No serif, no italics, no all-caps labels.
 | `--rule-strong` | `#c8c1b2` | `#3d3a33` | Input borders, hover borders |
 | `--danger` | `#b42318` | `#f97066` | Late chores, destructive actions |
 | `--rain` | `#2f6fb3` | `#6aa8e0` | Chance of rain/snow in the forecast (bars, percentages) |
+| `--warn` | `#b45309` | `#f5a524` | Needs attention (a recipe to review, warning badges), favorites |
 
 **Accent** (`--accent`, chosen in Settings → Appearance) marks *selection and now*:
 the active nav item, today's date, primary buttons, focus rings, links.
@@ -98,8 +101,8 @@ or white text for anything filled with a person or accent color.
 - Icons inherit text color: `--ink-2` at rest, accent when selected.
 - Weather uses Lucide's sun/cloud/rain set (`WeatherBadges.tsx`), not emoji — emoji
   render differently on every device.
-- Buttons use icons for arrows and "add" (`BackIcon`, `NextIcon`, `AddIcon`), not text
-  characters like ‹ › or +.
+- Buttons use icons for arrows, "add", and ticks (`BackIcon`, `NextIcon`, `AddIcon`,
+  `DoneIcon`), not text characters like ‹ › → + or ✓.
 - Decorative icons are `aria-hidden`; icon-only buttons need an `aria-label`.
 
 ## Components
@@ -137,7 +140,9 @@ or white text for anything filled with a person or accent color.
   its events underneath). Tablets and computers add 3 Day and Week columns. Swipe left or
   right to page.
 - **Busy days** scroll inside their column with a faded edge and a "Scroll for more"
-  cue — never a page scroll.
+  cue — never a page scroll, and never cut off at a count. The Home calendar does the same.
+- **Home calendar:** 3 days from today by default; 1 or 7 days from the panel's switch or
+  Settings → Home screen. The last tile sums up the following week.
 
 ## Devices
 
@@ -154,8 +159,10 @@ Hover styles live in `@media (hover: hover)` so touch screens never get stuck ho
 
 ## Motion
 
-Short and functional: 120–180ms ease-out for hover, toggles, and sheets; a slow
-cross-fade only in the photo slideshow. Respect `prefers-reduced-motion`.
+Short and functional: 120–180ms ease-out for hover, toggles, and sheets. The photo
+slideshow is the one slow place: a 1.6s cross-fade and a gentle drift (zoom plus a small
+pan, a different way each photo) that lasts the photo's whole time on screen. Its clock
+and date never move. Respect `prefers-reduced-motion`.
 
 ## Don't
 

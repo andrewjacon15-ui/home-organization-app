@@ -28,6 +28,13 @@ describe('Home screen panels', () => {
     expect(homePanelsFor({ phone: [] }, 'phone')).toEqual([])
   })
 
+  it('puts Countdowns on top of Homes saved before they existed, once', () => {
+    expect(homePanelsFor({ tablet: ['lists', 'calendar'] }, 'tablet', 0)).toEqual(['countdowns', 'lists', 'calendar'])
+    expect(homePanelsFor({ tablet: ['calendar', 'countdowns'] }, 'tablet', 0)).toEqual(['countdowns', 'calendar'])
+    // After the household saves its Home screen again, its order stands.
+    expect(homePanelsFor({ tablet: ['lists', 'calendar'] }, 'tablet', 2)).toEqual(['lists', 'calendar'])
+  })
+
   it('reorders and hides panels for one kind of device', () => {
     const onSave = vi.fn()
     render(<Harness onSave={onSave} />)

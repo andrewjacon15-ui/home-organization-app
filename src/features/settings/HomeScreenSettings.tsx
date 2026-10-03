@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { ICON_STROKE } from '../../components/Icons'
 import { DEVICE_LABELS, type Device } from '../../lib/device'
 import { useDevice } from '../../lib/DeviceContext'
-import { HOME_PANELS, homePanelsFor, type HomePanel } from '../home/homePanels'
+import { HOME_CALENDAR_DAYS, HOME_PANELS, HOME_PANELS_VERSION, homeCalendarDays, homePanelsFor, type HomePanel } from '../home/homePanels'
 import { SettingsSection } from './SettingRows'
 import { useSettings } from './SettingsContext'
 import type { DisplaySettings } from './settingsApi'
@@ -12,7 +12,7 @@ const DEVICES: Device[] = ['tablet', 'phone', 'desktop']
 type Setting = DisplaySettings['homePanels']
 
 /** Which panels a device's Home shows, top to bottom: tick to show, arrows to reorder. */
-export function HomePanelEditor({ value, device, onChange }: { value: Setting; device: Device; onChange: (next: Setting) => void }) {
+export function HomePanelEditor({ value, device, version = HOME_PANELS_VERSION, onChange }: { value: Setting; device: Device; version?: number; onChange: (next: Setting) => void }) {
   // Build each change on the last one sent (quick taps in a row all stick).
   const [local, setLocal] = useState(value)
   const [seen, setSeen] = useState(value)
@@ -20,7 +20,8 @@ export function HomePanelEditor({ value, device, onChange }: { value: Setting; d
     setSeen(value)
     setLocal(value)
   }
-  const shown = homePanelsFor(local, device)
+  // Once anything is saved the lists are current; until then, show what Home shows.
+  const shown = homePanelsFor(local, device, local === value ? version : HOME_PANELS_VERSION)
   // Shown panels in their order, then the hidden ones.
   const rows = [...shown, ...HOME_PANELS.map((p) => p.id).filter((id) => !shown.includes(id))]
   const commit = (list: HomePanel[]) => {
@@ -62,6 +63,34 @@ export function HomePanelEditor({ value, device, onChange }: { value: Setting; d
   )
 }
 
+/** Saving brings every device's list up to date, not just the one being edited. */
+function migrated(before: Setting, version: number, next: Setting): Setting {
+  if (version >= HOME_PANELS_VERSION) return next
+  const out: Setting = { ...next }
+  for (const d of DEVICES) if (Array.isArray(before[d]) && next[d] === before[d]) out[d] = homePanelsFor(before, d, version)
+  return out
+}
+
+/** 1, 3, or 7 days on the Home calendar (also switchable on the panel itself). */
+export function HomeCalendarDaysRow() {
+  const { settings, update } = useSettings()
+  const days = homeCalendarDays(settings.homeCalendarDays)
+  return (
+    <div className="setting-row">
+      <span className="setting-row__label" id="home-calendar-days">
+        Calendar on Home
+      </span>
+      <div className="segmented" role="group" aria-labelledby="home-calendar-days">
+        {HOME_CALENDAR_DAYS.map((n) => (
+          <button key={n} type="button" className={`segmented__item${n === days ? ' segmented__item--active' : ''}`} aria-pressed={n === days} onClick={() => void update({ homeCalendarDays: n })}>
+            {n === 1 ? '1 day' : `${n} days`}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export function HomeScreenSettings() {
   const { settings, update } = useSettings()
   const { device: current } = useDevice()
@@ -77,7 +106,13 @@ export function HomeScreenSettings() {
           </button>
         ))}
       </div>
-      <HomePanelEditor value={settings.homePanels} device={device} onChange={(homePanels) => void update({ homePanels })} />
+      <HomePanelEditor
+        value={settings.homePanels}
+        device={device}
+        version={settings.homePanelsVersion}
+        onChange={(homePanels) => void update({ homePanels: migrated(settings.homePanels, settings.homePanelsVersion, homePanels), homePanelsVersion: HOME_PANELS_VERSION })}
+      />
+      <HomeCalendarDaysRow />
     </SettingsSection>
   )
 }

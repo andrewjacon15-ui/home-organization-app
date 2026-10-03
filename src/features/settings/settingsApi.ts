@@ -50,6 +50,10 @@ export interface DisplaySettings {
   hiddenTabs: Partial<Record<Device, string[]>>
   /** Home screen panels shown on each kind of device, top to bottom (unset = Lists, Tasks, Calendar). */
   homePanels: Partial<Record<Device, string[]>>
+  /** Which homePanels migration the saved lists have had (see HOME_PANELS_VERSION; unset = none). */
+  homePanelsVersion: number
+  /** Days the Home calendar shows: 1, 3, or 7. */
+  homeCalendarDays: number
   /** Checked-off list items delete themselves after this many days (0 = keep until cleared). */
   listDoneDays: number
 }
@@ -91,6 +95,8 @@ export const DEFAULT_SETTINGS: DisplaySettings = {
   screensaverShuffle: true,
   hiddenTabs: {},
   homePanels: {},
+  homePanelsVersion: 0,
+  homeCalendarDays: 3,
   listDoneDays: 30,
 }
 

@@ -2,6 +2,7 @@
 // 1.75 stroke so every icon has the same weight. See docs/STYLE-GUIDE.md → Icons.
 import {
   BookOpen,
+  Check,
   CalendarDays,
   CloudSun,
   ChevronLeft,
@@ -12,6 +13,7 @@ import {
   ListChecks,
   Plus,
   Settings,
+  Sparkles,
   SquareCheckBig,
   Star,
   UtensilsCrossed,
@@ -45,3 +47,6 @@ export const WeatherIcon = icon(CloudSun)
 export const BackIcon = icon(ChevronLeft)
 export const NextIcon = icon(ChevronRight)
 export const AddIcon = icon(Plus)
+/** A done count ("3/5"), a ticked menu item, and the Up for Grabs badge. */
+export const DoneIcon = icon(Check)
+export const GrabsIcon = icon(Sparkles)
