@@ -1,4 +1,5 @@
 import { ChefHat, ExternalLink, Link2, SlidersHorizontal, Star } from 'lucide-react'
+import { Select } from '../../components/Select'
 import { useState, type FormEvent } from 'react'
 import { TAG_LABELS, TAG_OPTIONS, type RecipeTags } from '@shared/recipes/tagger.js'
 import { ICON_STROKE } from '../../components/Icons'
@@ -243,14 +244,12 @@ function FilterPanel({ entries, filters, onChange }: { entries: CatalogEntry[]; 
         return (
           <label key={f.key} className="field catalog-filters__field">
             {f.label}
-            <select value={filters[f.key]} onChange={(e) => onChange({ [f.key]: e.target.value })} disabled={options.length === 0 && !filters[f.key]}>
-              <option value="">{f.any}</option>
-              {options.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {f.name(o.value)} ({o.count})
-                </option>
-              ))}
-            </select>
+            <Select
+              value={filters[f.key]}
+              onChange={(v) => onChange({ [f.key]: v })}
+              disabled={options.length === 0 && !filters[f.key]}
+              options={[{ value: '', label: f.any }, ...options.map((o) => ({ value: o.value, label: `${f.name(o.value)} (${o.count})` }))]}
+            />
           </label>
         )
       })}
@@ -440,11 +439,16 @@ export function RecipeView({ recipe, today, onEdit, onDelete, onPlan, onAddToGro
           }}
         >
           <input type="date" value={planDate} onChange={(e) => setPlanDate(e.target.value)} aria-label="Plan for date" required />
-          <select value={planSlot} onChange={(e) => setPlanSlot(e.target.value as PlanSlot)} aria-label="Meal">
-            <option value="breakfast">Breakfast</option>
-            <option value="lunch">Lunch</option>
-            <option value="dinner">Dinner</option>
-          </select>
+          <Select
+            value={planSlot}
+            onChange={(v) => setPlanSlot(v as PlanSlot)}
+            aria-label="Meal"
+            options={[
+              { value: 'breakfast', label: 'Breakfast' },
+              { value: 'lunch', label: 'Lunch' },
+              { value: 'dinner', label: 'Dinner' },
+            ]}
+          />
           <button className="button">Add to meal plan</button>
           {planned && (
             <span className="muted" role="status">

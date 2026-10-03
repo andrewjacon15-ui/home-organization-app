@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { Select } from '../../components/Select'
 import { fromDateKey } from '../../lib/dates'
 import type { Member, NewChore } from '../../types'
 import { toRepeat, type RepeatChoice } from './schedule'
@@ -46,14 +47,7 @@ export function ChoreForm({ members, defaultDate, defaultAssignee = null, onAdd,
       <input className="chore-form2__title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What needs doing?" aria-label="Chore" maxLength={200} autoFocus />
       <label className="field">
         Who
-        <select value={assignee} onChange={(e) => setAssignee(e.target.value)}>
-          <option value="">Up for grabs</option>
-          {members.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.displayName}
-            </option>
-          ))}
-        </select>
+        <Select value={assignee} onChange={setAssignee} options={[{ value: '', label: 'Up for grabs' }, ...members.map((m) => ({ value: m.id, label: m.displayName }))]} />
       </label>
       <label className="field">
         {repeat === 'none' ? 'Due' : 'Starts'}
@@ -69,14 +63,18 @@ export function ChoreForm({ members, defaultDate, defaultAssignee = null, onAdd,
       </label>
       <label className="field">
         Repeat
-        <select value={repeat} onChange={(e) => setRepeat(e.target.value as RepeatChoice)}>
-          <option value="none">Doesn't repeat</option>
-          <option value="daily">Every day</option>
-          <option value="weekdays">Weekdays</option>
-          <option value="weekly">Every week</option>
-          <option value="biweekly">Every 2 weeks</option>
-          <option value="monthly">Every month</option>
-        </select>
+        <Select
+          value={repeat}
+          onChange={(v) => setRepeat(v as RepeatChoice)}
+          options={[
+            { value: 'none', label: "Doesn't repeat" },
+            { value: 'daily', label: 'Every day' },
+            { value: 'weekdays', label: 'Weekdays' },
+            { value: 'weekly', label: 'Every week' },
+            { value: 'biweekly', label: 'Every 2 weeks' },
+            { value: 'monthly', label: 'Every month' },
+          ]}
+        />
       </label>
       {(repeat === 'weekly' || repeat === 'biweekly') && (
         <div className="field chore-form2__days" role="group" aria-label="On">

@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react'
+import { choose } from '../../test-utils'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Chore, Member } from '../../types'
@@ -102,8 +103,8 @@ describe('adding chores', () => {
     // The toolbar button (the empty Up for Grabs column has its own "Add chore" link too).
     await user.click(screen.getAllByRole('button', { name: 'Add chore' })[0])
     await user.type(screen.getByLabelText('Chore'), 'Take out recycling')
-    await user.selectOptions(screen.getByLabelText('Who'), 'Andrew Jacon')
-    await user.selectOptions(screen.getByLabelText('Repeat'), 'Every week')
+    await choose(user, screen.getByLabelText('Who'), 'Andrew Jacon')
+    await choose(user, screen.getByLabelText('Repeat'), 'Every week')
     await user.click(screen.getByRole('button', { name: 'Thursday' }))
     // Submit: the form's own "Add chore" button.
     await user.click(screen.getAllByRole('button', { name: 'Add chore' }).find((b) => b.closest('form'))!)
@@ -113,6 +114,6 @@ describe('adding chores', () => {
   it('offers "Add chore" from an empty column, pre-filled for that person', async () => {
     const { user } = setup([])
     await user.click(within(screen.getByRole('article', { name: 'Lydia' })).getByRole('button', { name: 'Add chore for Lydia' }))
-    expect(screen.getByLabelText('Who')).toHaveDisplayValue('Lydia')
+    expect(screen.getByLabelText('Who')).toHaveTextContent('Lydia')
   })
 })

@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react'
+import { choose } from '../../test-utils'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Member } from '../../types'
@@ -80,8 +81,8 @@ describe('RewardsBoard', () => {
     await user.type(screen.getByLabelText('Reward'), 'Pizza night')
     await user.clear(screen.getByLabelText('Stars needed'))
     await user.type(screen.getByLabelText('Stars needed'), '25')
-    await user.selectOptions(screen.getByLabelText('For'), 'Lydia')
-    await user.selectOptions(screen.getByLabelText('Icon'), '🍕')
+    await choose(user, screen.getByLabelText('For'), 'Lydia')
+    await choose(user, screen.getByLabelText('Icon'), '🍕')
     await user.click(screen.getByRole('button', { name: 'Add' }))
     expect(props.onAdd).toHaveBeenCalledWith({ title: 'Pizza night', cost: 25, memberId: 'l', emoji: '🍕' })
   })

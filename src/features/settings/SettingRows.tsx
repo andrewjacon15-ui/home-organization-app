@@ -1,4 +1,5 @@
 import { useId, useState, type ReactNode } from 'react'
+import { Select } from '../../components/Select'
 
 export function SettingsSection({ title, id, children }: { title: string; id?: string; children: ReactNode }) {
   return (
@@ -39,20 +40,15 @@ export function SelectRow<T extends string | number>({
       <label htmlFor={id} className="setting-row__label">
         {label}
       </label>
-      <select
+      <Select
         id={id}
         value={String(value)}
-        onChange={(e) => {
-          const picked = options.find((o) => String(o.value) === e.target.value)
+        onChange={(v) => {
+          const picked = options.find((o) => String(o.value) === v)
           if (picked) onChange(picked.value)
         }}
-      >
-        {options.map((o) => (
-          <option key={String(o.value)} value={String(o.value)}>
-            {o.label}
-          </option>
-        ))}
-      </select>
+        options={options.map((o) => ({ value: String(o.value), label: o.label }))}
+      />
     </div>
   )
 }

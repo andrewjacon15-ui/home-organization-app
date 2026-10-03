@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
+import { chooseNow } from '../../test-utils'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { defaultPrefs, type ReminderPrefs } from '../reminders/reminderPrefsApi'
@@ -29,7 +30,7 @@ describe('EmailReminderRows', () => {
     fireEvent.click(screen.getByRole('switch', { name: 'Email me before my events' }))
     expect(onSave).toHaveBeenLastCalledWith(expect.objectContaining({ eventEmailsEnabled: true, leadTimeMinutes: 30, timezone: 'America/Chicago' }))
 
-    fireEvent.change(screen.getByLabelText('How long before'), { target: { value: '60' } })
+    chooseNow(screen.getByLabelText('How long before'), '60')
     expect(onSave).toHaveBeenLastCalledWith(expect.objectContaining({ leadTimeMinutes: 60 }))
   })
 
@@ -37,9 +38,9 @@ describe('EmailReminderRows', () => {
     const onSave = vi.fn()
     render(<Harness onSave={onSave} />)
     fireEvent.click(screen.getByRole('switch', { name: /daily digest/i }))
-    const hour = screen.getByLabelText('Send at') as HTMLSelectElement
-    expect(hour.value).toBe('7')
-    fireEvent.change(hour, { target: { value: '6' } })
+    const hour = screen.getByLabelText('Send at')
+    expect(hour).toHaveTextContent('7')
+    chooseNow(hour, '6')
     expect(onSave).toHaveBeenLastCalledWith(expect.objectContaining({ dailyDigestEnabled: true, digestHourLocal: 6 }))
   })
 })

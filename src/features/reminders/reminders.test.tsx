@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import { choose } from '../../test-utils'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { CalendarEvent, Chore, Member } from '../../types'
@@ -95,11 +96,11 @@ describe('ReminderSettings', () => {
     )
     expect(screen.getByRole('switch', { name: 'At time of event' })).not.toBeChecked()
     expect(screen.getByRole('switch', { name: 'Before event' })).toBeChecked()
-    expect(screen.getByLabelText('How long before')).toHaveDisplayValue('30 minutes')
+    expect(screen.getByLabelText('How long before')).toHaveTextContent('30 minutes')
     expect(screen.getByRole('switch', { name: /Chores when due/ })).not.toBeChecked()
     expect(screen.getByRole('switch', { name: 'Reminder sound' })).toBeChecked()
 
-    await user.selectOptions(screen.getByLabelText('How long before'), '1 hour')
+    await choose(user, screen.getByLabelText('How long before'), '1 hour')
     expect(update).toHaveBeenLastCalledWith({ remindBeforeMinutes: 60 })
     await user.click(screen.getByRole('switch', { name: /Chores when due/ }))
     expect(update).toHaveBeenLastCalledWith({ remindChoresDue: true })

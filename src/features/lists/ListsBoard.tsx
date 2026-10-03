@@ -1,4 +1,5 @@
 import { ArrowDown, ArrowUp, Pencil, Plus, X } from 'lucide-react'
+import { Select } from '../../components/Select'
 import { useState, type CSSProperties, type FormEvent } from 'react'
 import type { Member } from '../../types'
 import type { FamilyList, ListCategory, ListItem } from './listsApi'
@@ -321,14 +322,7 @@ function ItemRow({ item: i, list, categories, onToggle, onDelete, onEditItem }: 
             }}
           />
           {categories.length > 0 && (
-            <select value={cat} onChange={(e) => setCat(e.target.value)} aria-label="Category">
-              <option value="">No category</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+            <Select value={cat} onChange={setCat} aria-label="Category" options={[{ value: '', label: 'No category' }, ...categories.map((c) => ({ value: c.id, label: c.name }))]} />
           )}
           <div className="row item-edit__actions">
             <button className="button button--primary" disabled={!text.trim()}>

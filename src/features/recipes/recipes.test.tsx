@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react'
+import { choose } from '../../test-utils'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { MealPlanner } from '../meals/MealPlanner'
@@ -62,7 +63,7 @@ describe('RecipeBook', () => {
   it('plans a recipe onto a day and meal', async () => {
     const { props, user } = book()
     await user.click(screen.getByRole('button', { name: /Chicken tacos/ }))
-    await user.selectOptions(screen.getByLabelText('Meal'), 'Lunch')
+    await choose(user, screen.getByLabelText('Meal'), 'Lunch')
     await user.click(screen.getByRole('button', { name: 'Add to meal plan' }))
     expect(props.onPlan).toHaveBeenCalledWith(tacos, TODAY, 'lunch')
     expect(screen.getByRole('status')).toHaveTextContent('Added as lunch')

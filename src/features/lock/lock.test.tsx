@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import { choose } from '../../test-utils'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { LockSettings } from '../settings/LockSettings'
@@ -126,7 +127,7 @@ describe('LockSettings', () => {
         </StaticLock>
       </StaticSettings>,
     )
-    await user.selectOptions(screen.getByLabelText('Lock after'), '15 minutes')
+    await choose(user, screen.getByLabelText('Lock after'), '15 minutes')
     expect(save).toHaveBeenLastCalledWith({ ...config, lockAfterMinutes: 15 })
     await user.click(screen.getByRole('button', { name: 'Lock now' }))
     expect(lockNow).toHaveBeenCalled()
