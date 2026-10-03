@@ -8,4 +8,4 @@
  *   npx firebase-tools functions:secrets:set BRAVE_SEARCH_API_KEY
  * then set this to true, merge, and deploy functions.
  */
-export const ONLINE_SEARCH = false
+export const ONLINE_SEARCH = true
