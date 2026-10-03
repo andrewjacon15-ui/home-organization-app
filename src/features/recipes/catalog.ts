@@ -8,6 +8,7 @@ import { collection, doc, onSnapshot, updateDoc, serverTimestamp } from 'firebas
 import { httpsCallable } from 'firebase/functions'
 import { INDEX_VERSION, toIndexEntry, type IndexEntry } from '@shared/recipes/catalogIndex.js'
 import { foldAccents } from '@shared/recipes/dictionary.js'
+import type { MatchResult } from '@shared/recipes/matcher.js'
 import { TAG_OPTIONS, type RecipeTags } from '@shared/recipes/tagger.js'
 import { db, functions } from '../../firebase'
 import type { Recipe } from './recipesApi'
@@ -134,3 +135,15 @@ export function facetOptions(entries: CatalogEntry[], f: CatalogFilters, facet: 
 export const activeFilterCount = (f: CatalogFilters) => (['meal', 'cuisine', 'main', 'diet', 'time', 'source'] as const).filter((k) => f[k]).length + (f.favorites ? 1 : 0)
 
 export const titleCase = (s: string) => s.replace(/\b\w/g, (c) => c.toUpperCase())
+
+const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`
+
+/** Plain-words reasons a catalog recipe is suggested for what's in the kitchen. */
+export function catalogReasons(entry: CatalogEntry, m: MatchResult): string[] {
+  const needed = m.have.length + m.missing.length
+  return [
+    m.missing.length === 0 ? 'You have every ingredient' : `You have ${m.have.length} of its ${plural(needed, 'ingredient')}`,
+    entry.f ? 'One of your favorites' : null,
+    entry.m ? `Ready in ${entry.m} min` : null,
+  ].filter((x): x is string => !!x)
+}

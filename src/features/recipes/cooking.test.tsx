@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react'
 import { useReducer } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { isHeldAwake } from '../../lib/keepAwake'
+import { TimersProvider } from '../timers/TimersContext'
 import { cookingReducer, FRESH, type CookingState } from './cookingApi'
 import { CookingView } from './CookingMode'
 import type { Recipe } from './recipesApi'
@@ -13,8 +14,10 @@ const recipe: Recipe = {
   minutes: 20,
   url: null,
   ingredients: '1 1/2 cups flour\n2 eggs\n1 1/4 cups milk\nButter, for the pan',
-  steps: 'Whisk the dry ingredients.\nAdd milk and eggs.\nCook on a hot griddle.',
+  steps: 'Whisk the dry ingredients.\nAdd milk and eggs.\nCook on a hot griddle, 2-3 minutes per side.',
 }
+
+vi.mock('../timers/alarm', () => ({ primeAlarm: vi.fn(), startAlarm: vi.fn(), stopAlarm: vi.fn(), canRaiseVolume: () => false }))
 
 describe('cooking session reducer', () => {
   it('checks and unchecks ingredients and steps', () => {
@@ -44,7 +47,11 @@ describe('cooking session reducer', () => {
 
 function Harness({ oneStep = false, onReset = vi.fn(), onDone = vi.fn() }: { oneStep?: boolean; onReset?: () => void; onDone?: () => void }) {
   const [state, dispatch] = useReducer(cookingReducer, FRESH)
-  return <CookingView recipe={recipe} state={state} onAction={dispatch} onReset={onReset} onDone={onDone} oneStep={oneStep} />
+  return (
+    <TimersProvider>
+      <CookingView recipe={recipe} state={state} onAction={dispatch} onReset={onReset} onDone={onDone} oneStep={oneStep} />
+    </TimersProvider>
+  )
 }
 
 describe('CookingView', () => {
@@ -78,11 +85,47 @@ describe('CookingView', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Next' }))
     fireEvent.click(screen.getByRole('button', { name: 'Next' }))
     expect(screen.getByText('Step 3 of 3')).toBeInTheDocument()
-    expect(screen.getByText('Cook on a hot griddle.')).toBeInTheDocument()
+    expect(screen.getByText('Cook on a hot griddle, 2-3 minutes per side.')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Finish' }))
     expect(onDone).toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: 'Show all steps' }))
     expect(screen.getAllByRole('button', { pressed: true }).map((b) => b.textContent)).toEqual([expect.stringContaining('Whisk'), expect.stringContaining('Add milk')])
+  })
+
+  it('shows ingredients and steps side by side, and either can fill the screen', () => {
+    const { container } = render(<Harness />)
+    const cooking = container.querySelector('.cooking')!
+    expect(cooking).toHaveClass('cooking--both')
+    fireEvent.click(screen.getByRole('button', { name: 'Full screen steps' }))
+    expect(cooking).toHaveClass('cooking--steps')
+    fireEvent.click(screen.getByRole('button', { name: 'Show ingredients and steps' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Full screen ingredients' }))
+    expect(cooking).toHaveClass('cooking--ingredients')
+  })
+
+  it('readies a timer when you reach a step that calls for one, and starts it from the step', () => {
+    localStorage.clear()
+    render(<Harness oneStep />)
+    expect(screen.queryByRole('button', { name: /Step 3/ })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    // Spawned, ready, in the header…
+    expect(screen.getByRole('button', { name: /Step 3: Cook on a/ })).toHaveTextContent('Ready · 2:00')
+    // …and started from the step itself.
+    fireEvent.click(screen.getByRole('button', { name: 'Start 2–3 min timer' }))
+    expect(screen.getByRole('button', { name: /Pause timer, 2:00 left/ })).toBeInTheDocument()
+  })
+
+  it('clears timers it readied but nobody started when you finish', () => {
+    localStorage.clear()
+    const onDone = vi.fn()
+    render(<Harness onDone={onDone} />)
+    fireEvent.click(screen.getByRole('button', { name: /Whisk the dry ingredients/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Add milk and eggs/ }))
+    expect(screen.getByRole('button', { name: /Step 3: Cook on a/ })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }))
+    expect(screen.queryByRole('button', { name: /Step 3: Cook on a/ })).not.toBeInTheDocument()
+    expect(onDone).toHaveBeenCalled()
   })
 
   it('keeps the screen awake (pausing sleep mode and the screensaver) while open', () => {

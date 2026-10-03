@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parseIngredient } from './ingredient.js'
-import { bayesianRating, matchRecipe, onlineScore, rankByMatch, tokenizeHave } from './matcher.js'
+import { bayesianRating, matchRecipe, onlineScore, popularity, rankByMatch, searchScore, tokenizeHave } from './matcher.js'
 
 /** A fixture recipe as the catalog index stores it: ingredient keys and families. */
 function recipe(t: string, lines: string[], f = false) {
@@ -74,9 +74,14 @@ describe('ranking math', () => {
     expect(bayesianRating(null, null)).toBe(4)
   })
 
-  it('online score is 70% match and 30% popularity', () => {
+  it('online score weighs match, popularity, and search position', () => {
     expect(onlineScore(1, { value: 5, count: 1e9 })).toBeCloseTo(1)
-    expect(onlineScore(0.5, null)).toBeCloseTo(0.35 + 0.3 * 0.8)
+    expect(popularity(null)).toBeCloseTo(0.5)
+    expect(onlineScore(0.5, null)).toBeCloseTo(0.3 + 0.25 * 0.5 + 0.15)
+    expect(searchScore(1, 8)).toBe(1)
+    expect(searchScore(8, 8)).toBe(0)
+    // Searching for a dish: popularity and position only.
+    expect(onlineScore(null, { value: 4.8, count: 5000 }, searchScore(3, 5))).toBeCloseTo(0.6 * popularity({ value: 4.8, count: 5000 }) + 0.4 * 0.5)
     // A full match with a modest rating beats a half match with a famous one.
     expect(onlineScore(1, { value: 4.2, count: 20 })).toBeGreaterThan(onlineScore(0.5, { value: 4.9, count: 10000 }))
   })

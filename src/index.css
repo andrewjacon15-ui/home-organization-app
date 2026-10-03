@@ -4343,140 +4343,391 @@ thead .sidebar-grid__current {
 }
 
 /* --------------------------------------------------------------------------
-   What can I make?
+   Recipes: the three ways in, search screens, ranked results
    -------------------------------------------------------------------------- */
 
-.recipe-book__ask {
-  grid-column: 1 / -1;
-}
-
-.wcim {
+.recipe-home {
   display: grid;
   gap: 12px;
-  padding: 14px 16px;
-  border: 1px solid var(--rule);
-  border-radius: var(--r-lg);
-  background: var(--surface);
-  box-shadow: var(--shadow-sm);
+  max-width: 880px;
 }
 
-.wcim__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.wcim__head h2 {
-  margin: 0;
+.recipe-home__ask {
+  margin: 0 0 4px;
   font-size: var(--fs-lead);
 }
 
-.wcim__form {
+.recipe-choices {
   display: grid;
+  gap: 12px;
+}
+
+.recipe-choice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  min-height: 96px;
+  padding: 18px 20px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  color: var(--ink);
+  text-align: left;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+@media (hover: hover) {
+  .recipe-choice:hover {
+    border-color: var(--accent);
+  }
+}
+
+.recipe-choice:active {
+  background: var(--accent-soft);
+}
+
+.recipe-choice__icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.recipe-choice__text {
+  display: grid;
+  gap: 4px;
+}
+
+.recipe-choice__text strong {
+  font-size: var(--fs-title);
+  font-weight: 600;
+}
+
+.recipe-choice__text span {
+  color: var(--ink-2);
+}
+
+.recipe-choice__go {
+  color: var(--ink-3);
+}
+
+.recipe-home__favorites {
+  margin-top: 12px;
+}
+
+.recipe-home__sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: var(--fs-lead);
+  color: var(--ink);
+}
+
+.recipe-home__sub svg {
+  color: var(--accent-text);
+}
+
+.recipe-home__chips {
+  flex-wrap: wrap;
   gap: 8px;
 }
 
-.wcim__form p {
+/* "‹ Recipes  Our recipes": the way back is always in the same place. */
+.recipe-trail {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.recipe-trail__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: var(--tap);
+  padding: 0 14px 0 8px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--accent-text);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.recipe-trail__title {
   margin: 0;
 }
 
-.wcim__input {
+.recipe-book__add {
+  justify-content: flex-end;
+}
+
+.finder {
+  display: grid;
+  gap: 16px;
+  max-width: 980px;
+}
+
+.finder__form {
+  display: grid;
+  gap: 10px;
+  padding: 18px 20px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+}
+
+.finder__form p {
+  margin: 0;
+}
+
+.finder__step {
+  font-size: var(--fs-lead);
+  font-weight: 600;
+}
+
+.finder__input {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: end;
   gap: 8px;
 }
 
-.wcim__mic {
-  display: inline-grid;
-  place-items: center;
+.finder__mic {
   border: 1px solid var(--rule);
 }
 
-.wcim__mic--on {
-  color: var(--accent-ink);
+.finder__mic--on {
   background: var(--accent);
+  color: var(--accent-ink);
 }
 
-.wcim__understood {
-  font-size: var(--fs-small);
-  color: var(--ink-2);
+.finder__go {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.wcim__actions {
-  flex-wrap: wrap;
+.finder__understood {
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+.finder__where {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
 
-.wcim__results {
-  list-style: none;
+:root[data-device='phone'] .finder__where {
+  grid-template-columns: 1fr;
+}
+
+.finder__choice {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 72px;
+  padding: 12px 16px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r);
+  background: var(--surface);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.finder__choice > span {
+  display: grid;
+  gap: 2px;
+}
+
+.finder__choice > span > span {
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+}
+
+.finder__choice svg {
+  color: var(--accent-text);
+  flex: none;
+}
+
+.finder__choice--on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.finder__choice:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.finder__how {
+  margin: 0;
+}
+
+.finder__off {
+  padding: 14px 16px;
+  border: 1px dashed var(--rule-strong);
+  border-radius: var(--r);
+}
+
+.finder__link {
+  display: grid;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--rule);
+}
+
+.finder__link p {
+  margin: 0;
+}
+
+.result-list {
+  display: grid;
+  gap: 10px;
   margin: 0;
   padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 10px;
+  list-style: none;
 }
 
-.wcim-card {
+.result-card {
   display: grid;
-  align-content: start;
-  gap: 4px;
-  padding: 12px 14px;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 12px;
+  padding: 16px;
+  background: var(--surface);
   border: 1px solid var(--rule);
   border-radius: var(--r-lg);
 }
 
-.wcim-card:has(.wcim-preview) {
-  grid-column: 1 / -1;
+.result-card__rank {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
 }
 
-.wcim-card__title {
+.result-card__body {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.result-card__title {
   justify-self: start;
   padding: 0;
   border: none;
   background: none;
-  text-align: left;
-  font-size: var(--fs-lead);
-  font-weight: 600;
   color: var(--ink);
+  font-size: var(--fs-title);
+  font-weight: 600;
+  text-align: left;
   cursor: pointer;
 }
 
-.wcim-card__meta {
-  font-size: var(--fs-small);
+.result-card__meta,
+.result-card__have {
+  margin: 0;
   color: var(--ink-2);
-}
-
-.wcim-card__have {
   font-size: var(--fs-small);
-  color: #15803d;
 }
 
-.wcim-card__missing {
+.result-card__have {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
+.result-card__missing {
+  color: var(--ink);
+}
+
+.result-card__reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.result-card__reasons li {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
   font-size: var(--fs-small);
-  color: #b45309;
+  font-weight: 500;
 }
 
-.wcim-preview {
+.result-card__meters {
   display: grid;
-  gap: 10px;
-  margin-top: 8px;
-  padding-top: 10px;
-  border-top: 1px solid var(--rule);
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 6px 16px;
 }
 
-.wcim-preview__cols {
+.meter {
+  display: grid;
+  gap: 3px;
+}
+
+.meter__label {
+  color: var(--ink-2);
+  font-size: var(--fs-label);
+}
+
+.meter__track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--paper-2);
+  overflow: hidden;
+}
+
+.meter__fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.result-card__preview {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
   gap: 24px;
+  padding: 12px 0;
+  border-top: 1px solid var(--rule);
 }
 
-.wcim-preview h3 {
-  font-size: var(--fs-body);
-}
-
-:root[data-device='phone'] .wcim-preview__cols {
+:root[data-device='phone'] .result-card__preview {
   grid-template-columns: 1fr;
+}
+
+.result-card__preview h4 {
+  margin: 0 0 6px;
+}
+
+.result-card__preview ul,
+.result-card__preview ol {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.result-card__actions {
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
 }
 
 /* Settings: editable chip lists (pantry staples, recipe sites) */
@@ -4579,21 +4830,125 @@ thead .sidebar-grid__current {
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
-  gap: 32px;
+  gap: 20px;
   padding-top: 16px;
 }
 
-.cooking__ingredients,
-.cooking__steps {
+/* Either side can fill the screen. */
+.cooking--ingredients .cooking__body,
+.cooking--steps .cooking__body {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.cooking--ingredients .cooking__steps,
+.cooking--steps .cooking__ingredients {
+  display: none;
+}
+
+.cooking__pane {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 4px 16px 12px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+}
+
+.cooking__pane > ul,
+.cooking__pane > ol,
+.cooking__pane > .cooking__one {
+  flex: 1;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
 
+.cooking__pane-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.cooking__pane-head .row {
+  gap: 4px;
+}
+
 .cooking__ingredients h2,
 .cooking__steps h2 {
   font-size: var(--fs-lead);
-  margin: 0 0 8px;
+  margin: 0;
+}
+
+/* Full screen ingredients read bigger, in two columns on a wide screen. */
+.cooking--ingredients .cooking__ingredients ul {
+  columns: 2 320px;
+  column-gap: 32px;
+}
+
+.cooking--ingredients .cooking__check {
+  font-size: 1.35rem;
+  break-inside: avoid;
+}
+
+.cooking--steps .cooking__step {
+  font-size: 1.4rem;
+}
+
+.cooking--steps .cooking__big {
+  font-size: 2.2rem;
+}
+
+/* The step you're on. */
+.cooking__current > .cooking__step {
+  background: var(--accent-soft);
+  border-radius: var(--r);
+}
+
+.step-timers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 4px 12px 52px;
+}
+
+.cooking__one .step-timers {
+  padding: 0;
+}
+
+.step-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--accent);
+  background: var(--surface);
+  color: var(--accent-text);
+  font: inherit;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.step-timer--big {
+  min-height: 56px;
+  padding: 0 22px;
+  font-size: var(--fs-lead);
+}
+
+.step-timer--running {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.step-timer--done {
+  border-style: dashed;
+  cursor: default;
 }
 
 .cooking__ingredients ul,
@@ -4823,4 +5178,328 @@ thead .sidebar-grid__current {
 .done-section__note {
   font-weight: 400;
   color: var(--ink-3);
+}
+
+/* --------------------------------------------------------------------------
+   Kitchen timers (features/timers)
+   -------------------------------------------------------------------------- */
+
+.timer-button {
+  position: relative;
+  color: var(--ink);
+}
+
+.timer-button__count {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.timer-backdrop {
+  z-index: 80;
+}
+
+.timer-panel {
+  width: min(620px, 100%);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+}
+
+.timer-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.timer-panel__sub {
+  margin: 6px 0 0;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.timer-presets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+}
+
+.timer-preset {
+  display: grid;
+  gap: 2px;
+  min-height: var(--tap);
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  background: var(--surface);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.timer-preset__label {
+  font-weight: 600;
+}
+
+.timer-preset__time {
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (hover: hover) {
+  .timer-preset:hover {
+    border-color: var(--accent);
+  }
+}
+
+.timer-custom {
+  display: grid;
+  grid-template-columns: 90px 90px 1fr auto;
+  gap: 8px;
+  align-items: end;
+}
+
+:root[data-device='phone'] .timer-custom {
+  grid-template-columns: 1fr 1fr;
+}
+
+.timer-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.timer-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+}
+
+:root[data-device='phone'] .timer-row {
+  grid-template-columns: 1fr;
+}
+
+.timer-row--ringing,
+.timer-row--done {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.timer-row__info {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 12px;
+  align-items: baseline;
+}
+
+.timer-row__label {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timer-row__clock {
+  font-size: var(--fs-title);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.timer-row--paused .timer-row__clock,
+.timer-row--ready .timer-row__clock {
+  color: var(--ink-2);
+}
+
+.timer-row__bar {
+  grid-column: 1 / -1;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--paper-2);
+  overflow: hidden;
+}
+
+.timer-row__bar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.25s linear;
+}
+
+.timer-row__actions {
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+/* Running timers stay in view in the corner on every screen. */
+.timer-dock {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  /* Above the cooking screen too. */
+  z-index: 75;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  pointer-events: none;
+}
+
+:root[data-device='phone'] .timer-dock {
+  bottom: calc(76px + env(safe-area-inset-bottom));
+  right: 12px;
+}
+
+/* In the cooking screen's header, a row of chips that never covers the steps. */
+.timer-dock--inline {
+  position: static;
+  grid-column: 1 / -1;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.timer-dock--inline .timer-chip {
+  box-shadow: none;
+}
+
+:root[data-cooking] .timer-dock:not(.timer-dock--inline) {
+  display: none;
+}
+
+.timer-chip {
+  pointer-events: auto;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-height: var(--tap);
+  padding: 8px 16px;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-lg);
+  cursor: pointer;
+}
+
+.timer-chip__label {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.timer-chip__clock {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--accent-text);
+}
+
+.timer-chip--paused,
+.timer-chip--ready {
+  border-color: var(--rule-strong);
+}
+
+.timer-chip--paused .timer-chip__clock,
+.timer-chip--ready .timer-chip__clock {
+  color: var(--ink-2);
+}
+
+/* The alarm: above everything, sleep mode and the photo screensaver included. */
+.alarm {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 16px;
+  padding: 24px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  text-align: center;
+  animation: alarm-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes alarm-pulse {
+  50% {
+    filter: brightness(1.15);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alarm {
+    animation: none;
+  }
+}
+
+.alarm__list {
+  display: grid;
+  gap: 24px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.alarm__label {
+  margin: 0;
+  font-size: clamp(2rem, 6vw, 3.5rem);
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.alarm__sub {
+  margin: 6px 0 0;
+  font-size: var(--fs-lead);
+  opacity: 0.85;
+}
+
+.alarm__actions {
+  justify-content: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.alarm__stop,
+.alarm__snooze {
+  min-width: 160px;
+  min-height: 64px;
+  font-size: var(--fs-lead);
+}
+
+.alarm .alarm__stop {
+  background: var(--accent-ink);
+  color: var(--accent);
+  border-color: var(--accent-ink);
+}
+
+.alarm .alarm__snooze {
+  background: transparent;
+  color: var(--accent-ink);
+  border-color: var(--accent-ink);
+}
+
+:root[data-device='phone'] .cooking__pane > ul,
+:root[data-device='phone'] .cooking__pane > ol,
+:root[data-device='phone'] .cooking__pane > .cooking__one {
+  overflow: visible;
 }

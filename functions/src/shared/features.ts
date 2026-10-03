@@ -1,5 +1,6 @@
 /**
- * Features that need something set up first.
+ * Features that need something set up first. Shared with the web app, which hides what
+ * isn't turned on instead of letting it fail.
  *
  * ONLINE_SEARCH: "What can I make?" → Online, via the Brave Search API. Turn on only after the
  * household agrees to Brave's pricing ($5 of free credit a month, about 1,000 searches; the

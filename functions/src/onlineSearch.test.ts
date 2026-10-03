@@ -77,6 +77,27 @@ describe('findOnlineRecipes', () => {
     expect(res.results.some((r) => r.url.includes('random.example') || r.url.includes('/blog'))).toBe(false)
   })
 
+  it('explains each pick: ingredients, rating, and search position', async () => {
+    const { deps } = setup()
+    const res = await findOnlineRecipes(deps, 'andrew', { familyId: 'f', have: 'rice, eggs, peas and soy sauce' })
+    const fried = res.results[0]
+    expect(fried.reasons).toEqual(['You have every ingredient', 'Rated 4.6★ by 900 cooks', '#1 of 4 in web search (budgetbytes.com)'])
+    expect(fried.parts).toMatchObject({ match: 1, search: 1 })
+    expect(res.results[2].reasons[0]).toBe('You have 1 of its 5 ingredients')
+  })
+
+  it('finds a named dish, ranked by rating and search position', async () => {
+    const { deps, search } = setup()
+    search.mockResolvedValueOnce(['https://allrecipes.com/paella', 'https://budgetbytes.com/fried-rice'])
+    const res = await findOnlineRecipes(deps, 'andrew', { familyId: 'f', query: 'Paella!' })
+    expect(search).toHaveBeenCalledWith(expect.stringMatching(/^Paella recipe \(site:/))
+    expect(res.query).toBe('Paella')
+    expect(res.results[0].title).toBe('Paella')
+    expect(res.results[0].parts.match).toBeNull()
+    expect(res.results[0].reasons[0]).toBe('Rated 4.8★ by 5,000 cooks')
+    await expect(findOnlineRecipes(deps, 'andrew', { familyId: 'f', query: '  ' })).rejects.toMatchObject({ code: 'invalid-argument' })
+  })
+
   it('serves repeat searches from the 7-day cache without using the search allowance', async () => {
     const { deps, search, store, advance } = setup()
     await findOnlineRecipes(deps, 'andrew', { familyId: 'f', have: 'rice, eggs' })
