@@ -1,8 +1,8 @@
-import { ExternalLink, SlidersHorizontal, Star } from 'lucide-react'
 import { Select } from '../../components/Select'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { formatQuantity } from '@shared/recipes/quantity.js'
 import { TAG_LABELS, TAG_OPTIONS, type RecipeTags } from '@shared/recipes/tagger.js'
-import { BackIcon, ICON_STROKE } from '../../components/Icons'
+import { BackIcon, ExternalLinkIcon, FiltersIcon, StarIcon } from '../../components/Icons'
 import { addDays, fromDateKey } from '../../lib/dates'
 import type { MealSlot } from '../../types'
 import { amountText, stepText, useMetric } from './amounts'
@@ -120,10 +120,10 @@ export function RecipeBook(p: BookProps) {
         <input type="search" value={filters.q} onChange={(e) => set({ q: e.target.value })} placeholder="Search titles, ingredients, books" aria-label="Search recipes" />
         <div className="row catalog-bar">
           <button type="button" className={`chip${filters.favorites ? ' chip--active' : ''}`} aria-pressed={filters.favorites} onClick={() => set({ favorites: !filters.favorites })}>
-            <Star size={16} strokeWidth={ICON_STROKE} fill={filters.favorites ? 'currentColor' : 'none'} aria-hidden /> Favorites
+            <StarIcon size={16} fill={filters.favorites ? 'currentColor' : 'none'} /> Favorites
           </button>
           <button type="button" className={`chip${active - (filters.favorites ? 1 : 0) > 0 ? ' chip--active' : ''}`} aria-expanded={showFilters} onClick={() => setShowFilters((v) => !v)}>
-            <SlidersHorizontal size={16} strokeWidth={ICON_STROKE} aria-hidden /> Filters
+            <FiltersIcon size={16} /> Filters
             {active - (filters.favorites ? 1 : 0) > 0 ? ` (${active - (filters.favorites ? 1 : 0)})` : ''}
           </button>
           {(reviewCount > 0 || filters.review) && (
@@ -229,7 +229,7 @@ function rowMeta(e: CatalogEntry): string {
 function FavoriteButton({ title, on, onToggle }: { title: string; on: boolean; onToggle: () => void }) {
   return (
     <button type="button" className={`icon-button favorite${on ? ' favorite--on' : ''}`} aria-pressed={on} aria-label={`Favorite ${title}`} title={on ? 'Remove from favorites' : 'Add to favorites'} onClick={onToggle}>
-      <Star size={20} strokeWidth={ICON_STROKE} fill={on ? 'currentColor' : 'none'} aria-hidden />
+      <StarIcon size={20} fill={on ? 'currentColor' : 'none'} />
     </button>
   )
 }
@@ -312,7 +312,7 @@ export function RecipeView({ recipe, today, onEdit, onDelete, onPlan, onAddToGro
         <p className="recipe__meta">
           {[
             recipe.minutes ? `${recipe.minutes} minutes` : null,
-            recipe.servings ? `Serves ${recipe.servings}` : recipe.yieldText,
+            recipe.servings ? `Serves ${formatQuantity(recipe.servings * factor)}` : factor !== 1 ? `${recipe.yieldText ? `${recipe.yieldText}, ` : ''}× ${formatQuantity(factor)}` : recipe.yieldText,
             recipe.rating?.value ? `★ ${recipe.rating.value.toFixed(1)}${recipe.rating.count ? ` (${recipe.rating.count.toLocaleString()})` : ''}` : null,
           ]
             .filter(Boolean)
@@ -341,7 +341,7 @@ export function RecipeView({ recipe, today, onEdit, onDelete, onPlan, onAddToGro
               <>
                 {' · '}
                 <a href={recipe.url} target="_blank" rel="noreferrer noopener" className="recipe__original">
-                  View original <ExternalLink size={14} strokeWidth={ICON_STROKE} aria-hidden />
+                  View original <ExternalLinkIcon size={14} />
                 </a>
               </>
             )}

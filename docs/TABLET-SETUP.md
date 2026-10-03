@@ -195,8 +195,14 @@ The app's voice features use the browser's speech recognition, which Android's
 in-app browser engine (WebView, which Fully is built on) doesn't support
 ([Chromium issue](https://issues.chromium.org/issues/40417848)). So voice input
 doesn't work inside Fully on any tablet yet, whether or not it has a microphone.
-Making it work means recording audio in the page and transcribing it on the
-server, and Fully PLUS for microphone access.
+
+Fully PLUS with **Enable Microphone Access** on (Web Content Settings) lets the
+page *hear* the microphone, but it doesn't add speech-to-text: Fully's own
+JavaScript interface has no speech recognition either. Making voice work in
+Fully needs one more piece in the app: a free, on-device speech recognizer
+(for example Vosk, which runs in the page with a ~40 MB English model) or a paid
+transcription service on the server. Until then the mic button explains that
+voice isn't available on this screen, and typing works as usual.
 
 ## Undo
 

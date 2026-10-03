@@ -1,10 +1,9 @@
-import { ArrowDown, ArrowUp } from 'lucide-react'
 import { useState } from 'react'
-import { ICON_STROKE } from '../../components/Icons'
+import { ArrowDownIcon, ArrowUpIcon } from '../../components/Icons'
 import { DEVICE_LABELS, type Device } from '../../lib/device'
 import { useDevice } from '../../lib/DeviceContext'
 import { HOME_CALENDAR_DAYS, HOME_PANELS, HOME_PANELS_VERSION, homeCalendarDays, homePanelsFor, type HomePanel } from '../home/homePanels'
-import { SettingsSection } from './SettingRows'
+import { SettingsSection, ToggleRow } from './SettingRows'
 import { useSettings } from './SettingsContext'
 import type { DisplaySettings } from './settingsApi'
 
@@ -51,10 +50,10 @@ export function HomePanelEditor({ value, device, version = HOME_PANELS_VERSION, 
               {label(id)}
             </label>
             <button type="button" className="icon-button" aria-label={`Move ${label(id)} up`} disabled={!on || i === 0} onClick={() => move(id, -1)}>
-              <ArrowUp size={18} strokeWidth={ICON_STROKE} aria-hidden />
+              <ArrowUpIcon size={18} />
             </button>
             <button type="button" className="icon-button" aria-label={`Move ${label(id)} down`} disabled={!on || i === shown.length - 1} onClick={() => move(id, 1)}>
-              <ArrowDown size={18} strokeWidth={ICON_STROKE} aria-hidden />
+              <ArrowDownIcon size={18} />
             </button>
           </li>
         )
@@ -113,6 +112,12 @@ export function HomeScreenSettings() {
         onChange={(homePanels) => void update({ homePanels: migrated(settings.homePanels, settings.homePanelsVersion, homePanels), homePanelsVersion: HOME_PANELS_VERSION })}
       />
       <HomeCalendarDaysRow />
+      <ToggleRow
+        label="US holidays in Countdowns"
+        hint="Thanksgiving, Christmas, Mother’s Day and the rest, for the next two months. Add birthdays and anniversaries from the Countdowns panel; they repeat every year."
+        checked={settings.countdownHolidays}
+        onChange={(v) => void update({ countdownHolidays: v })}
+      />
     </SettingsSection>
   )
 }

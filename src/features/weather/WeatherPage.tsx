@@ -1,6 +1,5 @@
-import { CloudRain, Droplets, Snowflake, Sun, Sunrise, Sunset, Thermometer, TriangleAlert, Wind } from 'lucide-react'
 import { useState, type CSSProperties, type ReactNode } from 'react'
-import { ICON_STROKE } from '../../components/Icons'
+import { AlertIcon, CloudRainIcon, DropletsIcon, ICON_STROKE, SnowflakeIcon, SunIcon, SunriseIcon, SunsetIcon, ThermometerIcon, WindIcon } from '../../components/Icons'
 import { fromDateKey, toDateKey } from '../../lib/dates'
 import { useDevice } from '../../lib/DeviceContext'
 import { useNow, useToday } from '../../lib/hooks'
@@ -118,7 +117,7 @@ function AlertBanner({ alert }: { alert: WeatherAlert }) {
   const until = alert.ends ? new Date(alert.ends).toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : null
   return (
     <div className={`weather-alert${strong ? ' weather-alert--severe' : ''}`} role="alert">
-      <TriangleAlert size={20} strokeWidth={ICON_STROKE} aria-hidden />
+      <AlertIcon size={20} />
       <div>
         <strong>{alert.event}</strong>
         {until && <span className="muted"> · until {until}</span>}
@@ -148,7 +147,7 @@ function TodayView({ forecast, day, hourKey, details, units, aqi }: { forecast: 
           </span>
           {details.has('precip') && (
             <span className={`weather-now__rain${summary ? ' weather-now__rain--wet' : ''}`}>
-              <CloudRain size={18} strokeWidth={ICON_STROKE} aria-hidden />
+              <CloudRainIcon size={18} />
               {summary ?? 'No rain expected in the next 12 hours'}
             </span>
           )}
@@ -159,13 +158,13 @@ function TodayView({ forecast, day, hourKey, details, units, aqi }: { forecast: 
 
       <section className="weather-tiles" aria-label="Details">
         {details.has('precip') && (
-          <Tile icon={<Droplets {...ico} />} label="Rain and snow">
+          <Tile icon={<DropletsIcon {...ico} />} label="Rain and snow">
             <strong>{day.precipChance ?? 0}%</strong> chance
             <span className="muted">{precipAmount(day, units)} today</span>
           </Tile>
         )}
         {details.has('wind') && c.wind !== undefined && (
-          <Tile icon={<Wind {...ico} />} label="Wind">
+          <Tile icon={<WindIcon {...ico} />} label="Wind">
             <strong>
               {c.wind} {units.wind}
             </strong>
@@ -174,30 +173,30 @@ function TodayView({ forecast, day, hourKey, details, units, aqi }: { forecast: 
           </Tile>
         )}
         {details.has('feels') && c.feels !== undefined && (
-          <Tile icon={<Thermometer {...ico} />} label="Feels like">
+          <Tile icon={<ThermometerIcon {...ico} />} label="Feels like">
             <strong>{c.feels}°</strong>
             {day.feelsHigh !== undefined && <span className="muted">Up to {day.feelsHigh}° today</span>}
           </Tile>
         )}
         {details.has('humidity') && c.humidity !== undefined && (
-          <Tile icon={<Droplets {...ico} />} label="Humidity">
+          <Tile icon={<DropletsIcon {...ico} />} label="Humidity">
             <strong>{c.humidity}%</strong>
           </Tile>
         )}
         {details.has('uv') && day.uvMax !== undefined && (
-          <Tile icon={<Sun {...ico} />} label="UV index">
+          <Tile icon={<SunIcon {...ico} />} label="UV index">
             <strong>{Math.round(day.uvMax)}</strong> {uvLabel(day.uvMax)}
             <span className="muted">Highest today</span>
           </Tile>
         )}
         {details.has('sun') && day.sunrise && day.sunset && (
-          <Tile icon={<Sunrise {...ico} />} label="Sunrise and sunset">
+          <Tile icon={<SunriseIcon {...ico} />} label="Sunrise and sunset">
             <strong>{clockLabel(day.sunrise)}</strong>
             <span className="muted">Sets {clockLabel(day.sunset)}</span>
           </Tile>
         )}
         {details.has('aqi') && aqi !== null && (
-          <Tile icon={<Wind {...ico} />} label="Air quality">
+          <Tile icon={<WindIcon {...ico} />} label="Air quality">
             <strong>{aqi}</strong> {aqiLabel(aqi)}
           </Tile>
         )}
@@ -283,7 +282,7 @@ function ThreeDays({ days, hourly, today, details, units }: { days: DayForecast[
             </div>
             <dl className="weather-facts">
               {details.has('precip') && (
-                <Fact icon={(d.snow ?? 0) > 0 ? <Snowflake {...ico} /> : <Droplets {...ico} />} label="Rain">
+                <Fact icon={(d.snow ?? 0) > 0 ? <SnowflakeIcon {...ico} /> : <DropletsIcon {...ico} />} label="Rain">
                   {d.precipChance ?? 0}% · {precipAmount(d, units)}
                 </Fact>
               )}
@@ -297,22 +296,22 @@ function ThreeDays({ days, hourly, today, details, units }: { days: DayForecast[
                 </div>
               )}
               {details.has('feels') && d.feelsHigh !== undefined && (
-                <Fact icon={<Thermometer {...ico} />} label="Feels like">
+                <Fact icon={<ThermometerIcon {...ico} />} label="Feels like">
                   {d.feelsHigh}° / {d.feelsLow}°
                 </Fact>
               )}
               {details.has('wind') && d.windMax !== undefined && (
-                <Fact icon={<Wind {...ico} />} label="Wind">
+                <Fact icon={<WindIcon {...ico} />} label="Wind">
                   {d.windMax} {units.wind}, gusts {d.gustMax}
                 </Fact>
               )}
               {details.has('uv') && d.uvMax !== undefined && (
-                <Fact icon={<Sun {...ico} />} label="UV">
+                <Fact icon={<SunIcon {...ico} />} label="UV">
                   {Math.round(d.uvMax)} {uvLabel(d.uvMax)}
                 </Fact>
               )}
               {details.has('sun') && d.sunrise && d.sunset && (
-                <Fact icon={<Sunset {...ico} />} label="Sun">
+                <Fact icon={<SunsetIcon {...ico} />} label="Sun">
                   {clockLabel(d.sunrise)} – {clockLabel(d.sunset)}
                 </Fact>
               )}
@@ -352,7 +351,7 @@ function WeekView({ days, today, details, units }: { days: DayForecast[]; today:
           </span>
           {details.has('precip') && (
             <span className={`weather-row__rain${(d.precipChance ?? 0) >= 30 ? ' weather-row__rain--wet' : ''}`}>
-              <Droplets size={15} strokeWidth={ICON_STROKE} aria-hidden />
+              <DropletsIcon size={15} />
               {d.precipChance ?? 0}%<span className="weather-row__amount muted"> {precipAmount(d, units)}</span>
             </span>
           )}
@@ -365,7 +364,7 @@ function WeekView({ days, today, details, units }: { days: DayForecast[]; today:
           </span>
           {details.has('wind') && d.windMax !== undefined && (
             <span className="weather-row__extra muted">
-              <Wind size={15} strokeWidth={ICON_STROKE} aria-hidden /> {d.windMax} {units.wind}
+              <WindIcon size={15} /> {d.windMax} {units.wind}
             </span>
           )}
           {details.has('uv') && d.uvMax !== undefined && <span className="weather-row__extra muted">UV {Math.round(d.uvMax)}</span>}

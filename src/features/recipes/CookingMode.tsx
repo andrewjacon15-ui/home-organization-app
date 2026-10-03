@@ -1,6 +1,5 @@
-import { ChevronLeft, ChevronRight, Maximize2, Minimize2, Pause, Play, Timer } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { ICON_STROKE } from '../../components/Icons'
+import { BackIcon, CollapseIcon, ExpandIcon, NextIcon, PauseIcon, PlayIcon, TimerIcon } from '../../components/Icons'
 import { useKeepAwake } from '../../lib/keepAwake'
 import { findTimes, formatClock, formatSpan, stepLabel, type StepTime } from '../timers/timerMath'
 import { TimerDock } from '../timers/Timers'
@@ -43,7 +42,7 @@ function StepTimer({ source, time, label, big = false }: { source: string; time:
           else add(label, time.seconds, { start: true, source })
         }}
       >
-        <Play size={big ? 20 : 16} strokeWidth={ICON_STROKE} aria-hidden />
+        <PlayIcon size={big ? 20 : 16} />
         {t?.state === 'paused' ? `Resume timer · ${formatClock(t.leftMs)}` : `Start ${length} timer`}
       </button>
     )
@@ -59,7 +58,7 @@ function StepTimer({ source, time, label, big = false }: { source: string; time:
           pause(t.id)
         }}
       >
-        <Pause size={big ? 20 : 16} strokeWidth={ICON_STROKE} aria-hidden />
+        <PauseIcon size={big ? 20 : 16} />
         {formatClock(timeLeft(t, now))} left
       </button>
     )
@@ -129,7 +128,7 @@ export function CookingView({ recipe, state, onAction, onReset, onDone, oneStep:
       aria-pressed={focus === pane}
       onClick={() => setFocus(focus === pane ? 'both' : pane)}
     >
-      {focus === pane ? <Minimize2 size={20} strokeWidth={ICON_STROKE} aria-hidden /> : <Maximize2 size={20} strokeWidth={ICON_STROKE} aria-hidden />}
+      {focus === pane ? <CollapseIcon size={20} /> : <ExpandIcon size={20} />}
     </button>
   )
 
@@ -140,7 +139,7 @@ export function CookingView({ recipe, state, onAction, onReset, onDone, oneStep:
         <div className="row cooking__tools">
           <ScaleBar base={base} factor={factor} onScale={(f) => onAction({ type: 'scale', f })} metric={metric} onMetric={setMetric} />
           <button type="button" className="button" onClick={() => setPanelOpen(true)}>
-            <Timer size={18} strokeWidth={ICON_STROKE} aria-hidden /> Timers
+            <TimerIcon size={18} /> Timers
           </button>
           <button
             type="button"
@@ -212,11 +211,11 @@ export function CookingView({ recipe, state, onAction, onReset, onDone, oneStep:
               <StepTimers recipeId={recipe.id} step={current} text={steps[current]} big />
               <div className="row cooking__nav">
                 <button type="button" className="button cooking__navbtn" disabled={current === 0} onClick={() => onAction({ type: 'goto', step: current - 1, total: steps.length })}>
-                  <ChevronLeft size={22} strokeWidth={ICON_STROKE} aria-hidden /> Back
+                  <BackIcon size={22} /> Back
                 </button>
                 {current < steps.length - 1 ? (
                   <button type="button" className="button button--primary cooking__navbtn" onClick={() => onAction({ type: 'next', total: steps.length })}>
-                    Next <ChevronRight size={22} strokeWidth={ICON_STROKE} aria-hidden />
+                    Next <NextIcon size={22} />
                   </button>
                 ) : (
                   <button

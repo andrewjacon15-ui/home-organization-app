@@ -1,6 +1,6 @@
-import { Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudMoon, CloudRain, CloudSnow, CloudSun, Droplets, Moon, Sun, TriangleAlert, type LucideIcon } from 'lucide-react'
 import { createElement } from 'react'
 import { ICON_STROKE } from '../../components/Icons'
+import { Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudMoon, CloudRain, CloudSnow, CloudSun, Droplets, Moon, Sun, TriangleAlert, type LucideIcon } from '../../components/weatherGlyphs'
 import { fromDateKey, toDateKey } from '../../lib/dates'
 import { useNow } from '../../lib/hooks'
 import { useSettings } from '../settings/SettingsContext'

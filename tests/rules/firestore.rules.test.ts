@@ -776,6 +776,31 @@ describe('photo records and screensaver settings', () => {
     await assertFails(setDoc(display, { screensaverAfterMinutes: 0 }))
     await assertFails(setDoc(display, { screensaverSeconds: 1 }))
   })
+
+  it('accepts the holidays-in-countdowns switch', async () => {
+    const display = doc(dbFor(BOB), `families/${FAM_A}/settings/display`)
+    await assertSucceeds(setDoc(display, { countdownHolidays: false }, { merge: true }))
+    await assertFails(setDoc(display, { countdownHolidays: 'yes' }, { merge: true }))
+  })
+})
+
+describe('meal plan templates', () => {
+  const days = Array.from({ length: 7 }, () => ({ breakfast: '', lunch: '', dinner: 'Tacos', notes: '' }))
+  const col = (u: { uid: string; email: string }) => collection(dbFor(u), `families/${FAM_A}/mealTemplates`)
+
+  it('lets the family save, read, and delete templates', async () => {
+    await assertSucceeds(setDoc(doc(col(BOB), 't1'), { name: 'School week', days, createdBy: BOB.uid }))
+    await assertSucceeds(getDocs(col(ALICE)))
+    await assertSucceeds(deleteDoc(doc(col(ALICE), 't1')))
+  })
+
+  it('checks the shape and keeps other families out', async () => {
+    await assertFails(setDoc(doc(col(BOB), 't2'), { name: '', days, createdBy: BOB.uid }))
+    await assertFails(setDoc(doc(col(BOB), 't3'), { name: 'Short', days: days.slice(0, 5), createdBy: BOB.uid }))
+    await assertFails(setDoc(doc(col(BOB), 't4'), { name: 'Theirs', days, createdBy: ALICE.uid }))
+    await assertFails(setDoc(doc(col(MALLORY), 't5'), { name: 'Mine', days, createdBy: MALLORY.uid }))
+    await assertFails(getDocs(col(MALLORY)))
+  })
 })
 
 describe('side bar settings', () => {
@@ -893,6 +918,15 @@ describe('countdowns', () => {
     await assertFails(setDoc(doc(col(ALICE), 'c6'), { ...valid, emoji: '🏖️' }))
     await setDoc(doc(col(ALICE), 'c7'), valid)
     await assertFails(updateDoc(doc(col(ALICE), 'c7'), { title: 'Changed' }))
+  })
+
+  it('keeps birthdays and anniversaries every year (no expiry), and only those kinds', async () => {
+    const yearly = { title: 'Mom', date: '1966-11-02', createdBy: ALICE.uid, kind: 'birthday' }
+    await assertSucceeds(setDoc(doc(col(ALICE), 'y1'), yearly))
+    await assertSucceeds(setDoc(doc(col(ALICE), 'y2'), { ...yearly, kind: 'anniversary' }))
+    await assertFails(setDoc(doc(col(ALICE), 'y3'), { ...yearly, kind: 'holiday' }))
+    await assertFails(setDoc(doc(col(ALICE), 'y4'), { ...yearly, expireAt: valid.expireAt }))
+    await assertFails(setDoc(doc(col(ALICE), 'y5'), { title: 'Trip', date: '2026-12-20', createdBy: ALICE.uid }))
   })
 })
 

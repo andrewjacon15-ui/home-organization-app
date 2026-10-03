@@ -104,6 +104,9 @@ or white text for anything filled with a person or accent color.
 - Buttons use icons for arrows, add/remove, ticks, and close (`BackIcon`, `NextIcon`,
   `AddIcon`, `RemoveIcon`, `DoneIcon`, `CloseIcon`), not text characters like ‹ › → + − ✓ or ✕.
 - Decorative icons are `aria-hidden`; icon-only buttons need an `aria-label`.
+- Every icon is a named export of `Icons.tsx` (`PencilIcon`, `MapPinIcon`…), never imported
+  from `lucide-react` in a feature. The weather set, picked per forecast code, comes from
+  `components/weatherGlyphs.ts`.
 
 ## Components
 
@@ -153,6 +156,18 @@ or white text for anything filled with a person or accent color.
   − / + buttons, and a Metric switch, above the ingredients and in cooking mode. Whatever is
   shown is what goes to the grocery list.
 - **Steps** all show by default; "Step by step" is a button, never the starting view.
+
+### Countdowns
+
+Big day counts on Home: one-time countdowns, birthdays and anniversaries (they repeat every
+year, with "turns 60" or "30th anniversary" beside the date), and US holidays for the next two
+months (Settings → Home screen). Holidays can't be removed one by one; the switch hides them all.
+
+### Event details
+
+Tapping an event anywhere (calendar, Home) opens a sheet: title at `--fs-title`, when, who
+(avatars), where with a Directions link, its calendar, and "Open in Google Calendar". The chip
+itself looks the same; its text is the button.
 
 ### Welcome tour
 

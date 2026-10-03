@@ -1,7 +1,6 @@
-import { BookOpen, Globe, Mic, MicOff, Search } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { listFromSpeech, matchRecipe, rankByMatch, tokenizeHave, type MatchResult } from '@shared/recipes/matcher.js'
-import { ICON_STROKE } from '../../components/Icons'
+import { BookIcon, GlobeIcon, MicIcon, MicOffIcon, SearchIcon } from '../../components/Icons'
 import { useSpeech } from '../../lib/useSpeech'
 import { catalogReasons, type CatalogEntry, type ImportResult } from './catalog'
 import { ImportForm } from './ImportForm'
@@ -212,7 +211,7 @@ export function KitchenSearch({ entries, staples, onOpen, onFindOnline, onCookOn
               aria-pressed={speech.listening}
               onClick={speech.listening ? speech.stop : speech.start}
             >
-              {speech.supported ? <Mic size={22} strokeWidth={ICON_STROKE} aria-hidden /> : <MicOff size={22} strokeWidth={ICON_STROKE} aria-hidden />}
+              {speech.supported ? <MicIcon size={22} /> : <MicOffIcon size={22} />}
             </button>
           </div>
         </div>
@@ -228,7 +227,7 @@ export function KitchenSearch({ entries, staples, onOpen, onFindOnline, onCookOn
         <p className="finder__step">2. Where should we look?</p>
         <div className="finder__where">
           <button type="button" className={`finder__choice${where === 'ours' ? ' finder__choice--on' : ''}`} aria-pressed={where === 'ours'} onClick={() => look('ours')}>
-            <BookOpen size={22} strokeWidth={ICON_STROKE} aria-hidden />
+            <BookIcon size={22} />
             <span>
               <strong>Our recipes</strong>
               <span>{plural(entries.length, 'recipe')} saved</span>
@@ -241,7 +240,7 @@ export function KitchenSearch({ entries, staples, onOpen, onFindOnline, onCookOn
             disabled={!onFindOnline || online.busy}
             onClick={() => look('online')}
           >
-            <Globe size={22} strokeWidth={ICON_STROKE} aria-hidden />
+            <GlobeIcon size={22} />
             <span>
               <strong>{online.busy ? 'Searching…' : 'Online'}</strong>
               <span>{onFindOnline ? 'Your trusted recipe sites' : 'Not turned on yet'}</span>
@@ -319,7 +318,7 @@ export function WebSearch({ onFind, onCookOnline, onImport, onOpen }: WebProps) 
               <input type="search" value={dish} onChange={(e) => setDish(e.target.value)} placeholder="chicken pot pie, banana bread…" maxLength={100} />
             </label>
             <button className="button button--primary finder__go" disabled={online.busy}>
-              <Search size={18} strokeWidth={ICON_STROKE} aria-hidden /> {online.busy ? 'Searching…' : 'Search'}
+              <SearchIcon size={18} /> {online.busy ? 'Searching…' : 'Search'}
             </button>
           </div>
           <p className="settings-note">Searches your trusted recipe sites (Settings → Kitchen) and offers the best {TOP}.</p>

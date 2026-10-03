@@ -83,6 +83,8 @@ describe('RecipeBook', () => {
     await user.click(screen.getByRole('button', { name: /Chicken tacos/ }))
     await user.click(screen.getByRole('button', { name: 'Double' }))
     expect(screen.getByText('Serves 8')).toBeInTheDocument()
+    // The line under the title follows too.
+    expect(screen.getByText(/30 minutes · Serves 8/)).toBeInTheDocument()
     expect(screen.getByRole('checkbox', { name: '16 tortillas' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'More servings' }))
     expect(screen.getByText('Serves 9')).toBeInTheDocument()

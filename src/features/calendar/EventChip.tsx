@@ -1,7 +1,8 @@
 import { CloseIcon } from '../../components/Icons'
-import type { CSSProperties } from 'react'
+import { useState, type CSSProperties } from 'react'
 import type { Member, SyncedCalendar } from '../../types'
 import { useSettings } from '../settings/SettingsContext'
+import { EventDetails } from './EventDetails'
 import { countdownLabel, isPast, shortRange, type OwnedEvent } from './views'
 
 interface Props {
@@ -26,6 +27,7 @@ function ownerBackground(colors: string[], multi: boolean): string {
 
 export function EventChip({ event, members, calendars, now, today, compact, onDelete }: Props) {
   const { settings } = useSettings()
+  const [open, setOpen] = useState(false)
   const owners = event.ownerIds.map((id) => members.get(id)).filter((m) => m !== undefined)
   const personColors = owners.length ? owners.map((m) => m.color) : ['var(--ink-2)']
   // "By calendar" uses each source calendar's color (e.g. a purple Work calendar); hand-entered events keep the person's color.
@@ -43,7 +45,8 @@ export function EventChip({ event, members, calendars, now, today, compact, onDe
 
   return (
     <div className={`event${event.allDay ? ' event--allday' : ''}${past ? ' event--past' : ''}${compact === true ? ' event--compact' : ''}${compact === 'column' ? ' event--column' : ''}`} style={style}>
-      <div className="event__body">
+      {/* Tap for the whole event: when, who, where (with directions), and its calendar. */}
+      <button type="button" className="event__body event__open" onClick={() => setOpen(true)} aria-haspopup="dialog">
         <span className="event__title">{event.title}</span>
         <span className="event__time">
           {when}
@@ -51,7 +54,7 @@ export function EventChip({ event, members, calendars, now, today, compact, onDe
         </span>
         {!compact && event.location && <span className="event__location">{event.location}</span>}
         {calendarNames.length > 0 && <span className="visually-hidden"> (calendar: {calendarNames.join(', ')})</span>}
-      </div>
+      </button>
       <div className="event__owners" role="group" aria-label={`For ${owners.map((m) => m.displayName).join(', ') || 'someone'}`}>
         {owners.map((m) => (
           <span key={m.id} className="initial" style={{ '--pill': m.color } as CSSProperties} aria-hidden>
@@ -64,6 +67,7 @@ export function EventChip({ event, members, calendars, now, today, compact, onDe
           <CloseIcon size={16} />
         </button>
       )}
+      {open && <EventDetails event={event} members={members} calendars={calendars} onClose={() => setOpen(false)} onDelete={onDelete} />}
     </div>
   )
 }

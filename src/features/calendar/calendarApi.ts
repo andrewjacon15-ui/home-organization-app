@@ -25,6 +25,7 @@ export function watchEvents(familyId: string, from: Date, to: Date, onChange: (e
           allDay: Boolean(data.allDay),
           ...(data.startDate ? { startDate: data.startDate, endDate: data.endDate } : {}),
           ...(data.location ? { location: data.location } : {}),
+          ...(typeof data.htmlLink === 'string' && data.htmlLink.startsWith('https://') ? { htmlLink: data.htmlLink } : {}),
         }
       }),
     )

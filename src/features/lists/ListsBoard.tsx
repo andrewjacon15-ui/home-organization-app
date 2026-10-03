@@ -1,9 +1,8 @@
-import { ArrowDown, ArrowUp, Pencil, Plus, X } from 'lucide-react'
 import { Select } from '../../components/Select'
 import { useState, type CSSProperties, type FormEvent } from 'react'
 import type { Member } from '../../types'
 import type { FamilyList, ListCategory, ListItem } from './listsApi'
-import { AddIcon, DoneIcon, ICON_STROKE } from '../../components/Icons'
+import { AddIcon, ArrowDownIcon, ArrowUpIcon, CloseIcon, DoneIcon, PencilIcon } from '../../components/Icons'
 
 export interface ListActions {
   /** categoryId undefined = let the list file it (store aisles); null = the list's top. */
@@ -201,10 +200,10 @@ function CategorySection({ category, first, last, items, rowProps, actions: a }:
           <NameForm label="Category name" initial={category.name} onSave={(name) => (a.onRenameCategory(list, category.id, name), setEditing(false))} onCancel={() => setEditing(false)} />
           <div className="row">
             <button type="button" className="icon-button" aria-label={`Move ${category.name} up`} disabled={first} onClick={() => a.onMoveCategory(list, category.id, -1)}>
-              <ArrowUp size={18} strokeWidth={ICON_STROKE} aria-hidden />
+              <ArrowUpIcon size={18} />
             </button>
             <button type="button" className="icon-button" aria-label={`Move ${category.name} down`} disabled={last} onClick={() => a.onMoveCategory(list, category.id, 1)}>
-              <ArrowDown size={18} strokeWidth={ICON_STROKE} aria-hidden />
+              <ArrowDownIcon size={18} />
             </button>
             <button
               type="button"
@@ -222,10 +221,10 @@ function CategorySection({ category, first, last, items, rowProps, actions: a }:
           <span>{category.name}</span>
           <span className="list-category__count">{items.length || ''}</span>
           <button type="button" className="icon-button list-category__edit-btn" aria-label={`Add item to ${category.name}`} aria-expanded={adding} onClick={() => setAdding((v) => !v)}>
-            <Plus size={16} strokeWidth={ICON_STROKE} aria-hidden />
+            <AddIcon size={16} />
           </button>
           <button type="button" className="icon-button list-category__edit-btn" aria-label={`Edit ${category.name}`} onClick={() => setEditing(true)}>
-            <Pencil size={15} strokeWidth={ICON_STROKE} aria-hidden />
+            <PencilIcon size={15} />
           </button>
         </h3>
       )}
@@ -356,7 +355,7 @@ function ItemRow({ item: i, list, categories, onToggle, onDelete, onEditItem }: 
         {i.text}
       </button>
       <button type="button" className="icon-button list-item__delete" onClick={() => onDelete(list, i)} aria-label={`Delete ${i.text}`}>
-        <X size={16} strokeWidth={ICON_STROKE} aria-hidden />
+        <CloseIcon size={16} />
       </button>
     </li>
   )
