@@ -191,18 +191,23 @@ reload, which happens at least every 30 minutes when idle.
 
 ## Voice input
 
-The app's voice features use the browser's speech recognition, which Android's
-in-app browser engine (WebView, which Fully is built on) doesn't support
-([Chromium issue](https://issues.chromium.org/issues/40417848)). So voice input
-doesn't work inside Fully on any tablet yet, whether or not it has a microphone.
+Android's in-app browser engine (WebView, which Fully is built on) has no speech
+recognition of its own ([Chromium issue](https://issues.chromium.org/issues/40417848)),
+so inside Fully the app brings its own: **Vosk**, a free, offline recognizer that runs
+in the page with a small US English model. Nothing you say leaves the tablet. Phones and
+computers keep using their browser's built-in speech.
 
-Fully PLUS with **Enable Microphone Access** on (Web Content Settings) lets the
-page *hear* the microphone, but it doesn't add speech-to-text: Fully's own
-JavaScript interface has no speech recognition either. Making voice work in
-Fully needs one more piece in the app: a free, on-device speech recognizer
-(for example Vosk, which runs in the page with a ~40 MB English model) or a paid
-transcription service on the server. Until then the mic button explains that
-voice isn't available on this screen, and typing works as usual.
+To turn it on, Fully needs **PLUS** and, in Fully's settings, **Web Content Settings →
+Enable Microphone Access**. Then tap the mic (Recipes → What's in my kitchen):
+
+- The first time, it says "Getting voice ready" while it downloads the model, about
+  40 MB, once. After that it's kept on the tablet and starts in about a second.
+- If it says the microphone is off, check that Fully setting, and that Android allowed
+  Fully to use the microphone (Settings → Apps → Fully Kiosk Browser → Permissions).
+
+The two files (`public/voice/`) aren't in git. `npm run build` copies the recognizer from
+`node_modules` and downloads the model once into `.cache/voice/`, checking its SHA-256
+(`scripts/fetch-voice.mjs`). The bundle check fails if either file is missing.
 
 ## Undo
 

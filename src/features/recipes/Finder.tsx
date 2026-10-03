@@ -217,7 +217,7 @@ export function KitchenSearch({ entries, staples, onOpen, onFindOnline, onCookOn
         </div>
         {speech.listening && (
           <p className="muted" role="status">
-            Listening…
+            {speech.preparing ? 'Getting voice ready… The first time, this downloads about 40 MB to this screen.' : 'Listening…'}
           </p>
         )}
         {speech.error && <p className="muted">{speech.error}</p>}
