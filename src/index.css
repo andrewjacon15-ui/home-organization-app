@@ -3555,8 +3555,9 @@ letter-spacing: -0.015em;
 :root[data-device='phone'] .home-day--today {
   padding-left: 10px;
 }
-/* Calendar and meals: this week's past days drop off (earlier weeks still show every day). */
-:root[data-device='phone'] .week:has(.day--today) .day--past,
+/* Meals and the list: this week's past days drop off (earlier weeks still show every day). The calendar's
+   Week and 3 Day keep every day, since someone picked them to see the whole span. */
+:root[data-device='phone'] .week:not(.week--fit):has(.day--today) .day--past,
 :root[data-device='phone'] .schedule:has(.schedule-day--today) .schedule-day--past {
   display: none;
 }
@@ -4578,9 +4579,14 @@ thead .sidebar-grid__current {
 /* The box and the mic share one row, centered on each other. */
 .finder__input {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) var(--tap);
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
+}
+
+/* Search by name: the button lines up with the box, below the field's label. */
+.finder__input--search {
+  align-items: end;
 }
 
 .finder__input textarea {
@@ -6162,6 +6168,10 @@ thead .sidebar-grid__current {
   font-weight: 500;
 }
 .month-cell--dot.month-cell--today .month-cell__date {
+  /* Overrides the left-aligned circle the bigger views use, so today centers in its cell. */
+  justify-self: center;
+  width: 32px;
+  height: 32px;
   color: var(--accent);
   background: none;
   font-weight: 600;

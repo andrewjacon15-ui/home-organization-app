@@ -3,7 +3,7 @@
  * recipes by how much of them that covers. Rule-based: the same dictionary as the parser
  * (synonyms, plurals, families), plus a small typo allowance for words it doesn't know.
  */
-import { familyOf } from './dictionary.js'
+import { familyOf, lookupPhrase, maxPhraseWords } from './dictionary.js'
 import { parseIngredient } from './ingredient.js'
 
 export interface HaveItem {
@@ -25,7 +25,7 @@ export function tokenizeHave(text: string): HaveItem[] {
   const out = new Map<string, HaveItem>()
   const pieces = text
     .toLowerCase()
-    .split(/[\n,;&+]|\band\b|\bplus\b|\balso\b|\bwith\b/)
+    .split(SEPARATORS)
     .map((p) => p.trim().replace(/[.!?]+$/, ''))
   for (let piece of pieces) {
     for (let i = 0; i < 3 && LEAD_IN.test(piece); i++) piece = piece.replace(LEAD_IN, '')
@@ -37,6 +37,41 @@ export function tokenizeHave(text: string): HaveItem[] {
     if (!out.has(key)) out.set(key, { text: piece, key, family: familyOf(key) || key, known: ing.known })
   }
   return [...out.values()]
+}
+
+const SEPARATORS = /[\n,;&+]|\band\b|\bplus\b|\balso\b|\bwith\b/i
+
+/**
+ * Speech comes back as one run-on phrase ("chicken thighs rice broccoli"). Splits it into a
+ * comma list by finding the longest dictionary name at each word. Words the dictionary
+ * doesn't know ("2 cups", "frozen", "some") stay with the food after them, or the one
+ * before when nothing follows. Existing commas and "and" are kept as breaks.
+ */
+export function listFromSpeech(text: string): string {
+  const max = maxPhraseWords()
+  const items: string[] = []
+  for (const piece of text.split(SEPARATORS)) {
+    const words = piece.trim().replace(/[.!?]+$/, '').split(/\s+/).filter(Boolean)
+    const found: string[] = []
+    let pending: string[] = []
+    for (let i = 0; i < words.length; ) {
+      let n = Math.min(max, words.length - i)
+      while (n > 0 && !lookupPhrase(words.slice(i, i + n).join(' ').replace(/[^\p{L}' -]/gu, ''))) n--
+      if (n === 0) {
+        pending.push(words[i++])
+        continue
+      }
+      found.push([...pending, ...words.slice(i, i + n)].join(' '))
+      pending = []
+      i += n
+    }
+    if (pending.length) {
+      if (found.length) found[found.length - 1] += ' ' + pending.join(' ')
+      else found.push(pending.join(' '))
+    }
+    items.push(...found)
+  }
+  return items.join(', ')
 }
 
 /** Edit distance, capped (for typos like "brocoli" or "parmesean"). */
