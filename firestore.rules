@@ -54,14 +54,60 @@ service cloud.firestore {
       return value is string && value.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
     }
 
-    // config/access: { familyCreators: [lowercase emails] }. Managed with admin credentials only.
+    // config/access: { familyCreators: [lowercase emails], admins: [lowercase emails] }. Managed with admin credentials only.
     function canCreateFamily() {
       return verifiedEmail()
         && myEmail() in get(/databases/$(database)/documents/config/access).data.familyCreators;
     }
 
+    // The app's administrator: creates household invite links and sees the list of households (not their contents).
+    function isAdmin() {
+      return verifiedEmail()
+        && myEmail() in get(/databases/$(database)/documents/config/access).data.get('admins', []);
+    }
+
+    function householdInvite(code) {
+      return /databases/$(database)/documents/householdInvites/$(code);
+    }
+
+    // A new family started with a household invite: the invite is unused and unexpired now, and this same
+    // batch marks it used by this person for this family (see householdInvites → update).
+    function redeemsInvite(familyId) {
+      let code = request.resource.data.inviteCode;
+      return verifiedEmail()
+        && code is string
+        && exists(householdInvite(code))
+        && !('usedBy' in get(householdInvite(code)).data)
+        && get(householdInvite(code)).data.expiresAt > request.time
+        && getAfter(householdInvite(code)).data.usedBy == request.auth.uid
+        && getAfter(householdInvite(code)).data.familyId == familyId;
+    }
+
     match /config/{doc} {
       allow read, write: if false;
+    }
+
+    // Household invite links (/?household=CODE). The code is the secret: anyone signed in who has it may read it.
+    match /householdInvites/{code} {
+      allow get: if signedIn();
+      allow list, delete: if isAdmin();
+      allow create: if isAdmin()
+        && code.size() >= 20
+        && onlyKeys(['createdBy', 'createdAt', 'expiresAt', 'note'])
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.expiresAt is timestamp
+        && request.resource.data.expiresAt <= request.time + duration.value(31, 'd')
+        && (!('note' in request.resource.data) || (request.resource.data.note is string && request.resource.data.note.size() <= 80));
+      // Redeeming: once, before it expires, by the person creating a family with it in the same batch.
+      allow update: if verifiedEmail()
+        && !('usedBy' in resource.data)
+        && resource.data.expiresAt > request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usedBy', 'usedEmail', 'usedAt', 'familyId'])
+        && request.resource.data.usedBy == request.auth.uid
+        && request.resource.data.usedEmail == myEmail()
+        && request.resource.data.usedAt == request.time
+        && getAfter(familyPath(request.resource.data.familyId)).data.ownerId == request.auth.uid
+        && getAfter(familyPath(request.resource.data.familyId)).data.inviteCode == code;
     }
 
     // Keyed by lowercase email. One family per email.
@@ -79,12 +125,14 @@ service cloud.firestore {
       allow read: if isMember(familyId);
       // Only allowlisted accounts can start a family; everyone else joins by invite.
       // Stops any Google account from using this project (storage, calendar sync, email).
-      allow create: if canCreateFamily()
-        && request.resource.data.ownerId == request.auth.uid
-        && onlyKeys(['name', 'ownerId', 'timezone', 'createdAt']);
+      // Allowlisted accounts, or anyone holding an unused household invite link.
+      allow create: if request.resource.data.ownerId == request.auth.uid
+        && ((canCreateFamily() && onlyKeys(['name', 'ownerId', 'timezone', 'createdAt']))
+          || (onlyKeys(['name', 'ownerId', 'timezone', 'createdAt', 'inviteCode']) && redeemsInvite(familyId)));
       allow update: if isOwner(familyId)
         && request.resource.data.ownerId == resource.data.ownerId
-        && onlyKeys(['name', 'ownerId', 'timezone', 'createdAt']);
+        && request.resource.data.get('inviteCode', null) == resource.data.get('inviteCode', null)
+        && onlyKeys(['name', 'ownerId', 'timezone', 'createdAt', 'inviteCode']);
 
       match /members/{userId} {
         allow read: if isMember(familyId);

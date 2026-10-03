@@ -2,7 +2,7 @@
 // "Public Calendar" links. Read-only. Each link is a calendar doc with kind 'ics', so colors,
 // people, the filter, and reminders treat it like any synced calendar.
 import ICAL from 'ical.js'
-import { SYNC_FUTURE_DAYS, SYNC_PAST_DAYS, CalendarError, sameEvent } from './calendar.js'
+import { SYNC_FUTURE_DAYS, SYNC_PAST_DAYS, CalendarError, eventsDigest, sameEvent } from './calendar.js'
 import { hash } from './normalize.js'
 import type { EventDoc, StoredCalendar } from './types.js'
 
@@ -21,6 +21,8 @@ export interface FeedCalendar extends StoredCalendar {
   lastSyncAt?: Date | null
   error?: string | null
   eventCount?: number
+  /** Fingerprint of the events last written; an unchanged file skips re-reading them. */
+  digest?: string
 }
 
 export interface FeedStore {
@@ -30,7 +32,7 @@ export interface FeedStore {
   getFeed(familyId: string, key: string): Promise<FeedCalendar | null>
   saveFeed(familyId: string, feed: FeedCalendar): Promise<void>
   /** Only the sync result, so it never overwrites a color or name changed in Settings meanwhile. */
-  setFeedStatus(familyId: string, key: string, status: { lastSyncAt: Date; error: string | null; eventCount?: number }): Promise<void>
+  setFeedStatus(familyId: string, key: string, status: { lastSyncAt: Date; error: string | null; eventCount?: number; digest?: string }): Promise<void>
   deleteFeed(familyId: string, key: string): Promise<void>
   listFeedEvents(familyId: string, key: string): Promise<Map<string, EventDoc>>
   upsertEvents(familyId: string, events: { id: string; data: EventDoc }[]): Promise<void>
@@ -218,9 +220,10 @@ export const feedEventId = (key: string, id: string) => `f_${key}_${hash(id)}`
 export async function syncFeed(deps: { store: FeedStore; fetchFeed: FeedFetch; now?: Date }, familyId: string, feed: FeedCalendar) {
   const { store } = deps
   const now = deps.now ?? new Date()
-  const existing = await store.listFeedEvents(familyId, feed.key)
   if (!feed.enabled) {
-    await store.deleteEvents(familyId, [...existing.keys()])
+    if (feed.digest === 'off') return { eventCount: 0, changed: 0 }
+    await store.deleteEvents(familyId, [...(await store.listFeedEvents(familyId, feed.key)).keys()])
+    await store.setFeedStatus(familyId, feed.key, { error: null, lastSyncAt: now, eventCount: 0, digest: 'off' })
     return { eventCount: 0, changed: 0 }
   }
   const zone = (await store.familyTimezone(familyId)) ?? 'UTC'
@@ -248,12 +251,19 @@ export async function syncFeed(deps: { store: FeedStore; fetchFeed: FeedFetch; n
     }
     return { id: feedEventId(feed.key, p.id), data }
   })
+  // Same file as last time: nothing to compare or write (saves a read per event each hour).
+  const digest = eventsDigest(docs)
+  if (digest === feed.digest) {
+    await store.setFeedStatus(familyId, feed.key, { error: null, lastSyncAt: now, eventCount: docs.length })
+    return { eventCount: docs.length, changed: 0, name: parsed.name }
+  }
+  const existing = await store.listFeedEvents(familyId, feed.key)
   const keep = new Set(docs.map((d) => d.id))
   const changed = docs.filter((d) => !sameEvent(existing.get(d.id), d.data))
   const stale = [...existing.keys()].filter((id) => !keep.has(id))
   await store.upsertEvents(familyId, changed)
   await store.deleteEvents(familyId, stale)
-  await store.setFeedStatus(familyId, feed.key, { error: null, lastSyncAt: now, eventCount: docs.length })
+  await store.setFeedStatus(familyId, feed.key, { error: null, lastSyncAt: now, eventCount: docs.length, digest })
   return { eventCount: docs.length, changed: changed.length + stale.length, name: parsed.name }
 }
 

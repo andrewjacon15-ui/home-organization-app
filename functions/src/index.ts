@@ -8,6 +8,7 @@ import { setGlobalOptions } from 'firebase-functions/options'
 import { onSchedule } from 'firebase-functions/scheduler'
 import { getStorage } from 'firebase-admin/storage'
 import * as calendar from './calendar.js'
+import * as admin from './admin.js'
 import * as cookbooks from './cookbooks.js'
 import * as feeds from './feeds.js'
 import { firestoreCookbookStore, storageBookFiles } from './cookbookStore.js'
@@ -16,7 +17,7 @@ import * as reminders from './reminders.js'
 import { firestoreReminderStore, gmailMailer } from './reminderStore.js'
 import * as recipeIndex from './recipeIndex.js'
 import { INDEX_VERSION } from './shared/recipes/catalogIndex.js'
-import { firestoreFeedStore, firestoreStore } from './store.js'
+import { firestoreAdminStore, firestoreFeedStore, firestoreStore } from './store.js'
 import { nodeHttpGet } from './web/fetcher.js'
 import * as webRecipes from './webRecipes.js'
 import { ONLINE_SEARCH } from './shared/features.js'
@@ -89,6 +90,18 @@ function feedCallable<T>(handler: (req: CallableRequest) => Promise<T>) {
 export const addCalendarFeed = feedCallable((req) => feeds.addFeed(feedDeps(), req.auth?.uid, req.data ?? {}))
 export const refreshCalendarFeed = feedCallable((req) => feeds.refreshFeed(feedDeps(), req.auth?.uid, req.data ?? {}))
 export const removeCalendarFeed = feedCallable((req) => feeds.removeFeed(feedDeps(), req.auth?.uid, req.data ?? {}))
+
+/** The administrator's list of households (names and sizes only). */
+export const adminHouseholds = onCall({ invoker: 'public', timeoutSeconds: 60 }, async (req) => {
+  try {
+    const token = req.auth?.token
+    return await admin.listHouseholds(firestoreAdminStore(getFirestore()), { uid: req.auth?.uid, email: token?.email, emailVerified: token?.email_verified })
+  } catch (err) {
+    if (err instanceof calendar.CalendarError) throw new HttpsError(err.code, err.message)
+    logger.error('adminHouseholds failed', { error: String(err) })
+    throw new HttpsError('internal', 'Couldn’t load the households.')
+  }
+})
 
 /** Gmail account the reminder emails come from, and an app password for it (both in Secret Manager). */
 const gmailAddress = defineSecret('GMAIL_ADDRESS')

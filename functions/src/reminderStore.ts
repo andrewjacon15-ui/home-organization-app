@@ -7,9 +7,15 @@ const toDate = (v: unknown) => (v instanceof Timestamp ? v.toDate() : new Date(v
 export function firestoreReminderStore(db: Firestore): ReminderStore {
   const col = (familyId: string, name: string) => db.collection(`families/${familyId}/${name}`)
   return {
+    // Only households where someone has saved reminder settings: this job runs every 5 minutes,
+    // so reading every household each time would grow with every household that joins.
     async listFamilies() {
-      const snap = await db.collection('families').get()
-      return snap.docs.map((d) => ({ id: d.id, name: d.get('name') ?? '', timezone: d.get('timezone') }))
+      const prefs = await db.collectionGroup('reminderPrefs').select().get()
+      // families/{familyId}/reminderPrefs/{uid}
+      const ids = [...new Set(prefs.docs.map((d) => d.ref.path.split('/')[1]))]
+      if (ids.length === 0) return []
+      const snaps = await db.getAll(...ids.map((id) => db.doc(`families/${id}`)))
+      return snaps.filter((d) => d.exists).map((d) => ({ id: d.id, name: d.get('name') ?? '', timezone: d.get('timezone') }))
     },
 
     async listMembers(familyId) {

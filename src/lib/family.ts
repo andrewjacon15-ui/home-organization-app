@@ -47,8 +47,11 @@ export async function resolveFamily(user: User): Promise<string | null> {
   return familyId
 }
 
-/** Creates a family owned by this user, with them as its first member. */
-export async function createFamily(user: User, name: string): Promise<string> {
+/**
+ * Creates a family owned by this user, with them as its first member. With a household
+ * invite code, the same batch marks the invite used (firestore.rules → redeemsInvite).
+ */
+export async function createFamily(user: User, name: string, inviteCode?: string): Promise<string> {
   const familyRef = doc(collection(db, 'families'))
   const batch = writeBatch(db)
   batch.set(familyRef, {
@@ -56,7 +59,16 @@ export async function createFamily(user: User, name: string): Promise<string> {
     ownerId: user.uid,
     timezone: detectTimezone(),
     createdAt: serverTimestamp(),
+    ...(inviteCode ? { inviteCode } : {}),
   })
+  if (inviteCode) {
+    batch.update(doc(db, 'householdInvites', inviteCode), {
+      usedBy: user.uid,
+      usedEmail: emailKey(user),
+      usedAt: serverTimestamp(),
+      familyId: familyRef.id,
+    })
+  }
   batch.set(doc(db, 'families', familyRef.id, 'members', user.uid), {
     displayName: user.displayName ?? user.email ?? 'Me',
     email: emailKey(user),

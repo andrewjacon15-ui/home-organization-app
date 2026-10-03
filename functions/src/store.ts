@@ -1,4 +1,5 @@
-import { FieldValue, type Firestore } from 'firebase-admin/firestore'
+import { AggregateField, FieldValue, type Firestore } from 'firebase-admin/firestore'
+import type { AdminStore } from './admin.js'
 import type { FeedCalendar, FeedStore } from './feeds.js'
 import type { CalendarStatus, CalendarStore, EventDoc, StoredCalendar, StoredTokens } from './types.js'
 
@@ -27,8 +28,8 @@ export function firestoreStore(db: Firestore): CalendarStore {
     async getTokens(familyId, uid) {
       const snap = await tokensRef(familyId, uid).get()
       if (!snap.exists) return null
-      const { refreshToken, email, scope } = snap.data() as StoredTokens
-      return { refreshToken, email, scope }
+      const { refreshToken, email, scope, syncDigest } = snap.data() as StoredTokens
+      return { refreshToken, email, scope, ...(syncDigest ? { syncDigest } : {}) }
     },
 
     async saveTokens(familyId, uid, tokens) {
@@ -46,8 +47,8 @@ export function firestoreStore(db: Firestore): CalendarStore {
         .map((d) => {
           // families/{familyId}/members/{uid}/private/tokens
           const [, familyId, , uid] = d.ref.path.split('/')
-          const { refreshToken, email, scope } = d.data() as StoredTokens
-          return { familyId, uid, tokens: { refreshToken, email, scope } }
+          const { refreshToken, email, scope, syncDigest } = d.data() as StoredTokens
+          return { familyId, uid, tokens: { refreshToken, email, scope, ...(syncDigest ? { syncDigest } : {}) } }
         })
     },
 
@@ -93,6 +94,10 @@ export function firestoreStore(db: Firestore): CalendarStore {
 
     async deleteCalendars(familyId, keys) {
       await inBatches(db, keys, (batch, key) => batch.delete(calendarsCol(familyId).doc(key)))
+    },
+
+    async saveSyncDigest(familyId, uid, digest) {
+      await tokensRef(familyId, uid).set({ syncDigest: digest }, { merge: true })
     },
 
     async setCalendarStatus(familyId, uid, status) {
@@ -152,6 +157,47 @@ export function firestoreFeedStore(db: Firestore): FeedStore {
     },
     async deleteEvents(familyId, ids) {
       await inBatches(db, ids, (batch, id) => batch.delete(eventsCol(familyId).doc(id)))
+    },
+  }
+}
+
+/** The admin overview: one count/sum aggregation per collection (about one read per 1,000 documents). */
+export function firestoreAdminStore(db: Firestore): AdminStore {
+  return {
+    async admins() {
+      const list = (await db.doc('config/access').get()).get('admins')
+      return Array.isArray(list) ? list.filter((x): x is string => typeof x === 'string').map((x) => x.toLowerCase()) : []
+    },
+    async households() {
+      const families = await db.collection('families').get()
+      const invites = await db.collection('householdInvites').where('usedBy', '!=', null).get()
+      const ownerByFamily = new Map(invites.docs.map((d) => [d.get('familyId') as string, d.get('usedEmail') as string]))
+      return Promise.all(
+        families.docs.map(async (f) => {
+          const sub = (name: string) => f.ref.collection(name)
+          const [members, events, recipes, photos, cookbooks, owner] = await Promise.all([
+            sub('members').count().get(),
+            sub('events').count().get(),
+            sub('recipes').count().get(),
+            sub('photos').aggregate({ n: AggregateField.count(), bytes: AggregateField.sum('bytes') }).get(),
+            sub('cookbooks').aggregate({ bytes: AggregateField.sum('sizeBytes') }).get(),
+            ownerByFamily.has(f.id) ? Promise.resolve(null) : sub('members').doc(String(f.get('ownerId'))).get(),
+          ])
+          const created = f.get('createdAt')?.toDate?.() as Date | undefined
+          return {
+            id: f.id,
+            name: String(f.get('name') ?? ''),
+            ownerEmail: ownerByFamily.get(f.id) ?? (owner?.get('email') as string | undefined) ?? null,
+            createdAt: created ? created.toISOString() : null,
+            members: members.data().count,
+            events: events.data().count,
+            recipes: recipes.data().count,
+            photos: photos.data().n,
+            photoBytes: Number(photos.data().bytes ?? 0),
+            cookbookBytes: Number(cookbooks.data().bytes ?? 0),
+          }
+        }),
+      )
     },
   }
 }
