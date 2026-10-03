@@ -1,4 +1,5 @@
 import { APP_VERSION, BUILD_TIME, reloadToLatest, useUpdateCheck } from '../../lib/version'
+import { ExportRow } from './ExportRow'
 import { SettingsSection } from './SettingRows'
 
 const built = (iso: string) =>
@@ -12,7 +13,7 @@ const STATUS: Record<string, string> = {
   offline: "Couldn't reach the server.",
 }
 
-export function AboutSettings({ onShowTour }: { onShowTour?: () => void }) {
+export function AboutSettings({ onShowTour, familyId, householdName }: { onShowTour?: () => void; familyId?: string; householdName?: string }) {
   const { state, live, check } = useUpdateCheck()
   return (
     <SettingsSection title="About" id="about">
@@ -40,6 +41,7 @@ export function AboutSettings({ onShowTour }: { onShowTour?: () => void }) {
           </button>
         </div>
       </div>
+      {familyId && <ExportRow familyId={familyId} name={householdName ?? 'household'} />}
       {onShowTour && (
         <div className="setting-row">
           <span className="setting-row__label">

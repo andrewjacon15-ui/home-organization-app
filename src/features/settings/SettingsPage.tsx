@@ -112,7 +112,7 @@ export function SettingsPage({ family, members, userId, onOpenRecipes, onShowTou
         <SleepSettings />
         <LockSettings save={(c) => saveLock(family.id, c)} />
         <HouseholdsAdmin userId={userId} />
-        <AboutSettings onShowTour={onShowTour} />
+        <AboutSettings onShowTour={onShowTour} familyId={family.id} householdName={family.name} />
       </div>
     </div>
   )

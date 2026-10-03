@@ -1,6 +1,5 @@
-import { AlarmClock, Pause, Play, Plus, Timer, X } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
-import { ICON_STROKE } from '../../components/Icons'
+import { AddIcon, AlarmClockIcon, CloseIcon, PauseIcon, PlayIcon, TimerIcon } from '../../components/Icons'
 import { canRaiseVolume } from './alarm'
 import { formatClock, formatLength, PRESETS } from './timerMath'
 import { timeLeft, type KitchenTimer } from './timerState'
@@ -12,7 +11,7 @@ export function TimerButton() {
   const going = timers.filter((t) => t.state !== 'ready').length
   return (
     <button type="button" className="icon-button timer-button" aria-label={going ? `Kitchen timers (${going} going)` : 'Kitchen timers'} onClick={() => setPanelOpen(true)}>
-      <Timer size={24} strokeWidth={ICON_STROKE} aria-hidden />
+      <TimerIcon size={24} />
       {going > 0 && (
         <span className="timer-button__count" aria-hidden>
           {going}
@@ -42,19 +41,19 @@ export function TimerRow({ t, now, big = false }: { t: KitchenTimer; now: number
       <div className="row timer-row__actions">
         {(t.state === 'ready' || t.state === 'paused') && (
           <button type="button" className="button button--primary" onClick={() => start(t.id)} aria-label={`Start ${label}`}>
-            <Play size={18} strokeWidth={ICON_STROKE} aria-hidden /> {t.state === 'ready' ? 'Start' : 'Resume'}
+            <PlayIcon size={18} /> {t.state === 'ready' ? 'Start' : 'Resume'}
           </button>
         )}
         {t.state === 'running' && (
           <button type="button" className="button" onClick={() => pause(t.id)} aria-label={`Pause ${label}`}>
-            <Pause size={18} strokeWidth={ICON_STROKE} aria-hidden /> Pause
+            <PauseIcon size={18} /> Pause
           </button>
         )}
         <button type="button" className="button" onClick={() => addTime(t.id, 60)} aria-label={`Add a minute to ${label}`}>
-          <Plus size={18} strokeWidth={ICON_STROKE} aria-hidden /> 1 min
+          <AddIcon size={18} /> 1 min
         </button>
         <button type="button" className="icon-button" onClick={() => dismiss(t.id)} aria-label={t.state === 'ringing' ? `Stop ${label}` : `Remove ${label}`}>
-          <X size={20} strokeWidth={ICON_STROKE} aria-hidden />
+          <CloseIcon size={20} />
         </button>
       </div>
     </li>
@@ -86,7 +85,7 @@ export function TimerPanel() {
         <header className="timer-panel__head">
           <h3>Kitchen timers</h3>
           <button type="button" className="icon-button" aria-label="Close timers" onClick={close}>
-            <X size={20} strokeWidth={ICON_STROKE} aria-hidden />
+            <CloseIcon size={20} />
           </button>
         </header>
 
@@ -163,7 +162,7 @@ export function AlarmOverlay() {
   if (!ringing.length) return null
   return (
     <div className="alarm" role="alertdialog" aria-modal="true" aria-label="Timer done">
-      <AlarmClock className="alarm__icon" size={72} strokeWidth={1.5} aria-hidden />
+      <AlarmClockIcon className="alarm__icon" size={72} strokeWidth={1.5} />
       <ul className="alarm__list">
         {ringing.map((t) => (
           <li key={t.id} className="alarm__item">

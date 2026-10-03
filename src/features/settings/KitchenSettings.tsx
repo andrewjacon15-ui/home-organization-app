@@ -1,8 +1,7 @@
-import { X } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
 import { DEFAULT_KITCHEN, DEFAULT_SITES, normalizeSite, type KitchenSettings as Kitchen } from '@shared/recipes/kitchen.js'
 import { DEFAULT_STAPLES } from '@shared/recipes/matcher.js'
-import { ICON_STROKE } from '../../components/Icons'
+import { CloseIcon } from '../../components/Icons'
 import { saveKitchen, watchKitchen } from '../recipes/kitchenApi'
 import { SettingsSection } from './SettingRows'
 
@@ -26,7 +25,7 @@ export function ChipList({ label, items, onChange, normalize, placeholder, reset
           <li key={it} className="tag chip-list__item">
             {it}
             <button type="button" className="chip-list__remove" aria-label={`Remove ${it}`} onClick={() => onChange(items.filter((x) => x !== it))}>
-              <X size={14} strokeWidth={ICON_STROKE} aria-hidden />
+              <CloseIcon size={14} />
             </button>
           </li>
         ))}

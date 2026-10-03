@@ -97,7 +97,8 @@ export function HomePage({ familyId, userId, members, onNavigate }: Props) {
         onNavigate={onNavigate}
         panels={panels}
         countdowns={countdowns}
-        onAddCountdown={(title, date) => addCountdown(familyId, userId, title, date).catch(report)}
+        onAddCountdown={(title, date, kind) => addCountdown(familyId, userId, title, date, kind).catch(report)}
+        countdownHolidays={settings.countdownHolidays}
         onRemoveCountdown={(c) => removeCountdown(familyId, c.id).catch(report)}
         onToggleChore={(o, done, doneBy) => setOccurrenceDone(familyId, o, done, doneBy, userId, today).catch(report)}
         onDeleteChore={(c) => deleteChore(familyId, c.id).catch(report)}

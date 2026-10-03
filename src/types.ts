@@ -70,6 +70,8 @@ export interface CalendarEvent {
   startDate?: string
   endDate?: string
   location?: string
+  /** Synced Google events: the event in Google Calendar. */
+  htmlLink?: string
 }
 
 export type NewManualEvent = Pick<CalendarEvent, 'title' | 'start' | 'end' | 'allDay' | 'startDate' | 'endDate' | 'memberIds'>

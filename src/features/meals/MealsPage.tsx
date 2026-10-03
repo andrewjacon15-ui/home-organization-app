@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { DEFAULT_KITCHEN } from '@shared/recipes/kitchen.js'
 import { groceryLines } from '@shared/recipes/groceries.js'
-import { CartIcon, CloseIcon } from '../../components/Icons'
+import { CartIcon, CloseIcon, MealsIcon } from '../../components/Icons'
 import { addItems, groceryListId, openItemTexts, watchLists, type FamilyList } from '../lists/listsApi'
 import { watchKitchen } from '../recipes/kitchenApi'
 import { MealGroceries } from './MealGroceries'
+import { MealTemplates } from './MealTemplates'
+import { applyTemplate, deleteTemplate, isEmptyPlan, saveTemplate, templateFromWeek, watchTemplates, type ApplyMode, type MealTemplate } from './templates'
 import { plannedMeals, type GroceryResult, type PlannedMeal } from './upcomingMeals'
-import { addDays, daysBetween, startOfWeek } from '../../lib/dates'
+import { addDays, daysBetween, fromDateKey, startOfWeek } from '../../lib/dates'
 import { useToday } from '../../lib/hooks'
 import { useSettings } from '../settings/SettingsContext'
 import type { MealPlan } from '../../types'
@@ -49,8 +51,14 @@ export function MealsPage({ familyId, userId }: Props) {
     if (!shopping) return
     return watchMealPlans(familyId, today, addDays(today, shopDays - 1), (plans) => setUpcoming({ key: shopKey, plans }))
   }, [familyId, shopping, today, shopDays, shopKey])
-  useEffect(() => (shopping ? watchLists(familyId, setLists) : undefined), [familyId, shopping])
-  useEffect(() => (shopping ? watchKitchen(familyId, setKitchen) : undefined), [familyId, shopping])
+  // Meal plan templates (read only while their sheet is open).
+  const [templating, setTemplating] = useState(false)
+  const [templates, setTemplates] = useState<MealTemplate[]>([])
+  useEffect(() => (templating ? watchTemplates(familyId, setTemplates) : undefined), [familyId, templating])
+  // The grocery list and pantry staples, for either sheet.
+  const needLists = shopping || templating
+  useEffect(() => (needLists ? watchLists(familyId, setLists) : undefined), [familyId, needLists])
+  useEffect(() => (needLists ? watchKitchen(familyId, setKitchen) : undefined), [familyId, needLists])
   const meals = upcoming?.key === shopKey ? plannedMeals(upcoming.plans, today, shopDays, (text) => findEntry(recipes, text)?.id ?? null) : null
 
   async function addGroceries(chosen: PlannedMeal[]): Promise<GroceryResult> {
@@ -63,6 +71,23 @@ export function MealsPage({ familyId, userId }: Props) {
     return { added: plan.lines.length, staples: plan.staples.length, onList: plan.onList.length }
   }
 
+  const fmt = (d: string, o: Intl.DateTimeFormatOptions) => fromDateKey(d).toLocaleDateString(undefined, o)
+  const weekLabel = `${fmt(weekStart, { month: 'short', day: 'numeric' })} – ${fmt(addDays(weekStart, 6), { month: 'short', day: 'numeric' })}`
+  const weekEmpty = Array.from({ length: 7 }, (_, i) => plans[addDays(weekStart, i)]).every((p) => !p || isEmptyPlan(p))
+
+  /** Puts a template on the week on screen, then (if asked) shops for the meals it added. */
+  async function applyToWeek(t: MealTemplate, mode: ApplyMode, groceries: boolean): Promise<string> {
+    const { changes, added } = applyTemplate(t, weekStart, plans, mode)
+    await Promise.all(Object.entries(changes).map(([date, plan]) => saveMealPlan(familyId, date, plan, userId)))
+    const days = Object.keys(changes).length
+    const planned = days ? `Planned ${days} day${days === 1 ? '' : 's'} from “${t.name}”.` : `Nothing to change: ${weekLabel} already has those meals.`
+    if (!groceries) return planned
+    const withRecipes = added.map((m) => ({ ...m, recipeId: findEntry(recipes, m.text)?.id ?? null })).filter((m) => m.recipeId)
+    if (!withRecipes.length) return `${planned} None of its meals are saved recipes, so nothing went on the grocery list.`
+    const r = await addGroceries(withRecipes)
+    return `${planned} Added ${r.added} item${r.added === 1 ? '' : 's'} to the grocery list.`
+  }
+
   return (
     <>
       {error && (
@@ -71,6 +96,9 @@ export function MealsPage({ familyId, userId }: Props) {
         </p>
       )}
       <div className="meals__tools">
+        <button type="button" className="button" onClick={() => setTemplating(true)}>
+          <MealsIcon size={18} /> Templates
+        </button>
         <button type="button" className="button" onClick={() => setShopping(true)}>
           <CartIcon size={18} /> Groceries for upcoming meals
         </button>
@@ -91,6 +119,19 @@ export function MealsPage({ familyId, userId }: Props) {
           saveMealPlan(familyId, date, plan, userId).catch((e) => setError(e instanceof Error ? e.message : String(e)))
         }
       />
+      {templating && (
+        <MealTemplates
+          weekLabel={weekLabel}
+          weekEmpty={weekEmpty}
+          templates={templates}
+          onSave={async (name) => {
+            await saveTemplate(familyId, userId, name, templateFromWeek(plans, weekStart))
+          }}
+          onApply={applyToWeek}
+          onDelete={(t) => void deleteTemplate(familyId, t.id).catch((e) => setError(e instanceof Error ? e.message : String(e)))}
+          onClose={() => setTemplating(false)}
+        />
+      )}
       {shopping && <MealGroceries today={today} days={shopDays} onDays={setShopDays} meals={meals} onAdd={addGroceries} onClose={() => setShopping(false)} />}
       {open && (
         <div className="overlay" role="dialog" aria-modal="true" aria-label={open.title} onClick={() => setOpen(null)}>

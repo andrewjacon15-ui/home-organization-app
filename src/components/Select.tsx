@@ -1,6 +1,5 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
-import { Check, ChevronDown } from 'lucide-react'
-import { ICON_STROKE } from './Icons'
+import { ChevronDownIcon, DoneIcon } from './Icons'
 
 export interface SelectOption {
   value: string
@@ -112,7 +111,7 @@ export function Select({ value, options, onChange, id, disabled, className, ...r
         onKeyDown={onKey}
       >
         <span className="select__value">{current?.label ?? ''}</span>
-        <ChevronDown size={18} strokeWidth={ICON_STROKE} aria-hidden className="select__chevron" />
+        <ChevronDownIcon size={18} className="select__chevron" />
       </button>
       {open && (
         <ul ref={list} id={listId} role="listbox" aria-label={rest['aria-label']} className={`select__list${upward ? ' select__list--up' : ''}`}>
@@ -132,7 +131,7 @@ export function Select({ value, options, onChange, id, disabled, className, ...r
               }}
             >
               <span>{o.label}</span>
-              {o.value === value && <Check size={18} strokeWidth={ICON_STROKE} aria-hidden />}
+              {o.value === value && <DoneIcon size={18} />}
             </li>
           ))}
         </ul>

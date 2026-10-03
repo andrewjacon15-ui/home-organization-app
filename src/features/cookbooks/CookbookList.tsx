@@ -1,6 +1,5 @@
-import { BookOpen, Pencil, RefreshCw, Trash2 } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
-import { ICON_STROKE } from '../../components/Icons'
+import { BookIcon, PencilIcon, RefreshCwIcon, TrashIcon } from '../../components/Icons'
 import type { Cookbook } from './cookbooksApi'
 
 interface Props {
@@ -100,7 +99,7 @@ function CookbookRow({ book: b, coverUrl, onRename, onReparse, onAskDelete, onRe
     <li className="cookbook" aria-label={b.title}>
       <div className="cookbook__cover" aria-hidden>
         {/* A missing or broken cover falls back to the book icon. */}
-        {cover ? <img src={cover} alt="" onError={() => setCover(null)} /> : <BookOpen size={28} strokeWidth={ICON_STROKE} />}
+        {cover ? <img src={cover} alt="" onError={() => setCover(null)} /> : <BookIcon size={28} />}
       </div>
       <div className="cookbook__body">
         {renaming ? (
@@ -136,9 +135,9 @@ function CookbookRow({ book: b, coverUrl, onRename, onReparse, onAskDelete, onRe
         )}
       </div>
       <div className="cookbook__actions">
-        <IconButton label={`Rename ${b.title}`} onClick={() => setRenaming(true)} icon={<Pencil size={18} strokeWidth={ICON_STROKE} />} />
-        <IconButton label={`Re-parse ${b.title}`} disabled={busy} onClick={() => onReparse(b)} icon={<RefreshCw size={18} strokeWidth={ICON_STROKE} />} />
-        <IconButton label={`Delete ${b.title}`} onClick={() => onAskDelete(b)} icon={<Trash2 size={18} strokeWidth={ICON_STROKE} />} />
+        <IconButton label={`Rename ${b.title}`} onClick={() => setRenaming(true)} icon={<PencilIcon size={18} />} />
+        <IconButton label={`Re-parse ${b.title}`} disabled={busy} onClick={() => onReparse(b)} icon={<RefreshCwIcon size={18} />} />
+        <IconButton label={`Delete ${b.title}`} onClick={() => onAskDelete(b)} icon={<TrashIcon size={18} />} />
       </div>
     </li>
   )

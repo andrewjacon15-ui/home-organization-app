@@ -1,6 +1,5 @@
-import { Check } from 'lucide-react'
 import { useRef, useState } from 'react'
-import { ICON_STROKE } from '../../components/Icons'
+import { DoneIcon, ICON_STROKE } from '../../components/Icons'
 import { formatBytes, libraryUsage, type Photo } from './photosApi'
 
 interface Props {
@@ -106,7 +105,7 @@ export function PhotoLibrary({ photos, progress, onUpload, onCaption, onDelete, 
               >
                 {p.kind === 'video' ? <video src={p.url} muted preload="metadata" /> : <img src={p.thumbUrl ?? p.url} alt="" loading="lazy" />}
                 {p.kind === 'video' && <span className="photos__badge">Video</span>}
-                {picking && <span className="photos__check" aria-hidden>{picked.has(p.id) && <Check size={16} strokeWidth={ICON_STROKE + 0.75} />}</span>}
+                {picking && <span className="photos__check" aria-hidden>{picked.has(p.id) && <DoneIcon size={16} strokeWidth={ICON_STROKE + 0.75} />}</span>}
               </button>
             </li>
           ))}

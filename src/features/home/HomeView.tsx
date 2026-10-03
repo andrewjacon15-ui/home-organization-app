@@ -10,7 +10,7 @@ import type { FamilyList, ListItem } from '../lists/listsApi'
 import { useSettings } from '../settings/SettingsContext'
 import { DayWeather, WeatherStrip } from '../weather/WeatherBadges'
 import { CountdownPanel } from '../countdowns/Countdowns'
-import type { Countdown } from '../countdowns/countdownsApi'
+import type { Countdown, CountdownKind } from '../countdowns/countdownsApi'
 import { DoneIcon, GrabsIcon, NextIcon } from '../../components/Icons'
 import { useOverflowCue } from '../../lib/useOverflowCue'
 import { DEFAULT_HOME, HOME_CALENDAR_DAYS, PANEL_WEIGHT, type HomeCalendarDays, type HomePanel } from './homePanels'
@@ -38,7 +38,9 @@ interface Props {
   /** Which panels show, top to bottom (Settings → Home screen). */
   panels?: HomePanel[]
   countdowns?: Countdown[]
-  onAddCountdown?: (title: string, date: string) => void
+  onAddCountdown?: (title: string, date: string, kind: CountdownKind) => void
+  /** US holidays among the countdowns. */
+  countdownHolidays?: boolean
   onRemoveCountdown?: (c: Countdown) => void
 }
 
@@ -156,7 +158,9 @@ export function HomeView(p: Props) {
           </div>
         </section>
     ),
-    countdowns: () => <CountdownPanel countdowns={p.countdowns ?? []} today={p.today} onAdd={(t, d) => p.onAddCountdown?.(t, d)} onRemove={(c) => p.onRemoveCountdown?.(c)} />,
+    countdowns: () => (
+      <CountdownPanel countdowns={p.countdowns ?? []} today={p.today} holidays={p.countdownHolidays ?? true} onAdd={(t, d, k) => p.onAddCountdown?.(t, d, k)} onRemove={(c) => p.onRemoveCountdown?.(c)} />
+    ),
     weather: () => (
       <section className="home-panel home-panel--weather" aria-label="Weather">
         <PanelHead title="Weather" onOpen={() => p.onNavigate('weather')} />

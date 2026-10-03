@@ -54,6 +54,8 @@ export interface DisplaySettings {
   homePanelsVersion: number
   /** Days the Home calendar shows: 1, 3, or 7. */
   homeCalendarDays: number
+  /** US holidays in the next two months show among the Home countdowns. */
+  countdownHolidays: boolean
   /** Checked-off list items delete themselves after this many days (0 = keep until cleared). */
   listDoneDays: number
 }
@@ -97,6 +99,7 @@ export const DEFAULT_SETTINGS: DisplaySettings = {
   homePanels: {},
   homePanelsVersion: 0,
   homeCalendarDays: 3,
+  countdownHolidays: true,
   listDoneDays: 30,
 }
 
