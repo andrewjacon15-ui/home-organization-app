@@ -3,6 +3,7 @@
 import {
   BookOpen,
   CalendarDays,
+  CloudSun,
   ChevronLeft,
   ChevronRight,
   House,
@@ -38,6 +39,7 @@ export const RecipesIcon = icon(BookOpen)
 export const PhotosIcon = icon(Images)
 export const MoreIcon = icon(LayoutGrid)
 export const SettingsIcon = icon(Settings)
+export const WeatherIcon = icon(CloudSun)
 
 /** Button glyphs: arrows for paging, plus for "add". */
 export const BackIcon = icon(ChevronLeft)

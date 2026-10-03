@@ -8,10 +8,10 @@ import { ChoreCard } from '../chores/ChoreBoard'
 import { occurrencesOn, type Occurrence } from '../chores/schedule'
 import type { FamilyList, ListItem } from '../lists/listsApi'
 import { useSettings } from '../settings/SettingsContext'
-import { DayWeather } from '../weather/WeatherBadges'
+import { DayWeather, WeatherStrip } from '../weather/WeatherBadges'
 import { DEFAULT_HOME, PANEL_WEIGHT, type HomePanel } from './homePanels'
 
-export type HomeTarget = 'calendar' | 'chores' | 'lists'
+export type HomeTarget = 'calendar' | 'chores' | 'lists' | 'weather'
 
 interface Props {
   today: string
@@ -126,6 +126,12 @@ export function HomeView(p: Props) {
             })}
           </div>
         </section>
+    ),
+    weather: () => (
+      <section className="home-panel home-panel--weather" aria-label="Weather">
+        <PanelHead title="Weather" onOpen={() => p.onNavigate('weather')} />
+        <WeatherStrip />
+      </section>
     ),
     lists: () => (
         <section className="home-panel home-panel--lists" aria-label="Lists">

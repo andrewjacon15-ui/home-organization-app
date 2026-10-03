@@ -18,6 +18,8 @@
   --rule: #dfdacd; /* borders and dividers */
   --rule-strong: #c8c1b2; /* input borders, hover borders */
   --danger: #b42318;
+  /* Rain and snow in the forecast. */
+  --rain: #2f6fb3;
 
   /* Accent: set from settings at runtime (App.tsx), with a soft tint and a dark-mode text variant */
   --accent: #1d4ed8;
@@ -70,6 +72,7 @@
   --rule: #2e2c27;
   --rule-strong: #3d3a33;
   --danger: #f97066;
+  --rain: #6aa8e0;
   --accent-text: var(--accent-text-dark, #8fb0ff);
   --shadow-sm: none;
   --shadow: 0 0 0 1px var(--rule);
@@ -89,6 +92,7 @@
     --rule: #2e2c27;
     --rule-strong: #3d3a33;
     --danger: #f97066;
+  --rain: #6aa8e0;
     --accent-text: var(--accent-text-dark, #8fb0ff);
     --shadow-sm: none;
     --shadow: 0 0 0 1px var(--rule);
@@ -5512,4 +5516,594 @@ thead .sidebar-grid__current {
 :root[data-device='phone'] .cooking__pane > ol,
 :root[data-device='phone'] .cooking__pane > .cooking__one {
   overflow: visible;
+}
+
+/* --------------------------------------------------------------------------
+   Weather
+   -------------------------------------------------------------------------- */
+
+.masthead__weather {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.masthead__weather:empty {
+  display: none;
+}
+
+.day-weather__rain {
+  color: var(--rain);
+  font-weight: 600;
+  margin-left: 4px;
+}
+
+.weather {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+.weather__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.weather__head .page-title {
+  margin: 0;
+}
+
+.weather-setup {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.weather__credit {
+  font-size: var(--fs-label);
+  margin: 0;
+}
+
+.weather-alert {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--rule-strong);
+  background: var(--surface);
+}
+.weather-alert p {
+  margin: 4px 0 0;
+  font-size: var(--fs-small);
+}
+.weather-alert--severe {
+  border-color: var(--danger);
+}
+.weather-alert--severe > svg {
+  color: var(--danger);
+}
+
+.weather-today {
+  display: grid;
+  gap: 12px;
+}
+
+.weather-now {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 14px 20px;
+}
+.weather-now__main {
+  display: grid;
+  gap: 4px;
+}
+.weather-now__temp {
+  font-size: calc(var(--fs-display) * 1.6);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.weather-now__text {
+  font-size: var(--fs-lead);
+  font-weight: 600;
+}
+.weather-now__rain {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+.weather-now__rain--wet {
+  color: var(--rain);
+}
+
+.weather-hours {
+  padding: 12px 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.weather-hours::-webkit-scrollbar {
+  display: none;
+}
+.weather-hours ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(48px, 1fr);
+}
+.weather-hour {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+}
+.weather-hour__time {
+  color: var(--ink-2);
+  font-size: var(--fs-label);
+  white-space: nowrap;
+}
+.weather-hour__temp {
+  font-weight: 600;
+}
+.weather-hour__rain {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  color: var(--rain);
+  font-size: var(--fs-label);
+  font-weight: 600;
+}
+.weather-hour__dry {
+  color: var(--ink-3);
+  font-weight: 400;
+}
+.weather-hour .rain-bar {
+  width: 10px;
+  height: 28px;
+}
+
+/* A bar filled from the bottom to the chance of rain (inline --rain-chance, 0–100%). */
+.rain-bar {
+  position: relative;
+  display: block;
+  border-radius: 3px;
+  background: var(--paper-2);
+  overflow: hidden;
+}
+.rain-bar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--rain-chance, 0%);
+  background: var(--rain);
+}
+
+.weather-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+.weather-tile {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 12px 14px;
+}
+.weather-tile__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-label);
+  font-weight: 500;
+  color: var(--ink-2);
+}
+.weather-tile__value {
+  display: block;
+}
+.weather-tile__value strong {
+  font-size: var(--fs-title);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+.weather-tile__value .muted {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--fs-small);
+}
+
+.weather-days {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.weather-day {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  padding: 16px;
+}
+.weather-day--today {
+  border-top: 3px solid var(--accent);
+}
+.weather-day__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.weather-day__name {
+  font-size: var(--fs-lead);
+  font-weight: 600;
+}
+.weather-day__sky {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.weather-day__sky > div {
+  display: grid;
+}
+.weather-day__temps {
+  font-size: var(--fs-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.weather-day__text {
+  color: var(--ink-2);
+}
+.weather-facts {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+.weather-fact {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.weather-fact dt {
+  display: flex;
+  color: var(--ink-2);
+}
+.weather-fact dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.weather-facts__chart {
+  display: grid;
+  gap: 2px;
+}
+.rain-bars {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 2px;
+  height: 32px;
+}
+.rain-bars__axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--fs-label);
+}
+
+.weather-week {
+  list-style: none;
+  margin: 0;
+  padding: 4px 16px;
+}
+.weather-row {
+  display: grid;
+  grid-template-columns: 90px minmax(140px, 1.2fr) minmax(130px, 1fr) minmax(200px, 1.6fr) 90px 60px;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--rule);
+  font-variant-numeric: tabular-nums;
+}
+.weather-row:last-child {
+  border-bottom: none;
+}
+.weather-row__day {
+  font-weight: 600;
+}
+.weather-row--today .weather-row__day {
+  color: var(--accent);
+}
+.weather-row__sky {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.weather-row__text {
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.weather-row__rain {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.weather-row__rain--wet {
+  color: var(--rain);
+  font-weight: 600;
+}
+.weather-row__amount {
+  font-weight: 400;
+  font-size: var(--fs-small);
+}
+.weather-row__temps {
+  display: grid;
+  grid-template-columns: 36px 1fr 36px;
+  align-items: center;
+  gap: 10px;
+  text-align: right;
+}
+.weather-row__temps > :last-child {
+  text-align: left;
+  font-weight: 600;
+}
+.weather-row__extra {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  font-size: var(--fs-small);
+}
+.temp-range {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--paper-2);
+}
+.temp-range__fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  min-width: 6px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+/* Home panel */
+.weather-strip {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.weather-strip__now {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.weather-strip__temp {
+  font-size: var(--fs-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.weather-strip__text {
+  display: grid;
+  font-weight: 500;
+}
+.weather-strip__rain,
+.weather-strip__alert {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--fs-small);
+  color: var(--rain);
+}
+.weather-strip__alert {
+  color: var(--danger);
+}
+.weather-strip__days {
+  list-style: none;
+  margin: 0 0 0 auto;
+  padding: 0;
+  display: flex;
+  gap: 20px;
+}
+.weather-strip__days li {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+}
+.weather-strip__days .day-weather__rain {
+  margin: 0;
+  font-size: var(--fs-label);
+}
+
+/* Settings → Weather */
+.weather-detail-picker {
+  border: none;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+.weather-detail-picker legend {
+  padding: 0 0 8px;
+}
+.check-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 32px;
+}
+.check-row > span {
+  display: grid;
+}
+
+:root[data-device='phone'] .weather-days {
+  grid-template-columns: minmax(0, 1fr);
+}
+:root[data-device='phone'] .weather-now {
+  padding: 16px;
+  gap: 14px;
+}
+:root[data-device='phone'] .weather-now__temp {
+  font-size: calc(var(--fs-display) * 1.5);
+}
+:root[data-device='phone'] .weather-tiles {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+:root[data-device='phone'] .weather-row {
+  grid-template-columns: 52px 30px 52px minmax(0, 1fr);
+  gap: 10px;
+}
+:root[data-device='phone'] .weather-row__text,
+:root[data-device='phone'] .weather-row__amount,
+:root[data-device='phone'] .weather-row__extra {
+  display: none;
+}
+:root[data-device='phone'] .weather-row__temps {
+  grid-template-columns: 30px 1fr 30px;
+  gap: 6px;
+}
+:root[data-device='phone'] .weather-strip {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+:root[data-device='phone'] .weather-strip__days {
+  margin: 0;
+  width: 100%;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* --------------------------------------------------------------------------
+   Calendar: one day, and the phone's month (dots + the picked day)
+   -------------------------------------------------------------------------- */
+
+.calendar__board {
+  min-width: 0;
+}
+
+.day-view {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+.day-view__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.day-view__head h3 {
+  margin: 0;
+  font-size: var(--fs-title);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+.day-view .events,
+.month-agenda__day .events {
+  display: grid;
+  gap: 8px;
+}
+.day-forecast {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+  font-weight: 500;
+}
+.day-forecast .day-weather__rain {
+  margin: 0;
+}
+
+.month-agenda {
+  display: grid;
+  gap: 16px;
+}
+.month__grid--dots {
+  border-left: none;
+}
+.month-cell--dot {
+  min-height: 0;
+  height: 52px;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  padding: 6px 0;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 4px;
+  cursor: pointer;
+}
+:root[data-device='phone'] .month-cell--dot {
+  min-height: 0;
+}
+.month-cell--dot.month-cell--today {
+  box-shadow: none;
+}
+.month-cell--dot .month-cell__date {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  line-height: 1;
+  font-size: var(--fs-body);
+  font-weight: 500;
+}
+.month-cell--dot.month-cell--today .month-cell__date {
+  color: var(--accent);
+  background: none;
+  font-weight: 600;
+}
+.month-cell--dot.month-cell--selected .month-cell__date {
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+.month-cell__dots {
+  display: flex;
+  gap: 3px;
+  height: 6px;
+}
+.month-cell__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+}
+.month-agenda .month__head span {
+  padding: 0;
+  text-align: center;
+}
+.month-agenda__day {
+  display: grid;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
 }

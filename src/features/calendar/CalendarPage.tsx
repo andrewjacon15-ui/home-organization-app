@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type TouchEvent } from 'react'
 import { addDays, fromDateKey } from '../../lib/dates'
 import type { Device } from '../../lib/device'
 import { useDevice } from '../../lib/DeviceContext'
@@ -21,32 +21,73 @@ interface Props {
   members: Member[]
 }
 
-const VIEWS: { id: CalendarViewKind; label: string }[] = [
-  { id: 'threeDay', label: '3 Day' },
-  { id: 'week', label: 'Week' },
-  { id: 'month', label: 'Month' },
-  { id: 'schedule', label: 'Schedule' },
-]
+/**
+ * The views each kind of screen offers. A phone is too narrow for columns of days, so it
+ * gets one day, a running list, and a month of dots with the chosen day's events below.
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export const VIEWS_FOR: Record<Device, { id: CalendarViewKind; label: string }[]> = {
+  phone: [
+    { id: 'day', label: 'Day' },
+    { id: 'schedule', label: 'List' },
+    { id: 'month', label: 'Month' },
+  ],
+  tablet: [
+    { id: 'day', label: 'Day' },
+    { id: 'threeDay', label: '3 Day' },
+    { id: 'week', label: 'Week' },
+    { id: 'month', label: 'Month' },
+    { id: 'schedule', label: 'Schedule' },
+  ],
+  desktop: [
+    { id: 'day', label: 'Day' },
+    { id: 'threeDay', label: '3 Day' },
+    { id: 'week', label: 'Week' },
+    { id: 'month', label: 'Month' },
+    { id: 'schedule', label: 'Schedule' },
+  ],
+}
 
-const VIEW_KEY = 'calendar-view'
+const DEFAULT_VIEW: Record<Device, CalendarViewKind> = { phone: 'schedule', tablet: 'week', desktop: 'week' }
+const viewKey = (layout: Device) => `calendar-view-${layout}`
+const offers = (layout: Device, v: unknown): v is CalendarViewKind => VIEWS_FOR[layout].some((x) => x.id === v)
 
-/** Each device remembers its own view (the wall tablet might like 3 Day while phones use Week). */
-function initialView(device: Device): CalendarViewKind {
+/** Each layout remembers its own view, so a computer window squeezed to phone width gets it back when widened. */
+function savedView(layout: Device): CalendarViewKind {
   try {
-    const v = localStorage.getItem(VIEW_KEY)
-    if (VIEWS.some((x) => x.id === v)) return v as CalendarViewKind
+    const v = localStorage.getItem(viewKey(layout))
+    if (offers(layout, v)) return v
   } catch {
     // fall through to the default
   }
-  // A phone is too narrow for a week of columns; a running list reads better there.
-  return device === 'phone' ? 'schedule' : 'week'
+  return DEFAULT_VIEW[layout]
 }
 
-function rememberView(v: CalendarViewKind) {
+function rememberView(layout: Device, v: CalendarViewKind) {
   try {
-    localStorage.setItem(VIEW_KEY, v)
+    localStorage.setItem(viewKey(layout), v)
   } catch {
     // convenience only
+  }
+}
+
+/** Swipe left or right to page (phones and the wall tablet). */
+function useSwipe(onPage: (by: 1 | -1) => void) {
+  const start = useRef<{ x: number; y: number } | null>(null)
+  return {
+    onTouchStart: (e: TouchEvent) => {
+      const t = e.touches[0]
+      start.current = e.touches.length === 1 ? { x: t.clientX, y: t.clientY } : null
+    },
+    onTouchEnd: (e: TouchEvent) => {
+      const s = start.current
+      start.current = null
+      const t = e.changedTouches[0]
+      if (!s || !t) return
+      const dx = t.clientX - s.x
+      const dy = t.clientY - s.y
+      if (Math.abs(dx) > 70 && Math.abs(dx) > 2 * Math.abs(dy)) onPage(dx < 0 ? 1 : -1)
+    },
   }
 }
 
@@ -55,9 +96,12 @@ export function CalendarPage({ familyId, userId, members }: Props) {
   const today = useToday()
   const now = useNow()
   const { layout } = useDevice()
-  const [kind, setKind] = useState<CalendarViewKind>(() => initialView(layout))
+  const [chosen, setChosen] = useState<Partial<Record<Device, CalendarViewKind>>>({})
+  const kind = chosen[layout] ?? savedView(layout)
+  const views = VIEWS_FOR[layout]
   // Pages away from the one containing today, so a wall display rolls forward on its own.
   const [offset, setOffset] = useState(0)
+  const swipe = useSwipe((by) => setOffset((o) => o + by))
   const range = viewRange(kind, today, offset, settings)
   const first = range.days[0]
   const last = range.days[range.days.length - 1]
@@ -114,16 +158,16 @@ export function CalendarPage({ familyId, userId, members }: Props) {
             )}
           </div>
           <div className="segmented" role="group" aria-label="View">
-            {VIEWS.map((v) => (
+            {views.map((v) => (
               <button
                 key={v.id}
                 type="button"
                 className={`segmented__item${kind === v.id ? ' segmented__item--active' : ''}`}
                 aria-pressed={kind === v.id}
                 onClick={() => {
-                  setKind(v.id)
+                  setChosen((c) => ({ ...c, [layout]: v.id }))
                   setOffset(0)
-                  rememberView(v.id)
+                  rememberView(layout, v.id)
                 }}
               >
                 {v.label}
@@ -147,8 +191,10 @@ export function CalendarPage({ familyId, userId, members }: Props) {
           />
         </div>
 
+        <div className="calendar__board" {...swipe}>
         <CalendarBoard
           kind={kind}
+          layout={layout}
           range={range}
           today={today}
           now={now}
@@ -157,6 +203,7 @@ export function CalendarPage({ familyId, userId, members }: Props) {
           calendars={calendars}
           onDelete={(e) => deleteManualEvent(familyId, e.id).catch(report)}
         />
+        </div>
       </section>
     </>
   )

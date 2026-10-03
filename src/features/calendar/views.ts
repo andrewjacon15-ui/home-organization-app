@@ -2,7 +2,7 @@ import { addDays, fromDateKey, startOfWeek, toDateKey } from '../../lib/dates'
 import type { CalendarEvent, SyncedCalendar } from '../../types'
 import type { DisplaySettings } from '../settings/settingsApi'
 
-export type CalendarViewKind = 'threeDay' | 'week' | 'month' | 'schedule'
+export type CalendarViewKind = 'day' | 'threeDay' | 'week' | 'month' | 'schedule'
 
 export interface ViewRange {
   /** Date keys shown, in order. */
@@ -19,6 +19,11 @@ const range = (start: string, count: number) => Array.from({ length: count }, (_
 
 /** The days a view shows, `offset` pages away from the one containing today. */
 export function viewRange(kind: CalendarViewKind, today: string, offset: number, s: ViewSettings): ViewRange {
+  if (kind === 'day') {
+    const day = addDays(today, offset)
+    return { days: [day], label: fromDateKey(day).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }), focusMonth: null }
+  }
+
   if (kind === 'threeDay') {
     const days = range(addDays(today, offset * 3), 3)
     return { days, label: `${short(days[0])} – ${short(days[2])}`, focusMonth: null }

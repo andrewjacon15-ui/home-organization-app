@@ -1,11 +1,12 @@
 import type { Device } from '../../lib/device'
 
-export type HomePanel = 'lists' | 'tasks' | 'calendar'
+export type HomePanel = 'lists' | 'tasks' | 'calendar' | 'weather'
 
 export const HOME_PANELS: { id: HomePanel; label: string }[] = [
   { id: 'lists', label: 'Lists' },
   { id: 'tasks', label: "Today's tasks" },
   { id: 'calendar', label: 'Calendar' },
+  { id: 'weather', label: 'Weather' },
 ]
 
 /** Top to bottom. */
@@ -21,4 +22,4 @@ export function homePanelsFor(setting: Partial<Record<Device, string[]>> | undef
 }
 
 /** Relative heights when panels stack: the week needs the most room. */
-export const PANEL_WEIGHT: Record<HomePanel, number> = { lists: 1, tasks: 1.1, calendar: 1.35 }
+export const PANEL_WEIGHT: Record<HomePanel, number> = { lists: 1, tasks: 1.1, calendar: 1.35, weather: 0.6 }

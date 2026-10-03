@@ -26,13 +26,13 @@ describe('layoutFor', () => {
 describe('navFor', () => {
   it('shows every section by default, with the first four in the phone bar', () => {
     const tabs = navFor(undefined)
-    expect(tabs.map((t) => t.id)).toEqual(['home', 'calendar', 'lists', 'chores', 'rewards', 'meals', 'recipes', 'photos', 'settings'])
+    expect(tabs.map((t) => t.id)).toEqual(['home', 'calendar', 'lists', 'chores', 'rewards', 'meals', 'recipes', 'photos', 'weather', 'settings'])
     expect(tabs.filter((t) => t.phone).map((t) => t.id)).toEqual(['home', 'calendar', 'lists', 'chores'])
   })
 
   it('drops hidden sections, refills the phone bar, and never hides Settings', () => {
     const tabs = navFor(['lists', 'photos', 'settings'])
-    expect(tabs.map((t) => t.id)).toEqual(['home', 'calendar', 'chores', 'rewards', 'meals', 'recipes', 'settings'])
+    expect(tabs.map((t) => t.id)).toEqual(['home', 'calendar', 'chores', 'rewards', 'meals', 'recipes', 'weather', 'settings'])
     expect(tabs.filter((t) => t.phone).map((t) => t.id)).toEqual(['home', 'calendar', 'chores', 'rewards'])
   })
 })
