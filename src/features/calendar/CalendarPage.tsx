@@ -23,15 +23,17 @@ interface Props {
 }
 
 /**
- * The views each kind of screen offers. A phone is too narrow for columns of days, so it
- * gets one day, a running list, and a month of dots with the chosen day's events below.
+ * The views each kind of screen offers. A phone gets the same day counts as the tablet, a
+ * running list, and a month of dots with the chosen day's events below.
  */
 // eslint-disable-next-line react-refresh/only-export-components
 export const VIEWS_FOR: Record<Device, { id: CalendarViewKind; label: string }[]> = {
   phone: [
     { id: 'day', label: 'Day' },
-    { id: 'schedule', label: 'List' },
+    { id: 'threeDay', label: '3 Day' },
+    { id: 'week', label: 'Week' },
     { id: 'month', label: 'Month' },
+    { id: 'schedule', label: 'List' },
   ],
   tablet: [
     { id: 'day', label: 'Day' },
