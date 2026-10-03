@@ -9,6 +9,8 @@ import { LockProvider } from './features/lock/LockContext'
 import { SleepProvider } from './features/sleep/SleepContext'
 import { ScreensaverProvider } from './features/photos/ScreensaverContext'
 import { ReminderCenter } from './features/reminders/ReminderCenter'
+import { AlarmOverlay, TimerButton, TimerDock, TimerPanel } from './features/timers/Timers'
+import { TimersProvider } from './features/timers/TimersContext'
 import { SettingsProvider, useSettings } from './features/settings/SettingsContext'
 import { CurrentWeather } from './features/weather/WeatherBadges'
 import { WeatherProvider } from './features/weather/WeatherContext'
@@ -80,7 +82,9 @@ function SignedIn({ user }: { user: User }) {
         <LockProvider familyId={familyId}>
           <SleepProvider>
             <ScreensaverProvider familyId={familyId}>
-              <Home familyId={familyId} userId={user.uid} />
+              <TimersProvider>
+                <Home familyId={familyId} userId={user.uid} />
+              </TimersProvider>
             </ScreensaverProvider>
           </SleepProvider>
         </LockProvider>
@@ -151,6 +155,7 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
           <div className="masthead__meta">
             <span className="masthead__time">{now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span>
             <CurrentWeather />
+            <TimerButton />
           </div>
           <span className="masthead__name">{settings.calendarName || family.name}</span>
         </header>
@@ -169,6 +174,9 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
         </main>
       </div>
       <ReminderCenter familyId={familyId} members={members} />
+      <TimerDock />
+      <TimerPanel />
+      <AlarmOverlay />
     </div>
   )
 }

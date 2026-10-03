@@ -30,11 +30,20 @@ export interface OnlineResult {
   have: string[]
   missing: string[]
   score: number
+  /** Where it came in the web search (1 = first). */
+  searchRank?: number | null
+  /** Why it's shown, in plain words. */
+  reasons?: string[]
+  /** The ranking's parts, each 0–1 (match is null when searching for a dish). */
+  parts?: { match: number | null; rating: number; search: number }
 }
 
-export async function findOnline(familyId: string, have: string): Promise<OnlineResult[]> {
+/** Search by what's in the kitchen (ingredients), or for a dish by name. */
+export type OnlineQuery = { have: string } | { query: string }
+
+export async function findOnline(familyId: string, q: OnlineQuery): Promise<OnlineResult[]> {
   try {
-    const res = await httpsCallable<{ familyId: string; have: string }, { results: OnlineResult[] }>(functions, 'findOnlineRecipes', { timeout: 95_000 })({ familyId, have })
+    const res = await httpsCallable<{ familyId: string } & OnlineQuery, { results: OnlineResult[] }>(functions, 'findOnlineRecipes', { timeout: 95_000 })({ familyId, ...q })
     return res.data.results
   } catch (err) {
     // Before the search key is added, the function isn't deployed at all.

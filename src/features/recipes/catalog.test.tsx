@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { choose } from '../../test-utils'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
@@ -93,29 +93,5 @@ describe('Recipe catalog', () => {
     await user.click(screen.getByRole('button', { name: 'Thai' }))
     await user.click(screen.getByRole('button', { name: 'Save tags' }))
     expect(props.onSaveTags).toHaveBeenCalledWith(expect.objectContaining({ id: 'c' }), expect.objectContaining({ cuisine: expect.arrayContaining(['indian', 'thai']) }))
-  })
-
-  it('imports a recipe from a link and opens it', async () => {
-    const onImport = vi.fn(async () => ({ id: 's', title: 'Chickpea Salad', existed: false, needsReview: false }))
-    const { user } = setup({ onImport })
-    await user.click(screen.getByRole('button', { name: 'Add from link' }))
-    const add = screen.getByRole('button', { name: 'Add recipe' })
-    expect(add).toBeDisabled()
-    await user.type(screen.getByLabelText('Recipe link'), 'https://example.com/salad')
-    await user.click(add)
-    expect(onImport).toHaveBeenCalledWith('https://example.com/salad')
-    await waitFor(() => expect(screen.getByText('Added “Chickpea Salad”.')).toBeInTheDocument())
-    expect(screen.getByRole('article', { name: 'Chickpea Salad' })).toBeInTheDocument()
-  })
-
-  it('shows why an import failed', async () => {
-    const onImport = vi.fn(async () => {
-      throw new Error("example.com asks automated tools not to read this page, so it can't be imported. You can add the recipe by hand.")
-    })
-    const { user } = setup({ onImport })
-    await user.click(screen.getByRole('button', { name: 'Add from link' }))
-    await user.type(screen.getByLabelText('Recipe link'), 'https://example.com/x')
-    await user.click(screen.getByRole('button', { name: 'Add recipe' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('asks automated tools not to read')
   })
 })

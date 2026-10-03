@@ -1,4 +1,4 @@
-import { ChefHat, ExternalLink, Link2, SlidersHorizontal, Star } from 'lucide-react'
+import { ExternalLink, SlidersHorizontal, Star } from 'lucide-react'
 import { Select } from '../../components/Select'
 import { useState, type FormEvent } from 'react'
 import { TAG_LABELS, TAG_OPTIONS, type RecipeTags } from '@shared/recipes/tagger.js'
@@ -14,11 +14,8 @@ import {
   titleCase,
   type CatalogEntry,
   type CatalogFilters,
-  type ImportResult,
 } from './catalog'
-import type { OnlineResult } from './kitchenApi'
 import { lines, type Recipe, type RecipeDraft } from './recipesApi'
-import { WhatCanIMake } from './WhatCanIMake'
 
 type PlanSlot = Exclude<MealSlot, 'notes'>
 
@@ -38,14 +35,8 @@ export interface BookProps {
   onMarkReviewed?: (recipe: Recipe) => void
   onFavorite?: (id: string, favorite: boolean) => void
   onSaveTags?: (recipe: Recipe, tags: RecipeTags) => void
-  /** Reads a recipe page on the server and adds it. */
-  onImport?: (url: string) => Promise<ImportResult>
   /** Open straight onto the "Needs review" list (from Settings → Cookbooks). */
   initialFilter?: 'all' | 'review'
-  /** "What can I make?": pantry staples, and online search when it's set up. */
-  staples?: string[]
-  onFindOnline?: (have: string) => Promise<OnlineResult[]>
-  onSaveOnline?: (r: OnlineResult) => Promise<string>
   /** Opens cooking mode. */
   onCook?: (recipe: Recipe) => void
 }
@@ -57,8 +48,6 @@ export function RecipeBook(p: BookProps) {
   const { entries, selected, current, onSelect, initialFilter = 'all' } = p
   const [filters, setFilters] = useState<CatalogFilters>({ ...NO_FILTERS, review: initialFilter === 'review' })
   const [showFilters, setShowFilters] = useState(false)
-  const [importing, setImporting] = useState(false)
-  const [asking, setAsking] = useState(false)
   const [limit, setLimit] = useState(PAGE)
   const [editing, setEditing] = useState<Recipe | 'new' | null>(null)
   const all = entries ?? []
@@ -86,48 +75,12 @@ export function RecipeBook(p: BookProps) {
 
   return (
     <section className="recipe-book">
-      {asking && (
-        <div className="recipe-book__ask">
-          <WhatCanIMake
-            entries={all}
-            staples={p.staples ?? []}
-            onOpen={(id) => {
-              onSelect(id)
-              setAsking(false)
-            }}
-            onFindOnline={p.onFindOnline}
-            onSaveOnline={p.onSaveOnline}
-            onClose={() => setAsking(false)}
-          />
-        </div>
-      )}
       <div className="recipe-book__list">
-        <div className="recipe-book__head">
-          <h1 className="page-title">Recipes</h1>
-          <div className="row recipe-book__add">
-            <button type="button" className="button" aria-expanded={asking} onClick={() => setAsking((v) => !v)}>
-              <ChefHat size={18} strokeWidth={ICON_STROKE} aria-hidden /> What can I make?
-            </button>
-            {p.onImport && (
-              <button type="button" className="button" aria-expanded={importing} onClick={() => setImporting((v) => !v)}>
-                <Link2 size={18} strokeWidth={ICON_STROKE} aria-hidden /> Add from link
-              </button>
-            )}
-            <button type="button" className="button button--primary" onClick={() => setEditing('new')}>
-              New recipe
-            </button>
-          </div>
+        <div className="row recipe-book__add">
+          <button type="button" className="button button--primary" onClick={() => setEditing('new')}>
+            New recipe
+          </button>
         </div>
-        {importing && p.onImport && (
-          <ImportForm
-            onImport={p.onImport}
-            onDone={(id) => {
-              onSelect(id)
-              setFilters(NO_FILTERS)
-            }}
-            onClose={() => setImporting(false)}
-          />
-        )}
 
         <input type="search" value={filters.q} onChange={(e) => set({ q: e.target.value })} placeholder="Search titles, ingredients, books" aria-label="Search recipes" />
         <div className="row catalog-bar">
@@ -255,52 +208,6 @@ function FilterPanel({ entries, filters, onChange }: { entries: CatalogEntry[]; 
       })}
       <p className="settings-note catalog-filters__note">Tags are added automatically from each recipe; fix any on the recipe. Always check labels for allergies.</p>
     </div>
-  )
-}
-
-function ImportForm({ onImport, onDone, onClose }: { onImport: (url: string) => Promise<ImportResult>; onDone: (id: string) => void; onClose: () => void }) {
-  const [url, setUrl] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
-  const valid = /^https?:\/\/\S+\.\S+/.test(url.trim())
-
-  async function submit(e: FormEvent) {
-    e.preventDefault()
-    if (!valid || busy) return
-    setBusy(true)
-    setMessage(null)
-    try {
-      const r = await onImport(url.trim())
-      setMessage({ kind: 'ok', text: r.existed ? `“${r.title}” was already in your recipes — refreshed it.` : `Added “${r.title}”.${r.needsReview ? ' Give it a quick check.' : ''}` })
-      setUrl('')
-      onDone(r.id)
-    } catch (err) {
-      setMessage({ kind: 'error', text: err instanceof Error ? err.message : String(err) })
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <form className="import-form" onSubmit={submit} aria-label="Add a recipe from a link">
-      <label className="field">
-        Recipe link
-        <input type="url" inputMode="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Paste a link to a recipe page" autoFocus maxLength={2000} disabled={busy} />
-      </label>
-      <div className="row">
-        <button className="button button--primary" disabled={!valid || busy}>
-          {busy ? 'Reading the recipe…' : 'Add recipe'}
-        </button>
-        <button type="button" className="button" onClick={onClose} disabled={busy}>
-          Close
-        </button>
-      </div>
-      {message && (
-        <p className={message.kind === 'error' ? 'error' : 'muted'} role={message.kind === 'error' ? 'alert' : 'status'}>
-          {message.text}
-        </p>
-      )}
-    </form>
   )
 }
 

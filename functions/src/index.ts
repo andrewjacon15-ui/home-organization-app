@@ -18,7 +18,7 @@ import { INDEX_VERSION } from './shared/recipes/catalogIndex.js'
 import { firestoreStore } from './store.js'
 import { nodeHttpGet } from './web/fetcher.js'
 import * as webRecipes from './webRecipes.js'
-import { ONLINE_SEARCH } from './features.js'
+import { ONLINE_SEARCH } from './shared/features.js'
 import * as onlineSearch from './onlineSearch.js'
 import { firestoreHostStore, firestoreSearchStore, firestoreWebRecipeStore } from './webStore.js'
 
