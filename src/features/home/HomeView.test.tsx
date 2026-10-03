@@ -58,9 +58,9 @@ function setup(panels?: ('lists' | 'tasks' | 'calendar')[]) {
 }
 
 describe('HomeView', () => {
-  it('stacks Lists, then Tasks, then Calendar by default, and follows the Home screen setting', () => {
+  it('stacks Countdowns, Lists, Tasks, then Calendar by default, and follows the Home screen setting', () => {
     setup()
-    expect(screen.getAllByRole('region').map((r) => r.getAttribute('aria-label'))).toEqual(['Lists', "Today's tasks", 'This week'])
+    expect(screen.getAllByRole('region').map((r) => r.getAttribute('aria-label'))).toEqual(['Countdowns', 'Lists', "Today's tasks", 'This week'])
   })
 
   it('shows only the chosen panels, in order', () => {

@@ -1,7 +1,7 @@
 import type { EventDoc, GoogleEvent } from './types.js'
 
 /** Short, stable hash so long calendar IDs make compact, Firestore-safe keys. */
-function hash(text: string): string {
+export function hash(text: string): string {
   let h = 5381
   for (let i = 0; i < text.length; i++) h = ((h << 5) + h + text.charCodeAt(i)) >>> 0
   return h.toString(36)

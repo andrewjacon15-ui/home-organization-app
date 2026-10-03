@@ -11,7 +11,7 @@ interface Props {
 
 /** Your Google calendars: which ones show on the family board, their color, nickname, and whose they are. */
 export function MyCalendars({ userId, members, calendars, onChange }: Props) {
-  const mine = calendars.filter((c) => c.ownerId === userId)
+  const mine = calendars.filter((c) => c.ownerId === userId && c.kind !== 'ics')
   const [editing, setEditing] = useState<string | null>(null)
 
   if (mine.length === 0) return null

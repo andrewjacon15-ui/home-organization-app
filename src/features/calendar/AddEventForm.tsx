@@ -7,7 +7,8 @@ interface Props {
   defaultDate: string
   members: Member[]
   userId: string
-  onAdd: (event: NewManualEvent) => void
+  /** countdown: also count down to it on Home. */
+  onAdd: (event: NewManualEvent, options: { countdown: boolean }) => void
 }
 
 export function AddEventForm({ defaultDate, members, userId, onAdd }: Props) {
@@ -18,12 +19,14 @@ export function AddEventForm({ defaultDate, members, userId, onAdd }: Props) {
   const [startTime, setStartTime] = useState('09:00')
   const [endTime, setEndTime] = useState('10:00')
   const [who, setWho] = useState<string[]>([userId])
+  const [countdown, setCountdown] = useState(false)
 
   function submit(e: FormEvent) {
     e.preventDefault()
     if (!title.trim() || !date) return
-    onAdd({ ...buildManualEvent({ title, date, allDay, startTime, endTime }), memberIds: who.length ? who : [userId] })
+    onAdd({ ...buildManualEvent({ title, date, allDay, startTime, endTime }), memberIds: who.length ? who : [userId] }, { countdown })
     setTitle('')
+    setCountdown(false)
     setOpen(false)
   }
 
@@ -57,6 +60,9 @@ export function AddEventForm({ defaultDate, members, userId, onAdd }: Props) {
           <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} aria-label="Ends" />
         </>
       )}
+      <label className="event-form__allday">
+        <input type="checkbox" checked={countdown} onChange={(e) => setCountdown(e.target.checked)} /> Count down on Home
+      </label>
       {members.length > 1 && (
         <div className="event-form__who" role="group" aria-label="For">
           <span className="muted">For</span>

@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type TouchEvent } from 'react'
-import { addDays, fromDateKey } from '../../lib/dates'
+import { addDays, fromDateKey, toDateKey } from '../../lib/dates'
 import type { Device } from '../../lib/device'
 import { useDevice } from '../../lib/DeviceContext'
 import { useNow, useToday } from '../../lib/hooks'
 import type { CalendarEvent, Member, SyncedCalendar } from '../../types'
 import { useSettings } from '../settings/SettingsContext'
 import { AddEventForm } from './AddEventForm'
+import { addCountdown } from '../countdowns/countdownsApi'
 import { addManualEvent, deleteManualEvent, watchCalendars, watchEvents } from './calendarApi'
 import { CalendarFilter } from './CalendarFilter'
 import { applyFilter, loadHidden, saveHidden, type HiddenSets } from './filter'
@@ -187,7 +188,10 @@ export function CalendarPage({ familyId, userId, members }: Props) {
             defaultDate={range.days.includes(today) ? today : first}
             members={members}
             userId={userId}
-            onAdd={(e) => addManualEvent(familyId, userId, e).catch(report)}
+            onAdd={(e, { countdown }) => {
+              addManualEvent(familyId, userId, e).catch(report)
+              if (countdown) addCountdown(familyId, userId, e.title, e.startDate ?? toDateKey(e.start)).catch(report)
+            }}
           />
         </div>
 

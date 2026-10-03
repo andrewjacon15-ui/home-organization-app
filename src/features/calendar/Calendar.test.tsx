@@ -205,7 +205,18 @@ describe('AddEventForm', () => {
       start: local('2026-09-29T09:00'),
       end: local('2026-09-29T10:00'),
       memberIds: ['a', 'b'],
-    })
+    }, { countdown: false })
+  })
+
+  it('can also count down to the event on Home', async () => {
+    const onAdd = vi.fn()
+    const user = userEvent.setup()
+    render(<AddEventForm defaultDate={TODAY} members={members} userId="a" onAdd={onAdd} />)
+    await user.click(screen.getByRole('button', { name: 'Add event' }))
+    await user.type(screen.getByLabelText('Event title'), 'Beach trip')
+    await user.click(screen.getByRole('checkbox', { name: 'Count down on Home' }))
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ title: 'Beach trip' }), { countdown: true })
   })
 })
 

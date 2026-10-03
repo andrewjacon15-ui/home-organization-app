@@ -12,7 +12,7 @@ const DAY_MS = 86_400_000
 /** A user-facing error (maps to HttpsError in index.ts). */
 export class CalendarError extends Error {
   constructor(
-    public code: 'permission-denied' | 'failed-precondition' | 'invalid-argument',
+    public code: 'permission-denied' | 'failed-precondition' | 'invalid-argument' | 'already-exists' | 'not-found',
     message: string,
   ) {
     super(message)
@@ -83,7 +83,8 @@ export async function syncMember(
   let calendars: StoredCalendar[]
   const docs: { id: string; data: EventDoc }[] = []
   try {
-    const stored = await store.listCalendars(familyId, uid)
+    // Calendar links (kind ics) belong to the feed sync, not to this person's Google account.
+    const stored = (await store.listCalendars(familyId, uid)).filter((c) => c.kind !== 'ics')
     const merged = mergeCalendars(uid, await google.listCalendars(tokens.refreshToken), stored)
     calendars = merged.keep
     const storedByKey = new Map(stored.map((c) => [c.key, c]))
@@ -202,7 +203,7 @@ export async function disconnectCalendar(deps: { store: CalendarStore; google: G
   }
   await deps.store.deleteTokens(familyId, uid!)
   await deps.store.deleteEvents(familyId, await deps.store.listGoogleEventIds(familyId, uid!))
-  await deps.store.deleteCalendars(familyId, (await deps.store.listCalendars(familyId, uid!)).map((c) => c.key))
+  await deps.store.deleteCalendars(familyId, (await deps.store.listCalendars(familyId, uid!)).filter((c) => c.kind !== 'ics').map((c) => c.key))
   await deps.store.setCalendarStatus(familyId, uid!, null)
   return { ok: true }
 }

@@ -61,11 +61,23 @@ const calendarsCol = (familyId: string) => collection(db, 'families', familyId, 
 /** Everyone's synced Google calendars, primary first then by name. */
 export function watchCalendars(familyId: string, onChange: (calendars: SyncedCalendar[]) => void) {
   return onSnapshot(calendarsCol(familyId), (snap) => {
-    const list = snap.docs.map((d) => ({ ...(d.data() as Omit<SyncedCalendar, 'key'>), key: d.id }))
+    const list = snap.docs.map((d) => {
+      const data = d.data()
+      const synced = data.lastSyncAt as Timestamp | undefined
+      return { ...(data as Omit<SyncedCalendar, 'key'>), key: d.id, ...(synced ? { lastSyncAt: synced.toDate() } : {}) }
+    })
     list.sort((a, b) => Number(b.primary) - Number(a.primary) || (a.alias || a.name).localeCompare(b.alias || b.name))
     onChange(list)
   })
 }
+
+/** Adds a calendar link (.ics / webcal); the server checks it works and brings its events in. */
+export const addCalendarFeed = (familyId: string, url: string, name: string, memberIds: string[], color: string) =>
+  httpsCallable<object, { key: string; name: string; eventCount: number }>(functions, 'addCalendarFeed')({ familyId, url, name, memberIds, color }).then((r) => r.data)
+
+export const refreshCalendarFeed = (familyId: string, key: string) => httpsCallable(functions, 'refreshCalendarFeed')({ familyId, key })
+
+export const removeCalendarFeed = (familyId: string, key: string) => httpsCallable(functions, 'removeCalendarFeed')({ familyId, key })
 
 /** Show/hide, recolor, rename, or reassign one of your own calendars. */
 export function updateCalendar(familyId: string, key: string, changes: Partial<Pick<SyncedCalendar, 'enabled' | 'color' | 'alias' | 'memberIds'>>) {

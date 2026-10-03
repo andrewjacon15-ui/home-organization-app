@@ -1,8 +1,9 @@
 import type { Device } from '../../lib/device'
 
-export type HomePanel = 'lists' | 'tasks' | 'calendar' | 'weather'
+export type HomePanel = 'countdowns' | 'lists' | 'tasks' | 'calendar' | 'weather'
 
 export const HOME_PANELS: { id: HomePanel; label: string }[] = [
+  { id: 'countdowns', label: 'Countdowns' },
   { id: 'lists', label: 'Lists' },
   { id: 'tasks', label: "Today's tasks" },
   { id: 'calendar', label: 'Calendar' },
@@ -10,7 +11,7 @@ export const HOME_PANELS: { id: HomePanel; label: string }[] = [
 ]
 
 /** Top to bottom. */
-export const DEFAULT_HOME: HomePanel[] = ['lists', 'tasks', 'calendar']
+export const DEFAULT_HOME: HomePanel[] = ['countdowns', 'lists', 'tasks', 'calendar']
 
 const isPanel = (v: unknown): v is HomePanel => HOME_PANELS.some((p) => p.id === v)
 
@@ -21,5 +22,5 @@ export function homePanelsFor(setting: Partial<Record<Device, string[]>> | undef
   return [...new Set(list.filter(isPanel))]
 }
 
-/** Relative heights when panels stack: the week needs the most room. */
-export const PANEL_WEIGHT: Record<HomePanel, number> = { lists: 1, tasks: 1.1, calendar: 1.35, weather: 0.6 }
+/** Relative heights when panels stack: the week needs the most room; a strip (countdowns, weather) takes only what it needs. */
+export const PANEL_WEIGHT: Record<HomePanel, number | 'auto'> = { countdowns: 'auto', lists: 1, tasks: 1.1, calendar: 1.35, weather: 'auto' }
