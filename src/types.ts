@@ -12,6 +12,10 @@ export interface Member {
   color: string
   photoURL?: string
   calendar?: MemberCalendarStatus
+  /** When they joined this household (a Firestore timestamp). */
+  joinedAt?: { toDate(): Date } | null
+  /** When they finished or skipped the welcome tour. */
+  welcomedAt?: unknown
 }
 
 export interface Invite {

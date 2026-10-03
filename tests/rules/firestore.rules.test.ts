@@ -202,6 +202,12 @@ describe('family creation and joining', () => {
     await assertFails(updateDoc(doc(dbFor(BOB), `families/${FAM_A}/members/${ALICE.uid}`), { color: '#111111' }))
     await assertFails(updateDoc(doc(dbFor(BOB), `families/${FAM_A}/members/${BOB.uid}`), { email: 'other@example.com' }))
   })
+
+  it('lets members mark their own welcome tour as seen', async () => {
+    await assertSucceeds(updateDoc(doc(dbFor(BOB), `families/${FAM_A}/members/${BOB.uid}`), { welcomedAt: serverTimestamp() }))
+    await assertFails(updateDoc(doc(dbFor(BOB), `families/${FAM_A}/members/${BOB.uid}`), { welcomedAt: 'yes' }))
+    await assertFails(updateDoc(doc(dbFor(BOB), `families/${FAM_A}/members/${ALICE.uid}`), { welcomedAt: serverTimestamp() }))
+  })
 })
 
 describe('chores', () => {
@@ -575,6 +581,7 @@ describe('cooking sessions', () => {
     await assertSucceeds(setDoc(ref(dbFor(BOB)), session))
     await assertSucceeds(getDoc(ref(dbFor(ALICE))))
     await assertSucceeds(setDoc(ref(dbFor(ALICE)), { ...session, startedBy: ALICE.uid, items: [0, 1, 2] }))
+    await assertSucceeds(setDoc(ref(dbFor(ALICE)), { ...session, startedBy: ALICE.uid, servings: null, scale: 0.5 }))
     await assertSucceeds(deleteDoc(ref(dbFor(ALICE))))
   })
   it('checks the shape and keeps other families out', async () => {
@@ -582,6 +589,7 @@ describe('cooking sessions', () => {
     await assertFails(setDoc(ref(dbFor(BOB)), { ...session, startedBy: ALICE.uid }))
     await assertFails(setDoc(ref(dbFor(BOB)), { ...session, items: 'all' }))
     await assertFails(setDoc(ref(dbFor(BOB)), { ...session, notes: 'x' }))
+    await assertFails(setDoc(ref(dbFor(BOB)), { ...session, scale: 100 }))
     await assertFails(setDoc(ref(dbFor(MALLORY)), { ...session, startedBy: MALLORY.uid }))
     await assertFails(getDoc(ref(dbFor(MALLORY))))
   })

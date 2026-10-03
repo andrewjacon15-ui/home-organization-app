@@ -119,6 +119,17 @@ export function filterCatalog(entries: CatalogEntry[], f: CatalogFilters): Catal
   return entries.filter((e) => passes(e, f))
 }
 
+export type CatalogSort = 'az' | 'quick' | 'favorites'
+export const SORT_LABELS: Record<CatalogSort, string> = { az: 'A to Z', quick: 'Quickest first', favorites: 'Favorites first' }
+
+/** A to Z, quickest first (untimed last), or favorites first. */
+export function sortCatalog(entries: CatalogEntry[], sort: CatalogSort): CatalogEntry[] {
+  const byTitle = (a: CatalogEntry, b: CatalogEntry) => a.t.localeCompare(b.t)
+  return [...entries].sort((a, b) =>
+    sort === 'az' ? byTitle(a, b) : sort === 'quick' ? (a.m ?? Infinity) - (b.m ?? Infinity) || byTitle(a, b) : Number(!!b.f) - Number(!!a.f) || byTitle(a, b),
+  )
+}
+
 /** Options for one filter with how many recipes each would show (given the other filters). */
 export function facetOptions(entries: CatalogEntry[], f: CatalogFilters, facet: Facet): { value: string; count: number }[] {
   const pool = entries.filter((e) => passes(e, f, facet))

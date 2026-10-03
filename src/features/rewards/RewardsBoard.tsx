@@ -1,3 +1,4 @@
+import { CloseIcon } from '../../components/Icons'
 import { useState, type CSSProperties, type FormEvent } from 'react'
 import { Select } from '../../components/Select'
 import type { Member } from '../../types'
@@ -68,7 +69,7 @@ export function RewardsBoard({ members, rewards, balances, onAdd, onRedeem, onDe
                           </button>
                         ) : (
                           <button type="button" className="icon-button" onClick={() => onDelete(r)} aria-label={`Delete reward "${r.title}"`}>
-                            ✕
+                            <CloseIcon size={18} />
                           </button>
                         )}
                       </li>

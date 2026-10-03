@@ -16,7 +16,9 @@ import { CurrentWeather } from './features/weather/WeatherBadges'
 import { WeatherProvider } from './features/weather/WeatherContext'
 import { DEFAULT_ACCENT, isHex, mixHex, readableOn, withAlpha } from './lib/colors'
 import { DeviceProvider, useDevice } from './lib/DeviceContext'
-import { resolveFamily } from './lib/family'
+import { markWelcomed, resolveFamily } from './lib/family'
+import { detectPlatform, rememberWelcomed, shouldWelcome, tourSteps } from './features/welcome/welcome'
+import { WelcomeTour } from './features/welcome/WelcomeTour'
 import { useAuthUser, useFamily, useNow } from './lib/hooks'
 import { reloadToLatest, useUpdateCheck } from './lib/version'
 
@@ -101,6 +103,15 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
   const { settings } = useSettings()
   const { device } = useDevice()
   const update = useUpdateCheck({ onMount: true })
+  // New people get the welcome tour once; anyone can replay it from Settings → About.
+  const [tour, setTour] = useState<boolean | null>(null)
+  const me = members.find((m) => m.id === userId)
+  const showTour = tour ?? shouldWelcome(me, familyId, userId)
+  const closeTour = () => {
+    setTour(false)
+    rememberWelcomed(familyId, userId)
+    if (me && !me.welcomedAt) markWelcomed(familyId, userId).catch(() => undefined)
+  }
 
   const setTab = (t: Tab) => {
     setTabState(t)
@@ -173,10 +184,11 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
           {shown === 'recipes' && <RecipesPage familyId={familyId} userId={userId} />}
           {shown === 'weather' && <WeatherPage />}
           {shown === 'photos' && <PhotosPage familyId={familyId} userId={userId} />}
-          {shown === 'settings' && <SettingsPage family={family} members={members} userId={userId} onOpenRecipes={() => setTab('recipes')} />}
+          {shown === 'settings' && <SettingsPage family={family} members={members} userId={userId} onOpenRecipes={() => setTab('recipes')} onShowTour={() => setTour(true)} />}
           </Suspense>
         </main>
       </div>
+      {showTour && <WelcomeTour steps={tourSteps(settings.calendarName || family.name, device, detectPlatform())} onNavigate={setTab} onClose={closeTour} />}
       <ReminderCenter familyId={familyId} members={members} />
       <TimerDock />
       <TimerPanel />

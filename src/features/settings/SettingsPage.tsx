@@ -28,6 +28,8 @@ interface Props {
   userId: string
   /** Opens another section of the app (Cookbooks → review list). */
   onOpenRecipes?: () => void
+  /** Replays the welcome tour. */
+  onShowTour?: () => void
 }
 
 const SECTIONS = [
@@ -51,7 +53,7 @@ const SECTIONS = [
   { id: 'about', label: 'About' },
 ]
 
-export function SettingsPage({ family, members, userId, onOpenRecipes }: Props) {
+export function SettingsPage({ family, members, userId, onOpenRecipes, onShowTour }: Props) {
   const { locked, unlock } = useLock()
 
   if (locked) {
@@ -110,7 +112,7 @@ export function SettingsPage({ family, members, userId, onOpenRecipes }: Props) 
         <SleepSettings />
         <LockSettings save={(c) => saveLock(family.id, c)} />
         <HouseholdsAdmin userId={userId} />
-        <AboutSettings />
+        <AboutSettings onShowTour={onShowTour} />
       </div>
     </div>
   )

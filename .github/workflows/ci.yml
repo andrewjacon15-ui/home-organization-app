@@ -19,7 +19,7 @@ permissions:
 jobs:
   app:
     name: Lint, typecheck, unit tests, build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
@@ -47,7 +47,7 @@ jobs:
 
   rules:
     name: Security rules (Firestore + Storage emulators)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
@@ -70,7 +70,7 @@ jobs:
 
   guards:
     name: Cost and repository checks
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
@@ -84,7 +84,7 @@ jobs:
 
   audit:
     name: Dependency audit (production)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
@@ -100,7 +100,7 @@ jobs:
     name: CI passed
     if: always()
     needs: [app, rules, guards, audit]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: All jobs succeeded
         run: |

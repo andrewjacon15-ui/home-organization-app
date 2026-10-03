@@ -12,7 +12,7 @@ const STATUS: Record<string, string> = {
   offline: "Couldn't reach the server.",
 }
 
-export function AboutSettings() {
+export function AboutSettings({ onShowTour }: { onShowTour?: () => void }) {
   const { state, live, check } = useUpdateCheck()
   return (
     <SettingsSection title="About" id="about">
@@ -40,6 +40,17 @@ export function AboutSettings() {
           </button>
         </div>
       </div>
+      {onShowTour && (
+        <div className="setting-row">
+          <span className="setting-row__label">
+            Welcome tour
+            <span className="setting-row__hint">A quick look at what each part of the app is for, and setup tips for this device.</span>
+          </span>
+          <button type="button" className="button" onClick={onShowTour}>
+            Show the tour
+          </button>
+        </div>
+      )}
     </SettingsSection>
   )
 }

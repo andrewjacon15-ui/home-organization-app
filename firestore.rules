@@ -145,8 +145,9 @@ service cloud.firestore {
           && isHexColor(request.resource.data.color);
         // `calendar` (connection status) is written by Cloud Functions only.
         allow update: if request.auth.uid == userId
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'color', 'photoURL'])
-          && isHexColor(request.resource.data.color);
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'color', 'photoURL', 'welcomedAt'])
+          && isHexColor(request.resource.data.color)
+          && (request.resource.data.get('welcomedAt', null) == null || request.resource.data.welcomedAt is timestamp);
         allow delete: if request.auth.uid == userId || isOwner(familyId);
 
         // OAuth refresh tokens. Admin SDK (Cloud Functions) only.
@@ -386,8 +387,9 @@ service cloud.firestore {
       match /cookingSessions/{recipeId} {
         function validSession() {
           let d = request.resource.data;
-          return onlyKeys(['servings', 'items', 'steps', 'step', 'startedBy', 'updatedAt', 'expireAt'])
+          return onlyKeys(['servings', 'scale', 'items', 'steps', 'step', 'startedBy', 'updatedAt', 'expireAt'])
             && (d.servings == null || (d.servings is int && d.servings >= 1 && d.servings <= 100))
+            && (d.get('scale', null) == null || (d.scale is number && d.scale >= 0.125 && d.scale <= 16))
             && d.items is list && d.items.size() <= 100
             && d.steps is list && d.steps.size() <= 100
             && d.step is int && d.step >= 0 && d.step <= 200

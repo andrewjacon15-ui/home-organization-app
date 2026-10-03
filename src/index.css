@@ -411,6 +411,9 @@ input[type='radio']:disabled {
   position: absolute;
   width: 1px;
   height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
@@ -634,6 +637,8 @@ input[type='radio']:disabled {
 
 /* The main panel: its own scroller, content centred up to a comfortable width. */
 .app {
+  /* Anything absolutely placed (screen-reader labels) stays inside this scroller, never stretching the page. */
+  position: relative;
   height: 100dvh;
   min-width: 0;
   overflow-y: auto;
@@ -6491,4 +6496,261 @@ thead .sidebar-grid__current {
   line-height: 1.5;
   max-height: 40vh;
   overflow-y: auto;
+}
+
+/* --------------------------------------------------------------------------
+   Our recipes: the list is its own scrolling box; the recipe beside it scrolls with the page.
+   -------------------------------------------------------------------------- */
+.recipe-book__list {
+  position: sticky;
+  top: 12px;
+  align-content: start;
+}
+.catalog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.catalog-head .select {
+  min-width: 0;
+}
+.recipe-list {
+  max-height: max(260px, calc(100dvh - 330px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+.recipe-list .recipe-item:last-child {
+  border-bottom: none;
+}
+.recipe-list__empty,
+.recipe-list__more {
+  padding: 12px;
+}
+.recipe-list__more {
+  text-align: center;
+}
+.recipe-book__back {
+  display: none;
+}
+@media (max-width: 900px) {
+  .recipe-book__list {
+    position: static;
+  }
+  .recipe-list {
+    max-height: 55vh;
+  }
+}
+:root[data-device='phone'] .recipe-list {
+  max-height: 55vh;
+}
+:root[data-device='phone'] .recipe-book__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Half / as written / double, servings, and metric: above the ingredients and in cooking mode. */
+.scale-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin: 4px 0 12px;
+}
+.scale-bar__servings {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.scale-bar__servings .icon-button {
+  border: 1px solid var(--rule-strong);
+  border-radius: 999px;
+  width: 36px;
+  height: 36px;
+}
+.scale-bar__metric {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* Plan it: Today / Tomorrow / any date, then the meal. */
+.recipe__plan {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+.recipe__plan-label {
+  font-weight: 600;
+}
+.recipe__planned {
+  flex-basis: 100%;
+  font-size: var(--fs-small);
+}
+.recipe__steps-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.recipe__steps-head h3 {
+  margin: 0;
+}
+.cooking__tools .scale-bar {
+  margin: 0;
+}
+
+/* Meals → Groceries for upcoming meals. */
+.meals__tools {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+.meals__tools .button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.meal-groceries {
+  display: grid;
+  gap: 14px;
+  width: min(640px, 100%);
+}
+.meal-groceries h2 {
+  margin: 0;
+  padding-right: 40px;
+}
+.meal-groceries p {
+  margin: 0;
+}
+.meal-groceries__span {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+}
+.meal-groceries__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 45vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+.meal-groceries__list li + li {
+  border-top: 1px solid var(--rule);
+}
+.meal-groceries__meal {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+.meal-groceries__meal input {
+  flex: none;
+  width: 22px;
+  height: 22px;
+}
+.meal-groceries__meal--off {
+  cursor: default;
+  color: var(--ink-2);
+}
+.meal-groceries__result {
+  color: var(--accent-text);
+  font-weight: 600;
+}
+:root[data-device='phone'] .overlay {
+  padding: 0;
+}
+:root[data-device='phone'] .overlay__panel {
+  max-height: 100dvh;
+  height: 100dvh;
+  padding: 20px 16px;
+  border-radius: 0;
+}
+/* Sheets and dialogs float: 18px corners (STYLE-GUIDE → Components). */
+.overlay__panel {
+  border-radius: 18px;
+}
+
+/* Welcome tour for new household members: one card at a time. */
+.welcome {
+  z-index: 80;
+}
+.welcome__card {
+  display: grid;
+  gap: 12px;
+  width: min(520px, 100%);
+}
+:root[data-device='phone'] .welcome__card {
+  height: auto;
+  max-height: calc(100dvh - 32px);
+  align-self: end;
+  border-radius: 18px 18px 0 0;
+}
+.welcome__count {
+  margin: 0;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--accent-text);
+}
+.welcome__card h2 {
+  margin: 0;
+  font-size: var(--fs-title);
+}
+.welcome__text {
+  margin: 0;
+  font-size: var(--fs-body);
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+.welcome__go {
+  justify-self: start;
+}
+.welcome__dots {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+.welcome__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--rule-strong);
+}
+.welcome__dot--on {
+  background: var(--accent);
+}
+.welcome__nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.welcome__nav .button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }

@@ -11,12 +11,15 @@ import {
   Images,
   LayoutGrid,
   ListChecks,
+  Minus,
   Plus,
   Settings,
+  ShoppingCart,
   Sparkles,
   SquareCheckBig,
   Star,
   UtensilsCrossed,
+  X,
   type LucideIcon,
   type LucideProps,
 } from 'lucide-react'
@@ -47,6 +50,10 @@ export const WeatherIcon = icon(CloudSun)
 export const BackIcon = icon(ChevronLeft)
 export const NextIcon = icon(ChevronRight)
 export const AddIcon = icon(Plus)
+export const RemoveIcon = icon(Minus)
+/** Close a sheet, dismiss, or delete an item (never a text ✕). */
+export const CloseIcon = icon(X)
+export const CartIcon = icon(ShoppingCart)
 /** A done count ("3/5"), a ticked menu item, and the Up for Grabs badge. */
 export const DoneIcon = icon(Check)
 export const GrabsIcon = icon(Sparkles)

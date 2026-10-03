@@ -5,7 +5,7 @@ import { useFitHeight } from '../../lib/useFitHeight'
 import type { Chore, Member, NewChore } from '../../types'
 import { ChoreForm } from './ChoreForm'
 import { dueLabel, occurrencesOn, repeatLabel, type Occurrence } from './schedule'
-import { AddIcon, BackIcon, DoneIcon, GrabsIcon, NextIcon } from '../../components/Icons'
+import { AddIcon, BackIcon, CloseIcon, DoneIcon, GrabsIcon, NextIcon } from '../../components/Icons'
 
 const GRABS = '__grabs__'
 
@@ -190,7 +190,7 @@ export function ChoreCard({ o, members, now, today, onToggle, onDelete }: { o: O
         )}
       </div>
       <button type="button" className="icon-button chore-card__delete" onClick={() => confirm(`Delete "${o.chore.title}"${o.chore.repeat ? ' and all its repeats' : ''}?`) && onDelete(o.chore)} aria-label={`Delete ${o.chore.title}`}>
-        ✕
+        <CloseIcon size={18} />
       </button>
       <button type="button" className={`check-circle${o.done ? ' check-circle--on' : ''}`} onClick={toggle} aria-pressed={o.done} aria-label={`${o.done ? 'Undo' : 'Mark done'}: ${o.chore.title}`} />
     </li>
