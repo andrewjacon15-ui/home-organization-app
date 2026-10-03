@@ -1,4 +1,5 @@
 import { FieldValue, type Firestore } from 'firebase-admin/firestore'
+import type { FeedCalendar, FeedStore } from './feeds.js'
 import type { CalendarStatus, CalendarStore, EventDoc, StoredCalendar, StoredTokens } from './types.js'
 
 const BATCH_LIMIT = 400
@@ -96,6 +97,61 @@ export function firestoreStore(db: Firestore): CalendarStore {
 
     async setCalendarStatus(familyId, uid, status) {
       await memberRef(familyId, uid).update({ calendar: status ?? FieldValue.delete() })
+    },
+  }
+}
+
+const toDate = (v: unknown): Date | null => (v && typeof (v as { toDate?: () => Date }).toDate === 'function' ? (v as { toDate: () => Date }).toDate() : null)
+
+/** Calendar links: calendar docs with kind 'ics', and their events. */
+export function firestoreFeedStore(db: Firestore): FeedStore {
+  const eventsCol = (familyId: string) => db.collection(`families/${familyId}/events`)
+  const calendarsCol = (familyId: string) => db.collection(`families/${familyId}/calendars`)
+  const asFeed = (d: FirebaseFirestore.DocumentSnapshot): FeedCalendar => {
+    const x = d.data() as FeedCalendar
+    return { ...x, key: d.id, lastSyncAt: toDate(x.lastSyncAt) }
+  }
+
+  return {
+    async isMember(familyId, uid) {
+      return (await db.doc(`families/${familyId}/members/${uid}`).get()).exists
+    },
+    async familyTimezone(familyId) {
+      const tz = (await db.doc(`families/${familyId}`).get()).get('timezone')
+      return typeof tz === 'string' && tz ? tz : null
+    },
+    async listFeeds() {
+      const snap = await db.collectionGroup('calendars').where('kind', '==', 'ics').get()
+      // families/{familyId}/calendars/{key}
+      return snap.docs.map((d) => ({ familyId: d.ref.path.split('/')[1], feed: asFeed(d) }))
+    },
+    async getFeed(familyId, key) {
+      const snap = await calendarsCol(familyId).doc(key).get()
+      return snap.exists && snap.get('kind') === 'ics' ? asFeed(snap) : null
+    },
+    async saveFeed(familyId, { key, lastSyncAt, ...data }) {
+      await calendarsCol(familyId).doc(key).set({ ...data, ...(lastSyncAt ? { lastSyncAt } : {}) })
+    },
+    async setFeedStatus(familyId, key, status) {
+      await calendarsCol(familyId).doc(key).set(status, { merge: true })
+    },
+    async deleteFeed(familyId, key) {
+      await calendarsCol(familyId).doc(key).delete()
+    },
+    async listFeedEvents(familyId, key) {
+      const snap = await eventsCol(familyId).where('calendarKey', '==', key).where('source', '==', 'ics').get()
+      const out = new Map<string, EventDoc>()
+      for (const d of snap.docs) {
+        const x = d.data()
+        out.set(d.id, { ...(x as EventDoc), start: x.start?.toDate?.() ?? x.start, end: x.end?.toDate?.() ?? x.end })
+      }
+      return out
+    },
+    async upsertEvents(familyId, events) {
+      await inBatches(db, events, (batch, { id, data }) => batch.set(eventsCol(familyId).doc(id), { ...data, updatedAt: FieldValue.serverTimestamp() }))
+    },
+    async deleteEvents(familyId, ids) {
+      await inBatches(db, ids, (batch, id) => batch.delete(eventsCol(familyId).doc(id)))
     },
   }
 }

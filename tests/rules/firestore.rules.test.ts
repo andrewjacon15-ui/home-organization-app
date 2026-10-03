@@ -704,6 +704,30 @@ describe('synced calendars', () => {
     await assertFails(deleteDoc(mine))
   })
 
+  it('lets anyone in the family edit a calendar link, but only the server can add or remove one', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore() as unknown as Firestore
+      await setDoc(doc(db, `families/${FAM_A}/calendars/ics_school`), {
+        kind: 'ics',
+        url: 'https://school.example.org/cal.ics',
+        ownerId: BOB.uid,
+        calendarId: 'https://school.example.org/cal.ics',
+        name: 'School',
+        googleColor: '#0f766e',
+        color: '#0f766e',
+        enabled: true,
+        primary: false,
+        memberIds: [BOB.uid],
+      })
+    })
+    const link = doc(dbFor(ALICE), `families/${FAM_A}/calendars/ics_school`)
+    await assertSucceeds(updateDoc(link, { color: '#b42318', alias: 'Lincoln Elementary', memberIds: [ALICE.uid, BOB.uid] }))
+    await assertFails(updateDoc(link, { url: 'https://evil.example.com/x.ics' }))
+    await assertFails(updateDoc(doc(dbFor(MALLORY), `families/${FAM_A}/calendars/ics_school`), { enabled: false }))
+    await assertFails(deleteDoc(link))
+    await assertFails(setDoc(doc(dbFor(ALICE), `families/${FAM_A}/calendars/ics_new`), { kind: 'ics', url: 'https://x.com/a.ics', ownerId: ALICE.uid }))
+  })
+
   it('accepts the colorEventsBy display setting', async () => {
     const display = doc(dbFor(BOB), `families/${FAM_A}/settings/display`)
     await assertSucceeds(setDoc(display, { colorEventsBy: 'calendar' }))
@@ -837,5 +861,28 @@ describe('repeating chores', () => {
     await assertFails(setDoc(doc(db, `families/${FAM_A}/chores/x2`), { ...base, repeat: { freq: 'daily', interval: 0 } }))
     await assertFails(setDoc(doc(db, `families/${FAM_A}/chores/x3`), { ...base, repeat: { freq: 'weekly', interval: 1, days: 'mon' } }))
     await assertFails(setDoc(doc(db, `families/${FAM_A}/chores/x4`), { ...base, completions: 'yesterday' }))
+  })
+})
+
+describe('countdowns', () => {
+  const col = (user: { uid: string; email: string }) => collection(dbFor(user), `families/${FAM_A}/countdowns`)
+  const valid = { title: 'Beach trip', date: '2026-12-20', createdBy: ALICE.uid, expireAt: Timestamp.fromDate(new Date('2026-12-21T12:00:00Z')) }
+
+  it('lets the family add, see, and remove countdowns', async () => {
+    const ref = doc(col(ALICE), 'c1')
+    await assertSucceeds(setDoc(ref, valid))
+    await assertSucceeds(getDocs(col(BOB)))
+    await assertSucceeds(deleteDoc(doc(col(BOB), 'c1')))
+  })
+
+  it('rejects outsiders and bad countdowns', async () => {
+    await assertFails(setDoc(doc(col(MALLORY), 'c2'), { ...valid, createdBy: MALLORY.uid }))
+    await assertFails(getDocs(col(MALLORY)))
+    await assertFails(setDoc(doc(col(ALICE), 'c3'), { ...valid, createdBy: BOB.uid }))
+    await assertFails(setDoc(doc(col(ALICE), 'c4'), { ...valid, date: 'next Tuesday' }))
+    await assertFails(setDoc(doc(col(ALICE), 'c5'), { ...valid, title: '' }))
+    await assertFails(setDoc(doc(col(ALICE), 'c6'), { ...valid, emoji: '🏖️' }))
+    await setDoc(doc(col(ALICE), 'c7'), valid)
+    await assertFails(updateDoc(doc(col(ALICE), 'c7'), { title: 'Changed' }))
   })
 })

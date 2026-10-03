@@ -175,6 +175,15 @@ describe('syncMember', () => {
     expect(store.calendars.has(calendarKey('bob', 'gone@group'))).toBe(false)
   })
 
+  it('leaves calendar links (.ics) alone, even when the person who added one syncs or disconnects Google', async () => {
+    const link = { key: 'ics_abc', kind: 'ics' as const, ownerId: 'bob', calendarId: 'https://school.example.org/cal.ics', name: 'School', googleColor: '#0f766e', primary: false, enabled: true, color: '#0f766e', memberIds: ['bob'] }
+    await store.upsertCalendars(FAM, [link])
+    await syncMember({ store, google: stubGoogle({ listCalendars: vi.fn(async () => [PRIMARY]) }), now: NOW }, FAM, 'bob', tokens)
+    expect(store.calendars.get('ics_abc')).toEqual(link)
+    await disconnectCalendar({ store, google: stubGoogle() }, 'bob', { familyId: FAM })
+    expect(store.calendars.has('ics_abc')).toBe(true)
+  })
+
   it('skips working-location markers', async () => {
     const google = stubGoogle({ listEvents: vi.fn(async () => [{ ...allDay('wl', 'Home'), eventType: 'workingLocation' }, timed('real')]) })
     const result = await syncMember({ store, google, now: NOW }, FAM, 'bob', tokens)

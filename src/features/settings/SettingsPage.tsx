@@ -7,6 +7,7 @@ import { AboutSettings } from './AboutSettings'
 import { AppearanceSettings } from './AppearanceSettings'
 import { CookbookSettings } from '../cookbooks/CookbookSettings'
 import { requestRecipesFilter } from '../recipes/recipesFilter'
+import { CalendarLinks } from './CalendarLinks'
 import { CalendarSettings } from './CalendarSettings'
 import { DeviceSettings } from './DeviceSettings'
 import { EmailReminderSettings } from './EmailReminderSettings'
@@ -37,6 +38,7 @@ const SECTIONS = [
   { id: 'general', label: 'Weather' },
   { id: 'display', label: 'Display' },
   { id: 'google', label: 'Google Calendar' },
+  { id: 'links', label: 'Calendar links' },
   { id: 'calendar', label: 'Calendar' },
   { id: 'reminders', label: 'Reminders' },
   { id: 'email', label: 'Email reminders' },
@@ -90,6 +92,7 @@ export function SettingsPage({ family, members, userId, onOpenRecipes }: Props) 
         <PeopleViewSettings members={members} userId={userId} />
         <GeneralSettings />
         <GoogleCalendarSettings familyId={family.id} me={members.find((m) => m.id === userId)} members={members} />
+        <CalendarLinks familyId={family.id} userId={userId} members={members} />
         <CalendarSettings familyName={family.name} />
         <ReminderSettings />
         <EmailReminderSettings familyId={family.id} userId={userId} email={members.find((m) => m.id === userId)?.email ?? ''} timezone={family.timezone} />

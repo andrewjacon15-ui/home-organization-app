@@ -9,6 +9,8 @@ import { occurrencesOn, type Occurrence } from '../chores/schedule'
 import type { FamilyList, ListItem } from '../lists/listsApi'
 import { useSettings } from '../settings/SettingsContext'
 import { DayWeather, WeatherStrip } from '../weather/WeatherBadges'
+import { CountdownPanel } from '../countdowns/Countdowns'
+import type { Countdown } from '../countdowns/countdownsApi'
 import { DEFAULT_HOME, PANEL_WEIGHT, type HomePanel } from './homePanels'
 
 export type HomeTarget = 'calendar' | 'chores' | 'lists' | 'weather'
@@ -30,6 +32,9 @@ interface Props {
   onToggleItem: (list: FamilyList, item: ListItem) => void
   /** Which panels show, top to bottom (Settings → Home screen). */
   panels?: HomePanel[]
+  countdowns?: Countdown[]
+  onAddCountdown?: (title: string, date: string) => void
+  onRemoveCountdown?: (c: Countdown) => void
 }
 
 // Busy days scroll inside their cell; past this many, point to the Calendar tab.
@@ -127,6 +132,7 @@ export function HomeView(p: Props) {
           </div>
         </section>
     ),
+    countdowns: () => <CountdownPanel countdowns={p.countdowns ?? []} today={p.today} onAdd={(t, d) => p.onAddCountdown?.(t, d)} onRemove={(c) => p.onRemoveCountdown?.(c)} />,
     weather: () => (
       <section className="home-panel home-panel--weather" aria-label="Weather">
         <PanelHead title="Weather" onOpen={() => p.onNavigate('weather')} />
@@ -148,7 +154,7 @@ export function HomeView(p: Props) {
 
   if (panels.length === 0) return <p className="empty">Nothing is set to show on Home. Choose panels in Settings → Home screen.</p>
   return (
-    <div className="home" style={{ '--home-rows': panels.map((id) => `minmax(0, ${PANEL_WEIGHT[id]}fr)`).join(' ') } as CSSProperties}>
+    <div className="home" style={{ '--home-rows': panels.map((id) => (PANEL_WEIGHT[id] === 'auto' ? 'auto' : `minmax(0, ${PANEL_WEIGHT[id]}fr)`)).join(' ') } as CSSProperties}>
       {panels.map((id) => (
         <Fragment key={id}>{shown[id]()}</Fragment>
       ))}

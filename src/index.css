@@ -6107,3 +6107,177 @@ thead .sidebar-grid__current {
   padding-top: 12px;
   border-top: 1px solid var(--rule);
 }
+
+/* --------------------------------------------------------------------------
+   Settings → Calendar links
+   -------------------------------------------------------------------------- */
+
+.link-help {
+  margin: 4px 0 12px;
+}
+.link-help summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 500;
+}
+.link-help dl {
+  display: grid;
+  gap: 4px;
+  margin: 10px 0 6px;
+}
+.link-help dt {
+  font-weight: 600;
+  margin-top: 6px;
+}
+.link-help dd {
+  margin: 0;
+  color: var(--ink-2);
+}
+.link-help p {
+  margin: 6px 0 0;
+  font-size: var(--fs-small);
+}
+
+.link-form {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+.link-form > .row {
+  grid-column: 1 / -1;
+  order: 1;
+}
+.link-form > .button {
+  white-space: nowrap;
+}
+
+.calendar-item__status {
+  display: block;
+  font-size: var(--fs-small);
+  font-weight: 400;
+  color: var(--ink-2);
+}
+.calendar-item__status--error {
+  color: var(--danger);
+}
+.calendar-item__url {
+  font-size: var(--fs-small);
+  overflow-wrap: anywhere;
+  margin: 0;
+}
+
+:root[data-device='phone'] .link-form {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* --------------------------------------------------------------------------
+   Home → Countdowns
+   -------------------------------------------------------------------------- */
+
+/* One row on wide screens: the heading and Add on the left, the countdowns beside them. */
+.home-panel--countdowns {
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 8px 14px;
+}
+.home-panel--countdowns .home-panel__head {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 0;
+}
+.home-panel--countdowns .countdowns,
+.home-panel--countdowns .countdowns__empty {
+  flex: 1;
+  min-width: 0;
+}
+.home-panel--countdowns .countdowns__form {
+  flex: 1 1 100%;
+  margin: 0;
+}
+.countdown__unit {
+  line-height: 1.1;
+}
+.countdowns__add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.countdowns__form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.countdowns__form input:first-child {
+  flex: 1 1 180px;
+}
+.countdowns__empty {
+  margin: 0 0 4px;
+}
+.countdowns {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 2px;
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.countdowns::-webkit-scrollbar {
+  display: none;
+}
+.countdown {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 170px;
+  padding: 6px 30px 6px 10px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  background: var(--paper);
+}
+.countdown--today {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.countdown__count {
+  font-size: var(--fs-title);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+.countdown--today .countdown__count {
+  font-size: var(--fs-lead);
+}
+.countdown__text {
+  display: grid;
+  min-width: 0;
+}
+.countdown__unit,
+.countdown__date {
+  font-size: var(--fs-label);
+  color: var(--ink-2);
+}
+.countdown__title {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+.countdown__remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 26px;
+  height: 26px;
+  color: var(--ink-3);
+}

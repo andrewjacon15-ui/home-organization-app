@@ -20,7 +20,9 @@ code on every pull request so a change can't quietly start costing money
 | **Secret Manager** | 6 secret versions, 10k reads | 3 secrets (calendar, two for Gmail); read when a function instance starts | Worst case a few cents a month if instances start very often |
 | **Eventarc** (Firestore triggers) | Google-source events are free | Recipe index, cookbook parsing | — |
 | **Brave Search** (online recipe search) | $5 credit a month, about 1,000 searches | **Off** (`ONLINE_SEARCH = false`). If turned on: capped at 900 searches a month; repeat searches come from a 7-day cache | CI fails if the cap goes over 1,000 |
-| **Open-Meteo** (weather) | Free for non-commercial use, 10k calls a day | A few calls an hour | — |
+| **Open-Meteo** (weather, air quality) | Free for non-commercial use, 10k calls a day | One forecast call per open screen every 15 minutes (plus air quality if turned on) | — |
+| **National Weather Service** (alerts) | Free, no key | One call per open screen every 15 minutes | — |
+| **Calendar links** (.ics / webcal) | Free (plain web requests) | Each link read about once an hour by the existing calendar job (no new scheduled job); only changed events are written | 5 MB per file, 3,000 events per link |
 | **Gmail** (reminder emails) | Free (your own account, app password) | A handful a day | — |
 
 **Expected bill: $0.00** for one household. The only charges that could reasonably happen

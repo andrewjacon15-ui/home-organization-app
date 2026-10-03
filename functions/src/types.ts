@@ -13,7 +13,8 @@ export interface GoogleEvent {
 
 /** What we store in families/{familyId}/events/{eventId}. Dates stay as JS Dates until the store layer. */
 export interface EventDoc {
-  source: 'google'
+  /** google = a person's Google calendar; ics = a calendar link (feeds.ts). */
+  source: 'google' | 'ics'
   sourceUserId: string
   googleEventId: string
   /** Which synced calendar it came from (families/{id}/calendars/{calendarKey}). */
@@ -68,6 +69,8 @@ export interface StoredCalendar {
   color: string
   memberIds: string[]
   alias?: string
+  /** Set on calendar links (feeds.ts); Google calendars leave it out. */
+  kind?: 'ics'
 }
 
 /** Everything the calendar code needs from Firestore. Real impl: store.ts. Tests: an in-memory fake. */

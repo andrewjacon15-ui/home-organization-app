@@ -214,15 +214,28 @@ service cloud.firestore {
 
       // Each person's Google calendars, mirrored by the sync function (Admin SDK creates/removes them).
       // The owner may show/hide, recolor, rename, and say who a calendar belongs to.
+      // Google calendars are edited by their owner; calendar links (kind ics, added through the
+      // addCalendarFeed function) by anyone in the family.
       match /calendars/{calendarKey} {
         allow read: if isMember(familyId);
         allow update: if isMember(familyId)
-          && resource.data.ownerId == request.auth.uid
+          && (resource.data.ownerId == request.auth.uid || resource.data.get('kind', '') == 'ics')
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['enabled', 'color', 'alias', 'memberIds'])
           && request.resource.data.enabled is bool
           && isHexColor(request.resource.data.color)
           && (!('alias' in request.resource.data) || (request.resource.data.alias is string && request.resource.data.alias.size() <= 60))
           && request.resource.data.memberIds is list && request.resource.data.memberIds.size() >= 1 && request.resource.data.memberIds.size() <= 20;
+      }
+
+      // Countdowns on Home ("Beach trip in 12 days"). expireAt lets a TTL policy delete them the day after.
+      match /countdowns/{countdownId} {
+        allow read, delete: if isMember(familyId);
+        allow create: if isMember(familyId)
+          && onlyKeys(['title', 'date', 'createdBy', 'createdAt', 'expireAt'])
+          && request.resource.data.title is string && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 80
+          && isDateKey(request.resource.data.date)
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.expireAt is timestamp;
       }
 
       // Grocery / to-do lists. Items can belong to a person's section (memberId) or the whole list (null).

@@ -9,6 +9,7 @@ import { deleteChore, setOccurrenceDone, watchChores } from '../chores/choresApi
 import { addItems, ensureDefaultLists, setItemDone, watchItems, watchLists, type FamilyList, type ListItem } from '../lists/listsApi'
 import { useDevice } from '../../lib/DeviceContext'
 import { useSettings } from '../settings/SettingsContext'
+import { addCountdown, removeCountdown, watchCountdowns, type Countdown } from '../countdowns/countdownsApi'
 import { homePanelsFor } from './homePanels'
 import { HomeView, type HomeTarget } from './HomeView'
 
@@ -27,6 +28,8 @@ export function HomePage({ familyId, userId, members, onNavigate }: Props) {
   const showCalendar = panels.includes('calendar')
   const showTasks = panels.includes('tasks')
   const showLists = panels.includes('lists')
+  const showCountdowns = panels.includes('countdowns')
+  const [countdowns, setCountdowns] = useState<Countdown[]>([])
   const today = useToday()
   const now = useNow()
   const weekStart = settings.weekStartToday ? today : startOfWeek(today, settings.weekStartsOn)
@@ -45,6 +48,9 @@ export function HomePage({ familyId, userId, members, onNavigate }: Props) {
   useEffect(() => {
     if (showCalendar) return watchCalendars(familyId, setCalendars)
   }, [familyId, showCalendar])
+  useEffect(() => {
+    if (showCountdowns) return watchCountdowns(familyId, setCountdowns)
+  }, [familyId, showCountdowns])
   useEffect(() => {
     if (showTasks) return watchChores(familyId, setChores)
   }, [familyId, showTasks])
@@ -86,6 +92,9 @@ export function HomePage({ familyId, userId, members, onNavigate }: Props) {
         items={items}
         onNavigate={onNavigate}
         panels={panels}
+        countdowns={countdowns}
+        onAddCountdown={(title, date) => addCountdown(familyId, userId, title, date).catch(report)}
+        onRemoveCountdown={(c) => removeCountdown(familyId, c.id).catch(report)}
         onToggleChore={(o, done, doneBy) => setOccurrenceDone(familyId, o, done, doneBy, userId, today).catch(report)}
         onDeleteChore={(c) => deleteChore(familyId, c.id).catch(report)}
         onAddItem={(l, text) => addItems(familyId, l.id, userId, [text], null, { categories: l.categories }).catch(report)}

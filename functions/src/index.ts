@@ -9,13 +9,14 @@ import { onSchedule } from 'firebase-functions/scheduler'
 import { getStorage } from 'firebase-admin/storage'
 import * as calendar from './calendar.js'
 import * as cookbooks from './cookbooks.js'
+import * as feeds from './feeds.js'
 import { firestoreCookbookStore, storageBookFiles } from './cookbookStore.js'
 import { googleApi } from './google.js'
 import * as reminders from './reminders.js'
 import { firestoreReminderStore, gmailMailer } from './reminderStore.js'
 import * as recipeIndex from './recipeIndex.js'
 import { INDEX_VERSION } from './shared/recipes/catalogIndex.js'
-import { firestoreStore } from './store.js'
+import { firestoreFeedStore, firestoreStore } from './store.js'
 import { nodeHttpGet } from './web/fetcher.js'
 import * as webRecipes from './webRecipes.js'
 import { ONLINE_SEARCH } from './shared/features.js'
@@ -64,9 +65,30 @@ export const syncCalendars = onSchedule(
   { schedule: 'every 15 minutes', secrets: [clientSecret], timeoutSeconds: 300 },
   async () => {
     const result = await calendar.syncAll({ ...deps(), log: (msg, extra) => logger.warn(msg, extra) })
-    logger.info('calendar sync done', result)
+    // Calendar links ride along on this job (Cloud Scheduler's 3 free jobs are all in use).
+    const links = await feeds.syncAllFeeds({ ...feedDeps(), log: (msg, extra) => logger.warn(msg, extra) })
+    logger.info('calendar sync done', { ...result, links })
   },
 )
+
+const feedDeps = () => ({ store: firestoreFeedStore(getFirestore()), fetchFeed: feeds.httpFeedFetch })
+
+/** Calendar links (.ics / webcal): add, refresh now, remove. No secrets needed. */
+function feedCallable<T>(handler: (req: CallableRequest) => Promise<T>) {
+  return onCall({ invoker: 'public', timeoutSeconds: 60 }, async (req) => {
+    try {
+      return await handler(req)
+    } catch (err) {
+      if (err instanceof calendar.CalendarError) throw new HttpsError(err.code, err.message)
+      logger.warn('calendar link failed', { error: String(err), uid: req.auth?.uid })
+      throw new HttpsError('unavailable', 'Couldn’t reach that calendar link. Check it opens in a browser, then try again.')
+    }
+  })
+}
+
+export const addCalendarFeed = feedCallable((req) => feeds.addFeed(feedDeps(), req.auth?.uid, req.data ?? {}))
+export const refreshCalendarFeed = feedCallable((req) => feeds.refreshFeed(feedDeps(), req.auth?.uid, req.data ?? {}))
+export const removeCalendarFeed = feedCallable((req) => feeds.removeFeed(feedDeps(), req.auth?.uid, req.data ?? {}))
 
 /** Gmail account the reminder emails come from, and an app password for it (both in Secret Manager). */
 const gmailAddress = defineSecret('GMAIL_ADDRESS')

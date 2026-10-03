@@ -51,7 +51,8 @@ export type MealSlot = keyof MealPlan
 
 export interface CalendarEvent {
   id: string
-  source: 'google' | 'manual'
+  /** google = someone's Google calendar; ics = a calendar link; manual = typed into the app. */
+  source: 'google' | 'ics' | 'manual'
   sourceUserId: string
   /** Manual events: who the event is for (defaults to the creator). */
   memberIds?: string[]
@@ -89,6 +90,12 @@ export interface SyncedCalendar {
   primary: boolean
   /** Whose calendar this is on the family board (a shared "Family" calendar can be several people's). */
   memberIds: string[]
+  /** Calendar links (.ics / webcal) added in Settings → Calendar links. */
+  kind?: 'ics'
+  url?: string
+  lastSyncAt?: Date | null
+  error?: string | null
+  eventCount?: number
 }
 
 export interface ChoreRepeat {
