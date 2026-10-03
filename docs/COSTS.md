@@ -25,9 +25,41 @@ code on every pull request so a change can't quietly start costing money
 | **Calendar links** (.ics / webcal) | Free (plain web requests) | Each link read about once an hour by the existing calendar job (no new scheduled job); only changed events are written | 5 MB per file, 3,000 events per link |
 | **Gmail** (reminder emails) | Free (your own account, app password) | A handful a day | — |
 
-**Expected bill: $0.00** for one household. The only charges that could reasonably happen
+**Expected bill: $0.00** for one household (see "More households" below for several). The only charges that could reasonably happen
 are a few cents of Secret Manager reads, or Storage above 5 GB if many large videos are
 uploaded (the Photos page warns at 4 GB).
+
+## More households (invite links)
+
+Every household shares the same free allowances. Measured on the live project, the week of
+2026-09-28 (one household: wall tablet, two phones, about 180 calendar events):
+
+| | Per day | Free per day |
+|---|---|---|
+| Firestore reads | 21k–37k before the October 3 sync fix, which removes about 17k of them | 50k |
+| Firestore writes | 25–2k (18k before the September 30 sync fix) | 20k |
+| Storage | 48 MB in total | 5 GB in total |
+
+The scheduled jobs cost about the same however many households there are. The calendar sync
+re-reads stored events only when Google's copy changed, plus once a day; the reminder job only
+visits households with reminder settings. What grows with each household:
+
+- **An always-on wall tablet:** about 3k–8k reads a day (each idle reload re-reads what's on
+  screen).
+- **Phones only:** about 1k–2k reads a day.
+- **Calendar sync and reminders:** about 1k–2.5k reads a day.
+- **Photos and cookbooks:** typically 0.1–0.5 GB per household.
+
+**Rough limit before any charge:** about 5–8 households with wall tablets, or 15–20
+phone-only households. Firestore reads run out first, then Storage at around 10–25
+photo-heavy households. Past that it's still cheap: about $0.06 per extra 100k reads, so
+twenty tablet households would cost roughly $2–4 a month. Settings → Households (admin only)
+shows each household's size, and the $1 budget alert catches the first cent.
+
+Limits that aren't money:
+- Google lets an unverified sign-in app reach 100 users in total who connect Google Calendar.
+- Reminder emails come from the administrator's Gmail account, which can send to about 500
+  people a day.
 
 ## Not used, and checked
 

@@ -6281,3 +6281,39 @@ thead .sidebar-grid__current {
   height: 26px;
   color: var(--ink-3);
 }
+
+/* Settings → Households (admin) */
+.invite-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border: 1px solid var(--accent);
+  border-radius: var(--r);
+  background: var(--accent-soft);
+}
+.invite-link code {
+  flex: 1 1 260px;
+  overflow-wrap: anywhere;
+  font-size: var(--fs-small);
+}
+.admin-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.admin-list li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.admin-list li:last-child {
+  border-bottom: none;
+}
+.admin-list__stats {
+  font-size: var(--fs-small);
+}

@@ -38,6 +38,8 @@ export interface StoredTokens {
   refreshToken: string
   email: string
   scope: string
+  /** Fingerprint of the events the last sync wrote; when Google returns the same, the sync skips re-reading them. */
+  syncDigest?: string
 }
 
 export interface ConnectedMember {
@@ -90,6 +92,7 @@ export interface CalendarStore {
   listCalendars(familyId: string, uid: string): Promise<StoredCalendar[]>
   upsertCalendars(familyId: string, calendars: StoredCalendar[]): Promise<void>
   deleteCalendars(familyId: string, keys: string[]): Promise<void>
+  saveSyncDigest(familyId: string, uid: string, digest: string): Promise<void>
 }
 
 /** Everything the calendar code needs from Google. Real impl: google.ts. Tests: a stub. */

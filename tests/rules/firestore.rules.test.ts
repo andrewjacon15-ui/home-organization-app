@@ -13,6 +13,7 @@ import {
   getDoc,
   getDocs,
   query,
+  serverTimestamp,
   setDoc,
   Timestamp,
   updateDoc,
@@ -72,7 +73,7 @@ beforeEach(async () => {
     await setDoc(doc(db, `invites/${MALLORY.email}`), { familyId: FAM_B, invitedBy: MALLORY.uid })
 
     // Who may start a new family (server-managed; everyone else joins by invite).
-    await setDoc(doc(db, 'config/access'), { familyCreators: ['dave@example.com'] })
+    await setDoc(doc(db, 'config/access'), { familyCreators: ['dave@example.com'], admins: ['admin@example.com'] })
   })
 })
 
@@ -884,5 +885,83 @@ describe('countdowns', () => {
     await assertFails(setDoc(doc(col(ALICE), 'c6'), { ...valid, emoji: '🏖️' }))
     await setDoc(doc(col(ALICE), 'c7'), valid)
     await assertFails(updateDoc(doc(col(ALICE), 'c7'), { title: 'Changed' }))
+  })
+})
+
+describe('household invite links', () => {
+  const ADMIN = { uid: 'admin', email: 'admin@example.com' }
+  const NEWBIE = { uid: 'newbie', email: 'newbie@example.com' }
+  const CODE = 'abcdefghijkmnpqrstuvwxyz'
+  const inFuture = () => Timestamp.fromDate(new Date(Date.now() + 7 * 86_400_000))
+
+  async function seedInvite(extra: object = {}) {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore() as unknown as Firestore
+      await setDoc(doc(db, `householdInvites/${CODE}`), { createdBy: ADMIN.uid, expiresAt: inFuture(), note: 'For Sam', ...extra })
+    })
+  }
+
+  /** What the app does: family + member + email invite + mark the link used, in one batch. */
+  function redeem(user: { uid: string; email: string }, familyId: string, code = CODE, verified = true) {
+    const db = dbFor(user, verified)
+    const batch = writeBatch(db)
+    batch.set(doc(db, `families/${familyId}`), { name: 'New', ownerId: user.uid, timezone: 'UTC', inviteCode: code })
+    batch.set(doc(db, `families/${familyId}/members/${user.uid}`), { displayName: 'New', email: user.email, color: '#123456' })
+    batch.set(doc(db, `invites/${user.email}`), { familyId, invitedBy: user.uid })
+    batch.update(doc(db, `householdInvites/${code}`), { usedBy: user.uid, usedEmail: user.email, usedAt: serverTimestamp(), familyId })
+    return batch.commit()
+  }
+
+  it('lets only the admin create, list, and cancel invite links', async () => {
+    const make = (user: { uid: string; email: string }, code: string) =>
+      setDoc(doc(dbFor(user), `householdInvites/${code}`), { createdBy: user.uid, createdAt: serverTimestamp(), expiresAt: inFuture() })
+    await assertSucceeds(make(ADMIN, 'zzzzzzzzzzzzzzzzzzzzzzzz'))
+    await assertFails(make(ALICE, 'yyyyyyyyyyyyyyyyyyyyyyyy'))
+    await assertFails(make(ADMIN, 'short'))
+    await assertFails(setDoc(doc(dbFor(ADMIN), 'householdInvites/xxxxxxxxxxxxxxxxxxxxxxxx'), { createdBy: ADMIN.uid, expiresAt: Timestamp.fromDate(new Date(Date.now() + 90 * 86_400_000)) }))
+    await assertFails(setDoc(doc(dbFor(ADMIN, false), 'householdInvites/wwwwwwwwwwwwwwwwwwwwwwww'), { createdBy: ADMIN.uid, expiresAt: inFuture() }))
+    await assertSucceeds(getDocs(collection(dbFor(ADMIN), 'householdInvites')))
+    await assertFails(getDocs(collection(dbFor(ALICE), 'householdInvites')))
+    await assertFails(deleteDoc(doc(dbFor(ALICE), 'householdInvites/zzzzzzzzzzzzzzzzzzzzzzzz')))
+    await assertSucceeds(deleteDoc(doc(dbFor(ADMIN), 'householdInvites/zzzzzzzzzzzzzzzzzzzzzzzz')))
+  })
+
+  it('lets someone with the link start their own household, once', async () => {
+    await seedInvite()
+    await assertSucceeds(getDoc(doc(dbFor(NEWBIE), `householdInvites/${CODE}`)))
+    await assertSucceeds(redeem(NEWBIE, 'famNew'))
+    // Used: nobody else can start a household with it.
+    const other = { uid: 'other', email: 'other@example.com' }
+    await assertFails(redeem(other, 'famOther'))
+  })
+
+  it('keeps the new household private from the admin and other families', async () => {
+    await seedInvite()
+    await redeem(NEWBIE, 'famNew')
+    await assertFails(getDoc(doc(dbFor(ADMIN), 'families/famNew')))
+    await assertFails(getDocs(collection(dbFor(ADMIN), 'families/famNew/members')))
+    await assertFails(getDoc(doc(dbFor(ALICE), 'families/famNew')))
+    await assertSucceeds(getDoc(doc(dbFor(NEWBIE), 'families/famNew')))
+  })
+
+  it('refuses expired, missing, or unverified redemptions, and a family without the matching invite update', async () => {
+    await seedInvite({ expiresAt: Timestamp.fromDate(new Date(Date.now() - 60_000)) })
+    await assertFails(redeem(NEWBIE, 'famNew'))
+    await assertFails(redeem(NEWBIE, 'famNew', 'nopenopenopenopenopenope'))
+    await seedInvite()
+    await assertFails(redeem(NEWBIE, 'famNew', CODE, false))
+    // Claiming a code without marking it used.
+    await assertFails(setDoc(doc(dbFor(NEWBIE), 'families/famNew'), { name: 'New', ownerId: NEWBIE.uid, timezone: 'UTC', inviteCode: CODE }))
+    // Marking it used for someone else's family.
+    await assertFails(updateDoc(doc(dbFor(NEWBIE), `householdInvites/${CODE}`), { usedBy: NEWBIE.uid, usedEmail: NEWBIE.email, usedAt: serverTimestamp(), familyId: FAM_A }))
+  })
+
+  it('does not let someone already in a family use a link to start a second one', async () => {
+    await seedInvite()
+    await assertFails(redeem(BOB, 'famBob2'))
+  })
+
+  it('does not let an owner add or change an invite code later', async () => {
+    await assertFails(updateDoc(doc(dbFor(ALICE), `families/${FAM_A}`), { inviteCode: CODE }))
   })
 })

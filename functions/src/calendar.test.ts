@@ -38,7 +38,9 @@ class FakeStore implements CalendarStore {
     return [...this.events].filter(([, e]) => e.sourceUserId === u && e.source === 'google').map(([id]) => id)
   }
   writes = 0
+  eventReads = 0
   async listGoogleEvents(_f: string, u: string) {
+    this.eventReads++
     return new Map([...this.events].filter(([, e]) => e.sourceUserId === u && e.source === 'google'))
   }
   async getCalendarStatus(f: string, u: string) {
@@ -62,6 +64,10 @@ class FakeStore implements CalendarStore {
   }
   async deleteCalendars(_f: string, keys: string[]) {
     for (const k of keys) this.calendars.delete(k)
+  }
+  async saveSyncDigest(f: string, u: string, digest: string) {
+    const t = this.tokens.get(this.key(f, u))
+    if (t) this.tokens.set(this.key(f, u), { ...t, syncDigest: digest })
   }
 }
 
@@ -134,6 +140,29 @@ describe('syncMember', () => {
     await syncMember({ store, google, now: hourLater }, FAM, 'bob', tokens)
     expect(store.writes).toBe(3)
     expect((store.status.get(`${FAM}/bob`) as { lastSyncAt: Date }).lastSyncAt).toEqual(hourLater)
+  })
+
+  it('skips re-reading stored events when Google returns the same, except for a daily full check', async () => {
+    await store.saveTokens(FAM, 'bob', tokens)
+    const dentist = (summary: string, hour: number): GoogleEvent => ({
+      id: 'e1',
+      summary,
+      start: { dateTime: `2026-10-02T${hour}:00:00Z` },
+      end: { dateTime: `2026-10-02T${hour + 1}:00:00Z` },
+    })
+    const google = stubGoogle({ listCalendars: vi.fn(async () => [PRIMARY]), listEvents: vi.fn(async () => [dentist('Dentist', 15)]) })
+    const run = (now: Date) => syncMember({ store, google, now }, FAM, 'bob', store.tokens.get(store.key(FAM, 'bob')) as StoredTokens)
+    await run(NOW)
+    expect(store.eventReads).toBe(1)
+    await run(new Date(NOW.getTime() + 15 * 60_000))
+    expect(store.eventReads).toBe(1) // unchanged at Google: no reads of stored events
+    await run(new Date('2026-10-02T09:05:00Z'))
+    expect(store.eventReads).toBe(2) // the daily full check
+    google.listEvents = vi.fn(async () => [dentist('Dentist (moved)', 17)])
+    const r = await run(new Date('2026-10-02T10:00:00Z'))
+    expect(store.eventReads).toBe(3)
+    expect(r.upserted).toBe(1)
+    expect([...store.events.values()].map((e) => e.title)).toEqual(['Dentist (moved)'])
   })
 
   it('asks Google for 30 days back through 120 days ahead, per calendar', async () => {
@@ -220,7 +249,7 @@ describe('connectCalendar', () => {
     const result = await connectCalendar({ store, google, now: NOW }, 'bob', { familyId: FAM, code: 'auth-code' })
 
     expect(google.exchangeCode).toHaveBeenCalledWith('auth-code')
-    expect(store.tokens.get(`${FAM}/bob`)).toEqual({ refreshToken: 'rt-new', email: 'bob@example.com', scope: SCOPES })
+    expect(store.tokens.get(`${FAM}/bob`)).toEqual({ refreshToken: 'rt-new', email: 'bob@example.com', scope: SCOPES, syncDigest: expect.any(String) })
     expect(result).toMatchObject({ email: 'bob@example.com', upserted: 1, status: 'connected' })
   })
 

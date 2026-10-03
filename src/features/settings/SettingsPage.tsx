@@ -3,6 +3,7 @@ import { FamilyPage } from '../family/FamilyPage'
 import { saveLock } from '../lock/lockApi'
 import { useLock } from '../lock/LockContext'
 import { PinPad } from '../lock/PinPad'
+import { HouseholdsAdmin } from '../admin/HouseholdsAdmin'
 import { AboutSettings } from './AboutSettings'
 import { AppearanceSettings } from './AppearanceSettings'
 import { CookbookSettings } from '../cookbooks/CookbookSettings'
@@ -108,6 +109,7 @@ export function SettingsPage({ family, members, userId, onOpenRecipes }: Props) 
         <ScreensaverSettings />
         <SleepSettings />
         <LockSettings save={(c) => saveLock(family.id, c)} />
+        <HouseholdsAdmin userId={userId} />
         <AboutSettings />
       </div>
     </div>

@@ -15,11 +15,12 @@
   </head>
   <body>
     <h1>Privacy Policy</h1>
-    <p class="muted">Family Organizer · Last updated September 28, 2026</p>
+    <p class="muted">Family Organizer · Last updated October 3, 2026</p>
 
     <p>
-      Family Organizer is a private app used by one household to share a calendar, chores, meal plans, and photos on a
-      wall display and on family members' phones. It is not offered to the public. This page explains what the app
+      Family Organizer is a private app that a small number of invited households (friends and family of the app's
+      administrator) use to share a calendar, chores, meal plans, recipes, and photos on a wall display and on phones.
+      It is not offered to the public, and each household's information is kept separate from every other household's. This page explains what the app
       collects and how it is used.
     </p>
 
@@ -27,7 +28,7 @@
     <ul>
       <li><strong>Your Google account basics</strong>: name, email address, and profile photo, used to sign you in and show who is who.</li>
       <li><strong>Google Calendar events (read-only)</strong>, only if you choose "Connect my Google Calendar": event titles, times, and locations from your primary calendar, from 30 days ago to 120 days ahead.</li>
-      <li><strong>What your family enters</strong>: chores, meal plans, events added by hand, and family settings such as time zone.</li>
+      <li><strong>What your family enters</strong>: chores, lists, meal plans, recipes and cookbooks, photos, events added by hand, calendar links you add, and household settings such as time zone.</li>
     </ul>
 
     <h2>How it is used</h2>
@@ -38,8 +39,11 @@
 
     <h2>Where it is stored and who can see it</h2>
     <p>
-      Data is stored in Google Firebase (Cloud Firestore) in the United States. Security rules let only members of your
-      own family read it. The token that lets the app read your calendar is stored separately and can only be read by
+      Data is stored in Google Firebase (Cloud Firestore and Cloud Storage) in the United States. Security rules let only
+      members of your own household read it, including the app's administrator, who cannot open another household's
+      calendar, lists, photos, or anything else in it. To keep the app running and free, the administrator can see each
+      household's name, the email of the person who started it, and how much it stores (numbers of events, recipes, and
+      photos, and their total size), never their contents. The token that lets the app read your calendar is stored separately and can only be read by
       the app's server code, not by any person using the app.
     </p>
     <p>We do not sell, rent, or share your data, show ads, or use it for anything other than running the app.</p>

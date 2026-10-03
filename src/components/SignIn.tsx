@@ -2,6 +2,7 @@ import { FirebaseError } from 'firebase/app'
 import { getRedirectResult, signInWithPopup, signInWithRedirect } from 'firebase/auth'
 import { useEffect, useState } from 'react'
 import { auth, googleProvider } from '../firebase'
+import { pendingInvite } from '../features/admin/householdInvites'
 import { isKioskBrowser } from '../kiosk'
 
 export function SignIn() {
@@ -40,7 +41,11 @@ export function SignIn() {
     <main className="center-screen">
       <div className="card card--narrow">
         <h1>Family Organizer</h1>
-        <p>Sign in with your Google account to see the family's chores, meals, and calendar.</p>
+        {pendingInvite() ? (
+          <p>You’ve been invited to set up your own household: a shared calendar, lists, chores, and meals that only the people you add can see. Sign in with Google to start.</p>
+        ) : (
+          <p>Sign in with your Google account to see the family's chores, meals, and calendar.</p>
+        )}
         <button className="button button--primary button--large" onClick={signIn} disabled={busy}>
           Sign in with Google
         </button>

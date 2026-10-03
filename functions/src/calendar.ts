@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { calendarKey, eventDocId, normalizeEvent } from './normalize.js'
 import type { CalendarStore, EventDoc, GoogleApi, GoogleCalendarEntry, StoredCalendar, StoredTokens } from './types.js'
 
@@ -110,6 +111,16 @@ export async function syncMember(
     throw err
   }
 
+  // Nothing changed at Google since the last sync: skip re-reading every stored event (about a read
+  // per event every 15 minutes otherwise, the app's biggest Firestore cost). Once a day it checks
+  // in full anyway, in case something was changed or removed on our side.
+  const digest = eventsDigest(docs)
+  const fullCheck = now.getUTCHours() === FULL_CHECK_UTC_HOUR && now.getUTCMinutes() < 15
+  if (tokens.syncDigest === digest && !fullCheck) {
+    await refreshStatus(store, familyId, uid, tokens, calendars, docs.length, now, false)
+    return { upserted: 0, deleted: 0, status: 'connected' }
+  }
+
   // Write only what changed: a sync every 15 minutes that rewrote every event would cost a
   // write per event per run, and push every event again to every open screen.
   const existing = await store.listGoogleEvents(familyId, uid)
@@ -119,7 +130,21 @@ export async function syncMember(
 
   await store.upsertEvents(familyId, changed)
   await store.deleteEvents(familyId, stale)
-  const status = { status: 'connected' as const, email: tokens.email, lastSyncAt: now, eventCount: docs.length, calendarCount: calendars.filter((c) => c.enabled).length }
+  if (tokens.syncDigest !== digest) await store.saveSyncDigest(familyId, uid, digest)
+  await refreshStatus(store, familyId, uid, tokens, calendars, docs.length, now, changed.length + stale.length > 0)
+  return { upserted: changed.length, deleted: stale.length, status: 'connected' }
+}
+
+const FULL_CHECK_UTC_HOUR = 9
+
+/** Order-independent fingerprint of what a sync would store. */
+export function eventsDigest(docs: { id: string; data: EventDoc }[]): string {
+  const rows = docs.map((d) => JSON.stringify([d.id, { ...d.data, start: d.data.start.toISOString(), end: d.data.end.toISOString() }])).sort()
+  return createHash('sha1').update(rows.join('\n')).digest('base64url')
+}
+
+async function refreshStatus(store: CalendarStore, familyId: string, uid: string, tokens: StoredTokens, calendars: StoredCalendar[], eventCount: number, now: Date, changed: boolean) {
+  const status = { status: 'connected' as const, email: tokens.email, lastSyncAt: now, eventCount, calendarCount: calendars.filter((c) => c.enabled).length }
   const prev = await store.getCalendarStatus(familyId, uid)
   // The "last synced" time is refreshed hourly when nothing else changed (each write reaches every device).
   const fresh =
@@ -128,8 +153,7 @@ export async function syncMember(
     prev.eventCount === status.eventCount &&
     prev.calendarCount === status.calendarCount &&
     now.getTime() - prev.lastSyncAt.getTime() < STATUS_REFRESH_MS
-  if (!fresh || changed.length || stale.length) await store.setCalendarStatus(familyId, uid, status)
-  return { upserted: changed.length, deleted: stale.length, status: 'connected' }
+  if (!fresh || changed) await store.setCalendarStatus(familyId, uid, status)
 }
 
 const STATUS_REFRESH_MS = 60 * 60_000
