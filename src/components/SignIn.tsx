@@ -50,6 +50,9 @@ export function SignIn() {
           Sign in with Google
         </button>
         {error && <p className="error" role="alert">{error}</p>}
+        <p className="muted">
+          <a href="/about.html">About</a> · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms</a>
+        </p>
       </div>
     </main>
   )

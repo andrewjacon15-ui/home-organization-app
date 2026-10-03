@@ -78,7 +78,7 @@ export default defineConfig({
       },
       workbox: {
         // Firebase's auth handler and the static legal pages must not fall back to the app.
-        navigateFallbackDenylist: [/^\/__\//, /^\/(privacy|terms)\.html$/],
+        navigateFallbackDenylist: [/^\/__\//, /^\/(about|privacy|terms)\.html$/],
         // Slideshow photos never change once uploaded; keep them on the device so
         // the wall display doesn't re-download the library every loop.
         runtimeCaching: [
