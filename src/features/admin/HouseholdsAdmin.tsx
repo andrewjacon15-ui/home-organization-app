@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { useNow } from '../../lib/hooks'
 import { formatBytes } from '../photos/photosApi'
 import { SettingsSection } from '../settings/SettingRows'
+import { INVITE_DEVICE_LABELS, INVITE_DEVICES, inviteMessage, type InviteDevice } from './inviteMessage'
 import { amIAdmin, createInvite, fetchHouseholds, inviteLink, revokeInvite, watchInvites, type HouseholdInvite, type HouseholdSummary } from './householdInvites'
 
 /** Free Cloud Storage shared by every household (photos and cookbooks). */
@@ -28,7 +29,8 @@ export function HouseholdsAdmin({ userId, api = realApi }: { userId: string; api
   const [households, setHouseholds] = useState<HouseholdSummary[] | null>(null)
   const [note, setNote] = useState('')
   const [fresh, setFresh] = useState<string | null>(null)
-  const [copied, setCopied] = useState<string | null>(null)
+  const [device, setDevice] = useState<InviteDevice>('iphone')
+  const [copied, setCopied] = useState<'link' | 'message' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const now = useNow()
@@ -53,6 +55,7 @@ export function HouseholdsAdmin({ userId, api = realApi }: { userId: string; api
     try {
       const code = await api.create(userId, note)
       setFresh(code)
+      setCopied(null)
       setNote('')
     } catch (err) {
       report(err)
@@ -61,15 +64,22 @@ export function HouseholdsAdmin({ userId, api = realApi }: { userId: string; api
     }
   }
 
-  async function copy(code: string) {
+  // On a phone, the share sheet sends it straight to Messages or WhatsApp; elsewhere it's copied.
+  async function send(what: 'link' | 'message', code: string) {
     const link = inviteLink(code)
+    const text = what === 'link' ? link : inviteMessage(link, device)
     try {
-      if (navigator.share && matchMedia('(pointer: coarse)').matches) await navigator.share({ title: 'Your household invite', url: link })
-      else await navigator.clipboard.writeText(link)
-      setCopied(code)
+      if (navigator.share && matchMedia('(pointer: coarse)').matches) await navigator.share(what === 'link' ? { title: 'Your household invite', url: link } : { title: 'Your household invite', text })
+      else await navigator.clipboard.writeText(text)
+      setCopied(what)
     } catch {
-      // Cancelled share sheet, or no clipboard access: the link is on screen to copy by hand.
+      // Cancelled share sheet, or no clipboard access: the text is on screen to copy by hand.
     }
+  }
+
+  const show = (code: string) => {
+    setFresh(code)
+    setCopied(null)
   }
 
   const open = invites.filter((i) => !i.usedBy && i.expiresAt > now)
@@ -92,9 +102,36 @@ export function HouseholdsAdmin({ userId, api = realApi }: { userId: string; api
       {fresh && (
         <div className="invite-link" role="status">
           <code>{inviteLink(fresh)}</code>
-          <button type="button" className="button" onClick={() => void copy(fresh)}>
-            {copied === fresh ? 'Copied' : 'Copy link'}
-          </button>
+          <div className="invite-link__device">
+            <span id="invite-device">Setup steps for their</span>
+            <div className="segmented" role="group" aria-labelledby="invite-device">
+              {INVITE_DEVICES.map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  className={`segmented__item${d === device ? ' segmented__item--active' : ''}`}
+                  aria-pressed={d === device}
+                  onClick={() => {
+                    setDevice(d)
+                    setCopied(null)
+                  }}
+                >
+                  {INVITE_DEVICE_LABELS[d]}
+                </button>
+              ))}
+            </div>
+          </div>
+          <p className="invite-message" aria-label="Invite message">
+            {inviteMessage(inviteLink(fresh), device)}
+          </p>
+          <div className="row">
+            <button type="button" className="button button--primary" onClick={() => void send('message', fresh)}>
+              {copied === 'message' ? 'Copied' : 'Copy message'}
+            </button>
+            <button type="button" className="button" onClick={() => void send('link', fresh)}>
+              {copied === 'link' ? 'Copied' : 'Copy link only'}
+            </button>
+          </div>
         </div>
       )}
       {error && (
@@ -114,8 +151,8 @@ export function HouseholdsAdmin({ userId, api = realApi }: { userId: string; api
                   <span className="muted"> · expires {day(i.expiresAt)}</span>
                 </span>
                 <span className="row">
-                  <button type="button" className="link" onClick={() => void copy(i.code)}>
-                    {copied === i.code ? 'Copied' : 'Copy'}
+                  <button type="button" className="link" onClick={() => show(i.code)} aria-pressed={fresh === i.code}>
+                    Message
                   </button>
                   <button
                     type="button"
