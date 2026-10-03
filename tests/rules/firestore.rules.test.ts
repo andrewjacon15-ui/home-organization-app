@@ -618,12 +618,14 @@ describe('recipes', () => {
       source: { type: 'cookbook', bookId: 'bk1', bookTitle: 'Baking', location: 'p. 7' },
       items: [{ raw: '3 bananas', qty: 3, qtyMax: null, unit: null, name: 'bananas', note: '', key: 'banana', family: 'banana', known: true }],
       stepList: ['Bake.'], confidence: 0.5, needsReview: true, edited: false, favorite: false, yieldText: null,
+      notes: 'Freezes well.', credit: 'Grandma',
     }
     await assertSucceeds(setDoc(doc(dbFor(BOB), `families/${FAM_A}/recipes/ck_1`), parsed))
     await assertSucceeds(updateDoc(doc(dbFor(ALICE), `families/${FAM_A}/recipes/ck_1`), { needsReview: false, edited: true, title: 'Grandma’s Banana Bread' }))
     await assertFails(setDoc(doc(dbFor(BOB), `families/${FAM_A}/recipes/ck_2`), { ...parsed, source: { type: 'scraped' } }))
     await assertFails(setDoc(doc(dbFor(BOB), `families/${FAM_A}/recipes/ck_3`), { ...parsed, needsReview: 'yes' }))
     await assertFails(setDoc(doc(dbFor(BOB), `families/${FAM_A}/recipes/ck_4`), { ...parsed, items: 'lots' }))
+    await assertFails(setDoc(doc(dbFor(BOB), `families/${FAM_A}/recipes/ck_5`), { ...parsed, notes: 'x'.repeat(2001) }))
     // Favorites and hand-edited tags.
     await assertSucceeds(updateDoc(doc(dbFor(ALICE), `families/${FAM_A}/recipes/ck_1`), { favorite: true, tags: { meal: ['dinner'], cuisine: [], main: [], diet: [] }, tagsEdited: true }))
     await assertFails(updateDoc(doc(dbFor(ALICE), `families/${FAM_A}/recipes/ck_1`), { tags: 'dinner' }))

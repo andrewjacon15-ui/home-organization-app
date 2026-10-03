@@ -32,6 +32,8 @@ export interface Recipe {
   rating?: { value: number; count: number } | null
   credit?: string | null
   image?: string | null
+  /** The cook's notes printed with a cookbook recipe ("Freezes well"). */
+  notes?: string | null
   prepMinutes?: number | null
   cookMinutes?: number | null
   servings?: number | null
@@ -79,6 +81,7 @@ function fromDoc(id: string, x: DocumentData): Recipe {
     rating: x.rating ?? null,
     credit: x.credit ?? null,
     image: x.image ?? null,
+    notes: x.notes ?? null,
     prepMinutes: x.prepMinutes ?? null,
     cookMinutes: x.cookMinutes ?? null,
   }

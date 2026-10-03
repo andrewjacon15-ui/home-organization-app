@@ -3897,6 +3897,16 @@ thead .sidebar-grid__current {
   font-size: var(--fs-small);
 }
 
+/* The cook's own note from the book ("Freezes well"), set apart like a margin note. */
+.recipe__notes {
+  margin: 10px 0 0;
+  padding-left: 12px;
+  border-left: 3px solid var(--line);
+  color: var(--ink-2);
+  font-style: italic;
+  white-space: pre-line;
+}
+
 .recipe__source cite {
   font-style: normal;
   font-weight: 600;

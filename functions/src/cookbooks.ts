@@ -32,6 +32,8 @@ export interface ParseState {
   next: number
   total: number
   carry: Block[]
+  /** The chapter the parse is in ("Desserts"), for tagging; carried between chunks. */
+  chapter?: string | null
   ocr: boolean
   attempts: number
   kick: number
@@ -163,7 +165,9 @@ export function toRecipeDoc(r: ExtractedRecipe, bookId: string, book: BookDoc, o
         known: i.known,
       })),
       stepList: r.steps.slice(0, 80).map((s) => s.slice(0, 2000)),
-      tags: autoTag({ title, items: r.items }),
+      notes: r.notes.join('\n').slice(0, 2000),
+      credit: r.credit?.slice(0, 120) ?? null,
+      tags: autoTag({ title, items: r.items, hints: r.chapter ? [r.chapter] : [] }),
       confidence: r.confidence,
       needsReview,
       edited: false,
@@ -273,9 +277,11 @@ export async function processChunk(deps: CookbookDeps, familyId: string, bookId:
     }
 
     const final = next >= reader.units
-    let { recipes, carry } = extractRecipes(blocks, final)
+    let { recipes, carry, chapter } = extractRecipes(blocks, final, claimed.chapter ?? null)
     if (carry.length > MAX_CARRY) {
-      recipes = [...recipes, ...extractRecipes(carry, true).recipes]
+      const rest = extractRecipes(carry, true, chapter)
+      recipes = [...recipes, ...rest.recipes]
+      chapter = rest.chapter
       carry = []
     }
     const docs = recipes.map((r) => toRecipeDoc(r, bookId, book, ocr))
@@ -304,7 +310,7 @@ export async function processChunk(deps: CookbookDeps, familyId: string, bookId:
       reviewCount: counts.review,
     })
     // Writing the advanced cursor triggers the next chunk.
-    await deps.store.setState(familyId, bookId, { ...claimed, next, total: reader.units, carry, ocr, attempts: 0, lease: null, updatedAt: now() })
+    await deps.store.setState(familyId, bookId, { ...claimed, next, total: reader.units, carry, chapter, ocr, attempts: 0, lease: null, updatedAt: now() })
     return 'continued'
   } catch (err) {
     if (err instanceof BookError) return fail(err.message)
