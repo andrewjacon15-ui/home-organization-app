@@ -126,7 +126,22 @@ export function bayesianRating(value: number | null | undefined, count: number |
   return (C * m + n * r) / (C + n)
 }
 
-/** Online ranking: 70% ingredient match, 30% popularity (Bayesian rating on a 0–1 scale). */
-export function onlineScore(match: number, rating: { value: number; count: number } | null | undefined): number {
-  return 0.7 * match + 0.3 * (bayesianRating(rating?.value, rating?.count) / 5)
+/** Popularity on a 0–1 scale: the Bayesian rating, where 3★ or less is 0 and 5★ is 1. */
+export function popularity(rating: { value: number; count: number } | null | undefined): number {
+  return Math.max(0, Math.min(1, (bayesianRating(rating?.value, rating?.count) - 3) / 2))
+}
+
+/** Search position on a 0–1 scale: the first result 1, the last 0. */
+export function searchScore(rank: number | null | undefined, of: number): number {
+  if (rank == null || of <= 1) return 1
+  return Math.max(0, 1 - (rank - 1) / (of - 1))
+}
+
+/**
+ * Online ranking. Searching by ingredients: 60% ingredient match, 25% popularity, 15% search
+ * position. Searching for a dish (no match to weigh): 60% popularity, 40% search position.
+ */
+export function onlineScore(match: number | null, rating: { value: number; count: number } | null | undefined, position = 1): number {
+  const pop = popularity(rating)
+  return match == null ? 0.6 * pop + 0.4 * position : 0.6 * match + 0.25 * pop + 0.15 * position
 }
