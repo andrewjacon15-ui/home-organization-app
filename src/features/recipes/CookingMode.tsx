@@ -1,14 +1,14 @@
-import { ChevronLeft, ChevronRight, Maximize2, Minimize2, Minus, Pause, Play, Plus, Timer } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Maximize2, Minimize2, Pause, Play, Timer } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { scaleFactor, scaleLine } from '@shared/recipes/scaler.js'
 import { ICON_STROKE } from '../../components/Icons'
-import { useDevice } from '../../lib/DeviceContext'
 import { useKeepAwake } from '../../lib/keepAwake'
 import { findTimes, formatClock, formatSpan, stepLabel, type StepTime } from '../timers/timerMath'
 import { TimerDock } from '../timers/Timers'
 import { timeLeft } from '../timers/timerState'
 import { useTimers } from '../timers/useTimers'
-import { cookingReducer, endCooking, FRESH, saveCooking, watchCooking, type CookingAction, type CookingState } from './cookingApi'
+import { amountText, stepText, useMetric } from './amounts'
+import { ScaleBar } from './ScaleBar'
+import { cookingFactor, cookingReducer, endCooking, FRESH, saveCooking, watchCooking, type CookingAction, type CookingState } from './cookingApi'
 import { lines, type Recipe } from './recipesApi'
 
 interface ViewProps {
@@ -17,7 +17,7 @@ interface ViewProps {
   onAction: (a: CookingAction) => void
   onReset: () => void
   onDone: () => void
-  /** One big step at a time (default on the wall tablet). */
+  /** One big step at a time (off to start: every step shows, and "Step by step" switches). */
   oneStep?: boolean
 }
 
@@ -90,9 +90,9 @@ export function CookingView({ recipe, state, onAction, onReset, onDone, oneStep:
   const { add, hasSource, timers, dismiss, setPanelOpen } = useTimers()
   const ingredients = lines(recipe.ingredients)
   const steps = lines(recipe.steps)
+  const [metric, setMetric] = useMetric()
   const base = recipe.servings ?? null
-  const servings = state.servings ?? base
-  const factor = scaleFactor(base, servings)
+  const factor = cookingFactor(state, base)
   // The step you're on: the one shown big, or else the first not yet checked off.
   const firstOpen = steps.findIndex((_, i) => !state.steps.includes(i))
   const current = oneStep ? Math.min(state.step, Math.max(0, steps.length - 1)) : firstOpen
@@ -138,17 +138,7 @@ export function CookingView({ recipe, state, onAction, onReset, onDone, oneStep:
       <header className="cooking__head">
         <h1 className="cooking__title">{recipe.title}</h1>
         <div className="row cooking__tools">
-          {base ? (
-            <div className="cooking__servings" role="group" aria-label="Servings">
-              <button type="button" className="icon-button" aria-label="Fewer servings" disabled={!servings || servings <= 1} onClick={() => onAction({ type: 'servings', n: (servings ?? 1) - 1 })}>
-                <Minus size={20} strokeWidth={ICON_STROKE} aria-hidden />
-              </button>
-              <span aria-live="polite">Serves {servings}</span>
-              <button type="button" className="icon-button" aria-label="More servings" onClick={() => onAction({ type: 'servings', n: (servings ?? 0) + 1 })}>
-                <Plus size={20} strokeWidth={ICON_STROKE} aria-hidden />
-              </button>
-            </div>
-          ) : null}
+          <ScaleBar base={base} factor={factor} onScale={(f) => onAction({ type: 'scale', f })} metric={metric} onMetric={setMetric} />
           <button type="button" className="button" onClick={() => setPanelOpen(true)}>
             <Timer size={18} strokeWidth={ICON_STROKE} aria-hidden /> Timers
           </button>
@@ -193,7 +183,7 @@ export function CookingView({ recipe, state, onAction, onReset, onDone, oneStep:
                 <li key={i}>
                   <label className={`cooking__check${on ? ' cooking__check--done' : ''}`}>
                     <input type="checkbox" checked={on} onChange={() => onAction({ type: 'item', i })} />
-                    <span>{scaleLine(line, factor)}</span>
+                    <span>{amountText(line, factor, metric)}</span>
                   </label>
                 </li>
               )
@@ -207,7 +197,7 @@ export function CookingView({ recipe, state, onAction, onReset, onDone, oneStep:
             <div className="row">
               {steps.length > 1 && (
                 <button type="button" className="button" aria-pressed={oneStep} onClick={() => setOneStep((v) => !v)}>
-                  {oneStep ? 'Show all steps' : 'One step at a time'}
+                  {oneStep ? 'Show all steps' : 'Step by step'}
                 </button>
               )}
               {expand('steps', 'steps')}
@@ -218,7 +208,7 @@ export function CookingView({ recipe, state, onAction, onReset, onDone, oneStep:
               <p className="cooking__count">
                 Step {current + 1} of {steps.length}
               </p>
-              <p className={`cooking__big${state.steps.includes(current) ? ' cooking__big--done' : ''}`}>{steps[current]}</p>
+              <p className={`cooking__big${state.steps.includes(current) ? ' cooking__big--done' : ''}`}>{stepText(steps[current], metric)}</p>
               <StepTimers recipeId={recipe.id} step={current} text={steps[current]} big />
               <div className="row cooking__nav">
                 <button type="button" className="button cooking__navbtn" disabled={current === 0} onClick={() => onAction({ type: 'goto', step: current - 1, total: steps.length })}>
@@ -252,7 +242,7 @@ export function CookingView({ recipe, state, onAction, onReset, onDone, oneStep:
                       <span className="cooking__num" aria-hidden>
                         {i + 1}
                       </span>
-                      <span>{s}</span>
+                      <span>{stepText(s, metric)}</span>
                     </button>
                     {!on && <StepTimers recipeId={recipe.id} step={i} text={s} />}
                   </li>
@@ -267,9 +257,10 @@ export function CookingView({ recipe, state, onAction, onReset, onDone, oneStep:
 }
 
 /** Cooking mode with live, shared progress (any device in the family sees the same checks). */
-export function CookingMode({ familyId, userId, recipe, onClose }: { familyId: string; userId: string; recipe: Recipe; onClose: () => void }) {
-  const { device } = useDevice()
-  const [state, setState] = useState<CookingState>(FRESH)
+export function CookingMode({ familyId, userId, recipe, scale = 1, oneStep = false, onClose }: { familyId: string; userId: string; recipe: Recipe; scale?: number; oneStep?: boolean; onClose: () => void }) {
+  // A batch size picked on the recipe (½×, 2×) carries into a new cooking session.
+  const [start] = useState<CookingState>(() => cookingReducer(FRESH, { type: 'scale', f: scale }))
+  const [state, setState] = useState<CookingState>(start)
   const latest = useRef(state)
   const [error, setError] = useState<string | null>(null)
   const report = (e: unknown) => setError(e instanceof Error ? e.message : String(e))
@@ -277,10 +268,10 @@ export function CookingMode({ familyId, userId, recipe, onClose }: { familyId: s
   useEffect(
     () =>
       watchCooking(familyId, recipe.id, (s) => {
-        latest.current = s ?? FRESH
+        latest.current = s ?? start
         setState(latest.current)
       }),
-    [familyId, recipe.id],
+    [familyId, recipe.id, start],
   )
 
   return (
@@ -288,7 +279,7 @@ export function CookingMode({ familyId, userId, recipe, onClose }: { familyId: s
       <CookingView
         recipe={recipe}
         state={state}
-        oneStep={device === 'tablet'}
+        oneStep={oneStep}
         onAction={(a) => {
           const next = cookingReducer(latest.current, a)
           latest.current = next

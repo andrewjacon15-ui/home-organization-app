@@ -91,6 +91,11 @@ export function watchFamily(familyId: string, onChange: (family: Family | null) 
   })
 }
 
+/** The welcome tour is done for this person, on every device. */
+export function markWelcomed(familyId: string, userId: string) {
+  return updateDoc(doc(db, 'families', familyId, 'members', userId), { welcomedAt: serverTimestamp() })
+}
+
 export function watchMembers(familyId: string, onChange: (members: Member[]) => void) {
   return onSnapshot(collection(db, 'families', familyId, 'members'), (snap) => {
     const members = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Member)

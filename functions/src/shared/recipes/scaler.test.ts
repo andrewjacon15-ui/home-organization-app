@@ -12,6 +12,20 @@ describe('scaleLine', () => {
     expect(scaleLine('half an onion', 2)).toBe('1 onion')
   })
 
+  it('makes the unit or a short name agree with the new amount', () => {
+    expect(scaleLine('3/4 cup sugar', 2)).toBe('1 1/2 cups sugar')
+    expect(scaleLine('1 1/2 cups flour', 0.5)).toBe('3/4 cup flour')
+    expect(scaleLine('1 egg', 2)).toBe('2 eggs')
+    expect(scaleLine('1 large onion, diced', 3)).toBe('3 large onions, diced')
+    expect(scaleLine('2 ripe bananas', 0.5)).toBe('1 ripe banana')
+    expect(scaleLine('1 pinch saffron', 2)).toBe('2 pinches saffron')
+    expect(scaleLine('1 tbsp butter', 2)).toBe('2 tbsp butter')
+    expect(scaleLine('1 teaspoon vanilla', 3)).toBe('3 teaspoons vanilla')
+    expect(scaleLine('1 can black beans, drained and rinsed', 2)).toBe('2 cans black beans, drained and rinsed')
+    // Long names are left as written rather than guessed at.
+    expect(scaleLine('1 boneless skinless chicken breast half', 2)).toBe('2 boneless skinless chicken breast half')
+  })
+
   it('leaves lines without an amount, and factor 1, untouched', () => {
     expect(scaleLine('Salt and pepper, to taste', 3)).toBe('Salt and pepper, to taste')
     expect(scaleLine('  1 ½ cups milk ', 1)).toBe('1 ½ cups milk')

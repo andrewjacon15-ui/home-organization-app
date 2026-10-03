@@ -2,6 +2,7 @@ import { render, screen, within } from '@testing-library/react'
 import { choose } from '../../test-utils'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { addDays } from '../../lib/dates'
 import { MealPlanner } from '../meals/MealPlanner'
 import { findRecipe, lines, type Recipe } from './recipesApi'
 import { TestBook } from './TestBook'
@@ -47,7 +48,7 @@ describe('RecipeBook', () => {
     await user.clear(screen.getByLabelText('Search recipes'))
     await user.click(screen.getByRole('button', { name: /Chicken tacos/ }))
     const recipe = screen.getByRole('article', { name: 'Chicken tacos' })
-    expect(within(recipe).getAllByRole('checkbox')).toHaveLength(3)
+    expect(within(recipe).getAllByRole('checkbox').filter((c) => !c.closest('.scale-bar'))).toHaveLength(3)
     expect(within(within(recipe).getByRole('region', { name: 'Steps' })).getAllByRole('listitem')).toHaveLength(3)
     expect(within(recipe).getByText('30 minutes · Serves 4', { exact: false })).toBeInTheDocument()
     expect(within(recipe).getByRole('link', { name: 'Source' })).toHaveAttribute('href', 'https://example.com/tacos')
@@ -66,7 +67,45 @@ describe('RecipeBook', () => {
     await choose(user, screen.getByLabelText('Meal'), 'Lunch')
     await user.click(screen.getByRole('button', { name: 'Add to meal plan' }))
     expect(props.onPlan).toHaveBeenCalledWith(tacos, TODAY, 'lunch')
-    expect(screen.getByRole('status')).toHaveTextContent('Added as lunch')
+    expect(screen.getByRole('status')).toHaveTextContent('On the meal plan: Today · Lunch.')
+    await user.click(screen.getByRole('button', { name: 'Tomorrow' }))
+    await user.click(screen.getByRole('button', { name: 'Add to meal plan' }))
+    expect(props.onPlan).toHaveBeenLastCalledWith(tacos, addDays(TODAY, 1), 'lunch')
+  })
+
+  it('doubles or halves the amounts, converts to metric, and shops and cooks at that size', async () => {
+    const onAddToGrocery = vi.fn(async (_r: Recipe, items: string[]) => items.length)
+    const onCook = vi.fn()
+    const { user } = (() => {
+      render(<TestBook recipes={[tacos]} today={TODAY} onSave={vi.fn()} onDelete={vi.fn()} onPlan={vi.fn()} onAddToGrocery={onAddToGrocery} onCook={onCook} />)
+      return { user: userEvent.setup() }
+    })()
+    await user.click(screen.getByRole('button', { name: /Chicken tacos/ }))
+    await user.click(screen.getByRole('button', { name: 'Double' }))
+    expect(screen.getByText('Serves 8')).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: '16 tortillas' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'More servings' }))
+    expect(screen.getByText('Serves 9')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Half' }))
+    expect(screen.getByRole('checkbox', { name: '1/2 lb chicken' })).toBeInTheDocument()
+    await user.click(screen.getByRole('checkbox', { name: 'Metric' }))
+    expect(screen.getByRole('checkbox', { name: '225 g chicken' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Add ingredients to grocery list' }))
+    expect(onAddToGrocery).toHaveBeenCalledWith(tacos, ['225 g chicken', '4 tortillas', '1/2 lime'])
+    await user.click(screen.getByRole('checkbox', { name: 'Metric' }))
+    await user.click(screen.getByRole('button', { name: 'Step by step' }))
+    expect(onCook).toHaveBeenCalledWith(tacos, { scale: 0.5, oneStep: true })
+    await user.click(screen.getByRole('button', { name: 'Cook this' }))
+    expect(onCook).toHaveBeenLastCalledWith(tacos, { scale: 0.5, oneStep: false })
+  })
+
+  it('keeps the list in its own box and sorts it', async () => {
+    const quick: Recipe = { ...soup, id: 'q', title: 'Avocado toast', minutes: 5 }
+    const { user } = book([tacos, soup, quick])
+    const list = () => within(screen.getByRole('list', { name: 'Recipes' })).getAllByRole('button', { name: /^(?!Favorite)/ }).map((b) => b.textContent)
+    expect(list()[0]).toContain('Avocado toast')
+    await choose(user, screen.getByLabelText('Sort recipes'), 'Quickest first')
+    expect(list().map((t) => t?.split(/\d/)[0])).toEqual([expect.stringContaining('Avocado'), expect.stringContaining('Chicken'), expect.stringContaining('Tomato')])
   })
 
   it('creates a recipe, rejecting non-web links', async () => {

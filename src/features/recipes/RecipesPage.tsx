@@ -7,7 +7,7 @@ import { importRecipe, rebuildCatalog, saveTags, setFavorite, watchCatalog, type
 import { CookingMode } from './CookingMode'
 import { KitchenSearch, WebSearch } from './Finder'
 import { findOnline, watchKitchen, type OnlineResult } from './kitchenApi'
-import { deleteRecipe, getRecipe, lines, markReviewed, planRecipe, saveRecipe, watchRecipe, type Recipe } from './recipesApi'
+import { deleteRecipe, getRecipe, markReviewed, planRecipe, saveRecipe, watchRecipe, type Recipe } from './recipesApi'
 import { RecipeBook } from './RecipeBook'
 import { RecipeHome, RecipeTrail, type RecipeView } from './RecipeHome'
 import { takeRecipesFilter } from './recipesFilter'
@@ -21,7 +21,7 @@ export function RecipesPage({ familyId, userId }: { familyId: string; userId: st
   const [entries, setEntries] = useState<CatalogEntry[] | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
   const [current, setCurrent] = useState<Recipe | null>(null)
-  const [cooking, setCooking] = useState<Recipe | null>(null)
+  const [cooking, setCooking] = useState<{ recipe: Recipe; scale: number; oneStep: boolean } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const today = useToday()
   // Settings → Cookbooks → "N need review" opens straight onto the review list.
@@ -66,7 +66,7 @@ export function RecipesPage({ familyId, userId }: { familyId: string; userId: st
     const { id } = await importRecipe(familyId, r.url)
     setSelected(id)
     const saved = await getRecipe(familyId, id)
-    if (saved) setCooking(saved)
+    if (saved) setCooking({ recipe: saved, scale: 1, oneStep: false })
     return id
   }
 
@@ -95,10 +95,9 @@ export function RecipesPage({ familyId, userId }: { familyId: string; userId: st
           onFavorite={(id, fav) => setFavorite(familyId, id, fav).catch(report)}
           onSaveTags={(r, tags) => saveTags(familyId, r.id, tags).catch(report)}
           initialFilter={initialFilter}
-          onCook={setCooking}
+          onCook={(recipe, o) => setCooking({ recipe, ...o })}
           onPlan={(r, date, slot) => planRecipe(familyId, userId, date, slot, r.title).catch(report)}
-          onAddToGrocery={async (r) => {
-            const items = lines(r.ingredients)
+          onAddToGrocery={async (_r, items) => {
             try {
               const listId = await groceryListId(familyId, userId, lists)
               // Grocery lists with store aisles file each ingredient under its aisle.
@@ -128,7 +127,7 @@ export function RecipesPage({ familyId, userId }: { familyId: string; userId: st
           onOpen={open}
         />
       )}
-      {cooking && <CookingMode familyId={familyId} userId={userId} recipe={cooking} onClose={() => setCooking(null)} />}
+      {cooking && <CookingMode familyId={familyId} userId={userId} recipe={cooking.recipe} scale={cooking.scale} oneStep={cooking.oneStep} onClose={() => setCooking(null)} />}
     </>
   )
 }

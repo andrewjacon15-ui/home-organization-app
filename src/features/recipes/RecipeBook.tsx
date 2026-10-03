@@ -1,19 +1,25 @@
-import { ExternalLink, SlidersHorizontal, Star } from 'lucide-react'
+import { ChevronLeft, ExternalLink, SlidersHorizontal, Star } from 'lucide-react'
 import { Select } from '../../components/Select'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { TAG_LABELS, TAG_OPTIONS, type RecipeTags } from '@shared/recipes/tagger.js'
 import { ICON_STROKE } from '../../components/Icons'
+import { addDays, fromDateKey } from '../../lib/dates'
 import type { MealSlot } from '../../types'
+import { amountText, stepText, useMetric } from './amounts'
+import { ScaleBar } from './ScaleBar'
 import {
   activeFilterCount,
   facetOptions,
   filterCatalog,
   NO_FILTERS,
+  SORT_LABELS,
+  sortCatalog,
   SOURCE_LABELS,
   TIME_LABELS,
   titleCase,
   type CatalogEntry,
   type CatalogFilters,
+  type CatalogSort,
 } from './catalog'
 import { lines, type Recipe, type RecipeDraft } from './recipesApi'
 
@@ -30,18 +36,24 @@ export interface BookProps {
   onSave: (draft: RecipeDraft, id?: string) => Promise<string | void> | void
   onDelete: (recipe: Recipe) => void
   onPlan: (recipe: Recipe, date: string, slot: PlanSlot) => void
-  /** Adds the recipe's ingredients to the grocery list; resolves with how many were added. */
-  onAddToGrocery?: (recipe: Recipe) => Promise<number> | number
+  /** Adds these ingredient lines (as shown: scaled, metric) to the grocery list; resolves with how many were added. */
+  onAddToGrocery?: (recipe: Recipe, items: string[]) => Promise<number> | number
   onMarkReviewed?: (recipe: Recipe) => void
   onFavorite?: (id: string, favorite: boolean) => void
   onSaveTags?: (recipe: Recipe, tags: RecipeTags) => void
   /** Open straight onto the "Needs review" list (from Settings → Cookbooks). */
   initialFilter?: 'all' | 'review'
-  /** Opens cooking mode. */
-  onCook?: (recipe: Recipe) => void
+  /** Opens cooking mode, at the batch size picked here. */
+  onCook?: (recipe: Recipe, opts: CookOptions) => void
 }
 
-const PAGE = 150
+export interface CookOptions {
+  scale: number
+  /** Start on one big step at a time. */
+  oneStep: boolean
+}
+
+const PAGE = 60
 
 /** The family's recipe catalog: search, filters, favorites, import from a link; detail and editor. */
 export function RecipeBook(p: BookProps) {
@@ -49,10 +61,33 @@ export function RecipeBook(p: BookProps) {
   const [filters, setFilters] = useState<CatalogFilters>({ ...NO_FILTERS, review: initialFilter === 'review' })
   const [showFilters, setShowFilters] = useState(false)
   const [limit, setLimit] = useState(PAGE)
+  const [sort, setSort] = useState<CatalogSort>('az')
   const [editing, setEditing] = useState<Recipe | 'new' | null>(null)
   const all = entries ?? []
   const reviewCount = all.filter((e) => e.r).length
-  const shown = filterCatalog(all, filters)
+  const shown = sortCatalog(filterCatalog(all, filters), sort)
+  const listRef = useRef<HTMLUListElement>(null)
+  const more = useRef<HTMLLIElement>(null)
+  const detailRef = useRef<HTMLDivElement>(null)
+
+  // More rows load as the list box is scrolled near its end.
+  useEffect(() => {
+    const el = more.current
+    if (!el || typeof IntersectionObserver === 'undefined') return
+    const io = new IntersectionObserver((seen) => seen.some((x) => x.isIntersecting) && setLimit((l) => l + PAGE), { root: listRef.current, rootMargin: '200px' })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [shown.length, limit])
+
+  // A phone shows the list above the recipe: picking one brings the recipe into view.
+  const pick = (id: string) => {
+    onSelect(id)
+    if (document.documentElement.dataset.device === 'phone') requestAnimationFrame(() => detailRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }))
+  }
+  const backToList = () => {
+    onSelect(null)
+    requestAnimationFrame(() => listRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'center' }))
+  }
   const set = (changes: Partial<CatalogFilters>) => {
     setFilters((f) => ({ ...f, ...changes }))
     setLimit(PAGE)
@@ -112,13 +147,24 @@ export function RecipeBook(p: BookProps) {
           <p className="empty">No recipes yet. Add the family favorites, paste a link, or upload a cookbook in Settings.</p>
         ) : (
           <>
-            <p className="muted catalog-count">
-              {shown.length === all.length ? `${all.length} recipe${all.length === 1 ? '' : 's'}` : `${shown.length} of ${all.length}`}
-            </p>
-            <ul className="recipe-list" aria-label="Recipes">
+            <div className="catalog-head">
+              <p className="muted catalog-count">
+                {shown.length === all.length ? `${all.length} recipe${all.length === 1 ? '' : 's'}` : `${shown.length} of ${all.length}`}
+              </p>
+              <Select
+                value={sort}
+                onChange={(v) => {
+                  setSort(v as CatalogSort)
+                  listRef.current?.scrollTo?.(0, 0)
+                }}
+                aria-label="Sort recipes"
+                options={(Object.keys(SORT_LABELS) as CatalogSort[]).map((k) => ({ value: k, label: SORT_LABELS[k] }))}
+              />
+            </div>
+            <ul className="recipe-list" aria-label="Recipes" ref={listRef} tabIndex={-1}>
               {shown.slice(0, limit).map((e) => (
                 <li key={e.id} className="recipe-item">
-                  <button type="button" className={`recipe-row${e.id === selected ? ' recipe-row--active' : ''}`} aria-current={e.id === selected ? 'true' : undefined} onClick={() => onSelect(e.id)}>
+                  <button type="button" className={`recipe-row${e.id === selected ? ' recipe-row--active' : ''}`} aria-current={e.id === selected ? 'true' : undefined} onClick={() => pick(e.id)}>
                     <span className="recipe-row__title">
                       {e.t}
                       {e.r && <span className="badge badge--warn">Review</span>}
@@ -128,18 +174,25 @@ export function RecipeBook(p: BookProps) {
                   {p.onFavorite && <FavoriteButton title={e.t} on={e.f} onToggle={() => p.onFavorite!(e.id, !e.f)} />}
                 </li>
               ))}
-              {shown.length === 0 && <li className="muted">{filters.review && !filters.q && active === 0 ? 'Nothing left to review.' : 'No matches.'}</li>}
+              {shown.length === 0 && <li className="muted recipe-list__empty">{filters.review && !filters.q && active === 0 ? 'Nothing left to review.' : 'No matches.'}</li>}
+              {shown.length > limit && (
+                <li ref={more} className="recipe-list__more">
+                  <button type="button" className="link" onClick={() => setLimit((l) => l + PAGE)}>
+                    Show more ({shown.length - limit})
+                  </button>
+                </li>
+              )}
             </ul>
-            {shown.length > limit && (
-              <button type="button" className="button" onClick={() => setLimit((l) => l + PAGE)}>
-                Show more ({shown.length - limit})
-              </button>
-            )}
           </>
         )}
       </div>
 
-      <div className="recipe-book__detail">
+      <div className="recipe-book__detail" ref={detailRef}>
+        {selected && (
+          <button type="button" className="recipe-book__back" onClick={backToList}>
+            <ChevronLeft size={18} strokeWidth={ICON_STROKE} aria-hidden /> All recipes
+          </button>
+        )}
         {current && current.id === selected ? (
           <RecipeView
             recipe={current}
@@ -150,11 +203,11 @@ export function RecipeBook(p: BookProps) {
               onSelect(null)
             }}
             onPlan={(date, slot) => p.onPlan(current, date, slot)}
-            onAddToGrocery={p.onAddToGrocery ? () => p.onAddToGrocery!(current) : undefined}
+            onAddToGrocery={p.onAddToGrocery ? (items) => p.onAddToGrocery!(current, items) : undefined}
             onMarkReviewed={p.onMarkReviewed ? () => p.onMarkReviewed!(current) : undefined}
             onFavorite={p.onFavorite ? () => p.onFavorite!(current.id, !current.favorite) : undefined}
             onSaveTags={p.onSaveTags ? (tags) => p.onSaveTags!(current, tags) : undefined}
-            onCook={p.onCook ? () => p.onCook!(current) : undefined}
+            onCook={p.onCook ? (o) => p.onCook!(current, o) : undefined}
           />
         ) : selected ? (
           <p className="muted" role="status">
@@ -217,12 +270,16 @@ interface ViewProps {
   onEdit?: () => void
   onDelete?: () => void
   onPlan?: (date: string, slot: PlanSlot) => void
-  onAddToGrocery?: () => Promise<number> | number
+  onAddToGrocery?: (items: string[]) => Promise<number> | number
   onMarkReviewed?: () => void
   onFavorite?: () => void
   onSaveTags?: (tags: RecipeTags) => void
-  onCook?: () => void
+  onCook?: (opts: CookOptions) => void
 }
+
+const SLOT_LABELS: Record<PlanSlot, string> = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner' }
+const dayName = (date: string, today: string) =>
+  date === today ? 'Today' : date === addDays(today, 1) ? 'Tomorrow' : fromDateKey(date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
 
 export function RecipeView({ recipe, today, onEdit, onDelete, onPlan, onAddToGrocery, onMarkReviewed, onFavorite, onSaveTags, onCook }: ViewProps) {
   const [grocery, setGrocery] = useState<string | null>(null)
@@ -231,8 +288,10 @@ export function RecipeView({ recipe, today, onEdit, onDelete, onPlan, onAddToGro
   const [planSlot, setPlanSlot] = useState<PlanSlot>('dinner')
   const [planned, setPlanned] = useState<string | null>(null)
   const [editingTags, setEditingTags] = useState(false)
-  const ingredients = lines(recipe.ingredients)
-  const steps = lines(recipe.steps)
+  const [factor, setFactor] = useState(1)
+  const [metric, setMetric] = useMetric()
+  const ingredients = lines(recipe.ingredients).map((l) => amountText(l, factor, metric))
+  const steps = lines(recipe.steps).map((l) => stepText(l, metric))
   const online = recipe.source?.type === 'online'
   const tagList = recipe.tags ? (Object.keys(TAG_OPTIONS) as (keyof RecipeTags)[]).flatMap((k) => recipe.tags![k]) : []
 
@@ -243,7 +302,7 @@ export function RecipeView({ recipe, today, onEdit, onDelete, onPlan, onAddToGro
           <h2 className="recipe__title">{recipe.title}</h2>
           <div className="row recipe__title-actions">
             {onCook && (
-              <button type="button" className="button button--primary" onClick={onCook}>
+              <button type="button" className="button button--primary" onClick={() => onCook({ scale: factor, oneStep: false })}>
                 Cook this
               </button>
             )}
@@ -337,29 +396,28 @@ export function RecipeView({ recipe, today, onEdit, onDelete, onPlan, onAddToGro
 
       {onPlan && (
         <form
-          className="recipe__plan row"
+          className="recipe__plan"
           aria-label="Plan this recipe"
           onSubmit={(e) => {
             e.preventDefault()
             onPlan(planDate, planSlot)
-            setPlanned(`${planSlot} on ${planDate}`)
+            setPlanned(`${dayName(planDate, today)} · ${SLOT_LABELS[planSlot]}`)
           }}
         >
-          <input type="date" value={planDate} onChange={(e) => setPlanDate(e.target.value)} aria-label="Plan for date" required />
-          <Select
-            value={planSlot}
-            onChange={(v) => setPlanSlot(v as PlanSlot)}
-            aria-label="Meal"
-            options={[
-              { value: 'breakfast', label: 'Breakfast' },
-              { value: 'lunch', label: 'Lunch' },
-              { value: 'dinner', label: 'Dinner' },
-            ]}
-          />
+          <span className="recipe__plan-label">Plan it</span>
+          <div className="segmented segmented--small" role="group" aria-label="Day">
+            {[today, addDays(today, 1)].map((d) => (
+              <button key={d} type="button" className={`segmented__item${planDate === d ? ' segmented__item--active' : ''}`} aria-pressed={planDate === d} onClick={() => setPlanDate(d)}>
+                {dayName(d, today)}
+              </button>
+            ))}
+          </div>
+          <input type="date" value={planDate} min={today} onChange={(e) => setPlanDate(e.target.value || today)} aria-label="Plan for date" required />
+          <Select value={planSlot} onChange={(v) => setPlanSlot(v as PlanSlot)} aria-label="Meal" options={(Object.keys(SLOT_LABELS) as PlanSlot[]).map((k) => ({ value: k, label: SLOT_LABELS[k] }))} />
           <button className="button">Add to meal plan</button>
           {planned && (
-            <span className="muted" role="status">
-              Added as {planned}.
+            <span className="muted recipe__planned" role="status">
+              On the meal plan: {planned}.
             </span>
           )}
         </form>
@@ -368,13 +426,14 @@ export function RecipeView({ recipe, today, onEdit, onDelete, onPlan, onAddToGro
       <div className="recipe__body">
         <section aria-label="Ingredients">
           <h3>Ingredients</h3>
+          {ingredients.length > 0 && <ScaleBar base={recipe.servings} factor={factor} onScale={setFactor} metric={metric} onMetric={setMetric} />}
           {onAddToGrocery && ingredients.length > 0 && (
             <div className="row recipe__grocery">
               <button
                 type="button"
                 className="button"
                 onClick={async () => {
-                  const n = await onAddToGrocery()
+                  const n = await onAddToGrocery(ingredients)
                   setGrocery(`Added ${n} item${n === 1 ? '' : 's'} to the grocery list.`)
                 }}
               >
@@ -412,7 +471,14 @@ export function RecipeView({ recipe, today, onEdit, onDelete, onPlan, onAddToGro
           )}
         </section>
         <section aria-label="Steps">
-          <h3>Steps</h3>
+          <div className="recipe__steps-head">
+            <h3>Steps</h3>
+            {onCook && steps.length > 1 && (
+              <button type="button" className="button" onClick={() => onCook({ scale: factor, oneStep: true })}>
+                Step by step
+              </button>
+            )}
+          </div>
           {steps.length === 0 ? (
             <p className="muted">None listed.</p>
           ) : (

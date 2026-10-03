@@ -3,7 +3,7 @@ import { useReducer } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { isHeldAwake } from '../../lib/keepAwake'
 import { TimersProvider } from '../timers/TimersContext'
-import { cookingReducer, FRESH, type CookingState } from './cookingApi'
+import { cookingFactor, cookingReducer, FRESH, type CookingState } from './cookingApi'
 import { CookingView } from './CookingMode'
 import type { Recipe } from './recipesApi'
 
@@ -37,6 +37,14 @@ describe('cooking session reducer', () => {
     s = cookingReducer(s, { type: 'next', total: 3 })
     expect(s).toMatchObject({ step: 2, steps: [0, 1, 2] })
     expect(cookingReducer(s, { type: 'goto', step: -4, total: 3 }).step).toBe(0)
+  })
+
+  it('scales the batch between an eighth and sixteen times, and back to as written', () => {
+    expect(cookingReducer(FRESH, { type: 'scale', f: 0.5 }).scale).toBe(0.5)
+    expect(cookingReducer(FRESH, { type: 'scale', f: 100 }).scale).toBe(16)
+    expect(cookingReducer({ ...FRESH, scale: 2 }, { type: 'scale', f: 1 }).scale).toBeNull()
+    expect(cookingFactor({ ...FRESH, servings: 6 }, 4)).toBe(1.5)
+    expect(cookingFactor({ ...FRESH, scale: 0.5 }, null)).toBe(0.5)
   })
 
   it('keeps servings between 1 and 100', () => {
@@ -77,6 +85,26 @@ describe('CookingView', () => {
     expect(screen.getByText(/amounts × 1.5/)).toBeInTheDocument()
   })
 
+  it('halves, doubles and shows metric amounts, steps included', () => {
+    render(<Harness />)
+    fireEvent.click(screen.getByRole('button', { name: 'Double' }))
+    expect(screen.getByText('Serves 8')).toBeInTheDocument()
+    expect(screen.getByText('3 cups flour')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Half' }))
+    expect(screen.getByText('Serves 2')).toBeInTheDocument()
+    expect(screen.getByText('1 egg', { exact: false })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Metric' }))
+    expect(screen.getByText('180 ml flour')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Metric' }))
+  })
+
+  it('shows every step to start, with Step by step as a choice', () => {
+    render(<Harness />)
+    expect(within(screen.getByRole('region', { name: 'Steps' })).getAllByRole('listitem')).toHaveLength(3)
+    fireEvent.click(screen.getByRole('button', { name: 'Step by step' }))
+    expect(screen.getByText('Step 1 of 3')).toBeInTheDocument()
+  })
+
   it('walks one big step at a time on the tablet, finishing with Done', () => {
     const onDone = vi.fn()
     render(<Harness oneStep onDone={onDone} />)
@@ -89,7 +117,7 @@ describe('CookingView', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Finish' }))
     expect(onDone).toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: 'Show all steps' }))
-    expect(screen.getAllByRole('button', { pressed: true }).map((b) => b.textContent)).toEqual([expect.stringContaining('Whisk'), expect.stringContaining('Add milk')])
+    expect(within(screen.getByRole('region', { name: 'Steps' })).getAllByRole('button', { pressed: true }).map((b) => b.textContent)).toEqual([expect.stringContaining('Whisk'), expect.stringContaining('Add milk')])
   })
 
   it('shows ingredients and steps side by side, and either can fill the screen', () => {

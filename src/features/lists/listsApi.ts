@@ -63,6 +63,12 @@ export function watchItems(familyId: string, listId: string, onChange: (items: L
   })
 }
 
+/** What's still to get on a list (one read, for adding without doubling up). */
+export async function openItemTexts(familyId: string, listId: string): Promise<string[]> {
+  const snap = await getDocs(itemsCol(familyId, listId))
+  return snap.docs.filter((d) => !d.get('done')).map((d) => String(d.get('text') ?? ''))
+}
+
 /** First visit: create the Grocery and To-Do lists. Fixed IDs make a race between two devices harmless. */
 export async function ensureDefaultLists(familyId: string, userId: string) {
   const existing = await getDocs(query(listsCol(familyId), limit(1)))
