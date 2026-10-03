@@ -4824,3 +4824,13 @@ thead .sidebar-grid__current {
   font-weight: 400;
   color: var(--ink-3);
 }
+
+.photos__storage {
+  margin: 0 0 12px;
+  font-size: var(--fs-small);
+}
+
+.photos__storage--near {
+  color: var(--ink);
+  font-weight: 600;
+}

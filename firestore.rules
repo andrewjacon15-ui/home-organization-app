@@ -174,8 +174,11 @@ service cloud.firestore {
         // The file lives in Storage at storagePath (inside this family's folder).
         function validPhoto() {
           let d = request.resource.data;
-          return onlyKeys(['storagePath', 'url', 'kind', 'width', 'height', 'caption', 'uploadedBy', 'createdAt'])
+          return onlyKeys(['storagePath', 'url', 'kind', 'width', 'height', 'thumbPath', 'thumbUrl', 'bytes', 'caption', 'uploadedBy', 'createdAt'])
             && d.storagePath is string && d.storagePath.matches('^families/' + familyId + '/photos/[^/]+$')
+            && (!('thumbPath' in d) || (d.thumbPath is string && d.thumbPath.matches('^families/' + familyId + '/photos/[^/]+_thumb[.]jpg$')))
+            && (!('thumbUrl' in d) || (d.thumbUrl is string && d.thumbUrl.size() <= 2000))
+            && (!('bytes' in d) || (d.bytes is int && d.bytes >= 0 && d.bytes <= 300 * 1024 * 1024))
             && (!('url' in d) || (d.url is string && d.url.size() <= 2000))
             && (!('kind' in d) || d.kind in ['image', 'video'])
             && (!('caption' in d) || (d.caption is string && d.caption.size() <= 200))

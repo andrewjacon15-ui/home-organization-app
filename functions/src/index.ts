@@ -4,6 +4,7 @@ import { HttpsError, onCall, type CallableRequest } from 'firebase-functions/htt
 import * as logger from 'firebase-functions/logger'
 import { defineSecret } from 'firebase-functions/params'
 import { onDocumentWritten } from 'firebase-functions/firestore'
+import { setGlobalOptions } from 'firebase-functions/options'
 import { onSchedule } from 'firebase-functions/scheduler'
 import { getStorage } from 'firebase-admin/storage'
 import * as calendar from './calendar.js'
@@ -22,6 +23,11 @@ import * as onlineSearch from './onlineSearch.js'
 import { firestoreHostStore, firestoreSearchStore, firestoreWebRecipeStore } from './webStore.js'
 
 initializeApp()
+
+// Cost guard: a household needs one or two instances of anything, so no function may scale
+// past three (unless it sets its own, smaller-or-similar cap), and none keeps an instance warm
+// (minInstances stays unset: idle costs nothing). scripts/check-costs.mjs enforces this in CI.
+setGlobalOptions({ maxInstances: 3 })
 
 /** The "Calendar connect" OAuth client. The ID is public; the secret lives in Secret Manager. */
 export const GOOGLE_CLIENT_ID = '254203364485-vj57g7ocoo1p7qen3nttc61vusrsg44c.apps.googleusercontent.com'

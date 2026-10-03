@@ -1,7 +1,7 @@
 import { Check } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { ICON_STROKE } from '../../components/Icons'
-import type { Photo } from './photosApi'
+import { formatBytes, libraryUsage, type Photo } from './photosApi'
 
 interface Props {
   photos: Photo[]
@@ -82,6 +82,8 @@ export function PhotoLibrary({ photos, progress, onUpload, onCaption, onDelete, 
         )}
       </header>
 
+      {photos.length > 0 && <StorageLine photos={photos} />}
+
       {progress && (
         <div className="photos__progress" role="status">
           Uploading {Math.min(progress.done + 1, progress.total)} of {progress.total}…
@@ -102,7 +104,7 @@ export function PhotoLibrary({ photos, progress, onUpload, onCaption, onDelete, 
                 aria-pressed={picking ? picked.has(p.id) : undefined}
                 onClick={() => (picking ? togglePick(p.id) : setOpen(p))}
               >
-                {p.kind === 'video' ? <video src={p.url} muted preload="metadata" /> : <img src={p.url} alt="" loading="lazy" />}
+                {p.kind === 'video' ? <video src={p.url} muted preload="metadata" /> : <img src={p.thumbUrl ?? p.url} alt="" loading="lazy" />}
                 {p.kind === 'video' && <span className="photos__badge">Video</span>}
                 {picking && <span className="photos__check" aria-hidden>{picked.has(p.id) && <Check size={16} strokeWidth={ICON_STROKE + 0.75} />}</span>}
               </button>
@@ -159,5 +161,17 @@ function CaptionField({ value, onSave }: { value: string; onSave: (caption: stri
         }}
       />
     </label>
+  )
+}
+
+/** How much of the free storage the library uses, with a warning before it runs out. */
+function StorageLine({ photos }: { photos: Photo[] }) {
+  const u = libraryUsage(photos)
+  const near = u.share >= 0.8
+  const older = u.uncounted ? ` (${u.uncounted} older ${u.uncounted === 1 ? 'photo isn’t' : 'photos aren’t'} counted)` : ''
+  return (
+    <p className={`photos__storage${near ? ' photos__storage--near' : ' muted'}`}>
+      Photos use {formatBytes(u.bytes)} of the 5 GB of free storage{older}.{near && ' Remove some videos or old photos to stay free.'}
+    </p>
   )
 }
