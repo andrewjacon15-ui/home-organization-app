@@ -1,6 +1,6 @@
 import { BookOpen, Globe, Mic, MicOff, Search } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
-import { matchRecipe, rankByMatch, tokenizeHave, type MatchResult } from '@shared/recipes/matcher.js'
+import { listFromSpeech, matchRecipe, rankByMatch, tokenizeHave, type MatchResult } from '@shared/recipes/matcher.js'
 import { ICON_STROKE } from '../../components/Icons'
 import { useSpeech } from '../../lib/useSpeech'
 import { catalogReasons, type CatalogEntry, type ImportResult } from './catalog'
@@ -178,7 +178,11 @@ export function KitchenSearch({ entries, staples, onOpen, onFindOnline, onCookOn
   const [local, setLocal] = useState<{ entry: CatalogEntry; result: MatchResult }[] | null>(null)
   const online = useOnline(onFindOnline)
   const [error, setError] = useState<string | null>(null)
-  const speech = useSpeech((heard) => setText((t) => (t.trim() ? `${t.trim()}, ${heard}` : heard)))
+  // Speech arrives as one run-on phrase; split it into a comma list so each ingredient reads on its own.
+  const speech = useSpeech((heard) => {
+    const list = listFromSpeech(heard)
+    setText((t) => (t.trim() ? `${t.trim().replace(/,$/, '')}, ${list}` : list))
+  })
   const understood = tokenizeHave(text)
 
   const look = (w: Where) => {
@@ -309,7 +313,7 @@ export function WebSearch({ onFind, onCookOnline, onImport, onOpen }: WebProps) 
       {onFind ? (
         <form className="finder__form" onSubmit={submit}>
           <p className="finder__step">What do you want to make?</p>
-          <div className="finder__input">
+          <div className="finder__input finder__input--search">
             <label className="field">
               Dish
               <input type="search" value={dish} onChange={(e) => setDish(e.target.value)} placeholder="chicken pot pie, banana bread…" maxLength={100} />

@@ -125,7 +125,7 @@ describe("What's in my kitchen", () => {
     expect(screen.getByText("Voice isn't available on this screen. Type instead.")).toBeInTheDocument()
   })
 
-  it('fills the box from speech where it is supported', async () => {
+  it('fills the box from speech, with commas between the foods', async () => {
     class FakeRecognition {
       lang = ''
       interimResults = false
@@ -135,7 +135,7 @@ describe("What's in my kitchen", () => {
       onerror = null
       start() {
         setTimeout(() => {
-          this.onresult?.({ results: [[{ transcript: 'chicken and rice' }]] })
+          this.onresult?.({ results: [[{ transcript: 'chicken thighs rice broccoli' }]] })
           this.onend?.()
         })
       }
@@ -145,7 +145,7 @@ describe("What's in my kitchen", () => {
     try {
       const { user } = kitchen()
       await user.click(screen.getByRole('button', { name: 'Say what you have' }))
-      await waitFor(() => expect(screen.getByLabelText('Ingredients')).toHaveValue('chicken and rice'))
+      await waitFor(() => expect(screen.getByLabelText('Ingredients')).toHaveValue('chicken thighs, rice, broccoli'))
     } finally {
       delete (window as unknown as { webkitSpeechRecognition?: unknown }).webkitSpeechRecognition
     }

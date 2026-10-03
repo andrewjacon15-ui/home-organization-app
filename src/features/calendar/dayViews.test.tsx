@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { CalendarEvent, Member } from '../../types'
 import { StaticSettings } from '../settings/SettingsContext'
 import { CalendarBoard } from './CalendarBoard'
+import { VIEWS_FOR } from './CalendarPage'
 import { viewRange } from './views'
 
 const TODAY = '2026-09-29'
@@ -43,6 +44,13 @@ describe('day view', () => {
     expect(within(day).getByRole('heading', { name: 'Today' })).toBeInTheDocument()
     expect(within(day).getAllByText(/^(Beach trip|Standup|Soccer)$/).map((n) => n.textContent)).toEqual(['Beach trip', 'Standup', 'Soccer'])
     expect(within(day).queryByText('Dentist')).not.toBeInTheDocument()
+  })
+})
+
+describe('calendar views', () => {
+  it('offers phones the same 1, 3 and 7 days as the tablet, plus Month and List', () => {
+    expect(VIEWS_FOR.phone.map((v) => v.label)).toEqual(['Day', '3 Day', 'Week', 'Month', 'List'])
+    expect(VIEWS_FOR.tablet.map((v) => v.id)).toEqual(['day', 'threeDay', 'week', 'month', 'schedule'])
   })
 })
 

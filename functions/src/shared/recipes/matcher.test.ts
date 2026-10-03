@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parseIngredient } from './ingredient.js'
-import { bayesianRating, matchRecipe, onlineScore, popularity, rankByMatch, searchScore, tokenizeHave } from './matcher.js'
+import { bayesianRating, listFromSpeech, matchRecipe, onlineScore, popularity, rankByMatch, searchScore, tokenizeHave } from './matcher.js'
 
 /** A fixture recipe as the catalog index stores it: ingredient keys and families. */
 function recipe(t: string, lines: string[], f = false) {
@@ -22,6 +22,23 @@ describe('tokenizeHave', () => {
   it('drops quantities and duplicates', () => {
     expect(tokenizeHave('2 cups rice\nrice\n1 lb ground beef').map((h) => h.key)).toEqual(['rice', 'ground beef'])
     expect(tokenizeHave('')).toEqual([])
+  })
+})
+
+describe('listFromSpeech', () => {
+  it('puts commas between the foods in a run-on spoken phrase', () => {
+    expect(listFromSpeech('chicken thighs rice broccoli')).toBe('chicken thighs, rice, broccoli')
+    expect(listFromSpeech('ground beef olive oil tomatoes onion')).toBe('ground beef, olive oil, tomatoes, onion')
+  })
+
+  it('keeps unknown words with their food and respects breaks already there', () => {
+    expect(listFromSpeech('I have 2 cups rice some frozen peas and eggs')).toBe('I have 2 cups rice, some frozen peas, eggs')
+    expect(listFromSpeech('Chicken, rice.')).toBe('Chicken, rice')
+    expect(listFromSpeech('')).toBe('')
+  })
+
+  it('reads back into the same ingredients', () => {
+    expect(tokenizeHave(listFromSpeech('chicken thighs rice spring onions eggs')).map((h) => h.key)).toEqual(['chicken thigh', 'rice', 'green onion', 'egg'])
   })
 })
 
