@@ -4,6 +4,7 @@ import type { User } from 'firebase/auth'
 import { describe, expect, it, vi } from 'vitest'
 import { FamilySetup } from '../../components/FamilySetup'
 import { HouseholdsAdmin } from './HouseholdsAdmin'
+import { inviteMessage } from './inviteMessage'
 import { inviteLink, newCode, pendingInvite, takeInviteFromUrl, type HouseholdInvite } from './householdInvites'
 
 const createFamily = vi.fn(async () => 'famNew')
@@ -24,6 +25,26 @@ describe('invite links', () => {
     takeInviteFromUrl({ search: '?household=CODE123&x=1', href: 'https://home.example/?household=CODE123&x=1' } as Location, { replaceState: replace } as unknown as History)
     expect(pendingInvite()).toBe('CODE123')
     expect(replace).toHaveBeenCalledWith(null, '', '/?x=1')
+  })
+})
+
+describe('invite messages', () => {
+  const link = 'https://home.example/?household=abc'
+  it('gives numbered setup steps for each device, with the link', () => {
+    const iphone = inviteMessage(link, 'iphone')
+    expect(iphone).toContain('1. Open this link in Safari: ' + link)
+    expect(iphone).toMatch(/Add to Home Screen/)
+    expect(iphone).toMatch(/expires in 14 days/)
+    expect(inviteMessage(link, 'android')).toMatch(/Open this link in Chrome[\s\S]*Add to home screen/)
+    expect(inviteMessage(link, 'computer')).toMatch(/Settings → Google Calendar/)
+  })
+
+  it('sets up a wall tablet from a phone first, then signs the tablet in without the link', () => {
+    const tablet = inviteMessage(link, 'tablet')
+    expect(tablet).toMatch(/^1\. Start on your phone or computer/m)
+    expect(tablet).toContain('open https://home.example in Chrome')
+    expect(tablet.split(link)).toHaveLength(2)
+    expect(tablet).toMatch(/This device is a to Tablet/)
   })
 })
 
@@ -84,6 +105,18 @@ describe('Households (admin)', () => {
     await u.click(screen.getByRole('button', { name: 'Create invite link' }))
     expect(a.create).toHaveBeenCalledWith('u1', 'For Pat')
     expect(await screen.findByRole('status')).toHaveTextContent('/?household=NEWCODE')
+    expect(screen.getByLabelText('Invite message')).toHaveTextContent(/Open this link in Safari: .*\/\?household=NEWCODE/)
+    await u.click(screen.getByRole('button', { name: 'Wall tablet' }))
+    expect(screen.getByRole('button', { name: 'Wall tablet' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByLabelText('Invite message')).toHaveTextContent(/Start on your phone or computer/)
+    const write = vi.fn(async () => undefined)
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: write }, configurable: true })
+    await u.click(screen.getByRole('button', { name: 'Copy message' }))
+    expect(write).toHaveBeenCalledWith(expect.stringContaining('Start on your phone or computer'))
+    expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument()
+    // An older open link can show its message too.
+    await u.click(screen.getByRole('button', { name: 'Message' }))
+    expect(screen.getByRole('status')).toHaveTextContent('/?household=open1')
     await u.click(screen.getByRole('button', { name: 'Show households and usage' }))
     expect(await screen.findByText('The Jacobs Family')).toBeInTheDocument()
     expect(screen.getByText(/2 people · 180 events · 196 recipes · 40 photos · 230 MB/)).toBeInTheDocument()

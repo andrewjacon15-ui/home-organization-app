@@ -6453,3 +6453,32 @@ thead .sidebar-grid__current {
 .admin-list li > span:first-child {
   font-size: var(--fs-body);
 }
+
+/* Settings → Households: the invite message with setup steps for the person's device. */
+.invite-link {
+  display: grid;
+  gap: 10px;
+}
+.invite-link__device {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  font-size: var(--fs-small);
+  color: var(--ink-2);
+}
+.invite-link__device .segmented {
+  flex-wrap: wrap;
+}
+.invite-message {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--r);
+  background: var(--surface);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  max-height: 40vh;
+  overflow-y: auto;
+}
