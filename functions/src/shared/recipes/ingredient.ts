@@ -44,8 +44,19 @@ export function cleanLine(raw: string): string {
     .trim()
 }
 
+/**
+ * Family-cookbook package sizes: "1 - 16oz can tomato sauce" means one 16-ounce can, not
+ * 1 to 16 ounces. Rewritten as "1 (16 oz) can tomato sauce", which reads the usual way.
+ */
+const PACKAGE = /^(\d+)\s*-\s*(\d+(?:\.\d+)?)\s?(oz|ounces?|lbs?|g|ml)\b\.?\s*(?=(cans?|jars?|packages?|pkgs?|boxes|box|bags?|bottles?|cartons?|containers?|tubs?|packets?|envelopes?|sticks?)\b)?/i
+function packageSize(s: string): string {
+  const m = PACKAGE.exec(s)
+  if (!m || (!m[4] && +m[2] < 3 * +m[1])) return s
+  return `${m[1]} (${m[2]} ${m[3]}) ${s.slice(m[0].length)}`
+}
+
 export function parseIngredient(raw: string): Ingredient {
-  let s = cleanLine(raw)
+  let s = packageSize(cleanLine(raw))
   const notes: string[] = []
 
   const q = readQuantity(s)
@@ -84,7 +95,7 @@ export function parseIngredient(raw: string): Ingredient {
     s = s.replace(/^of\s+/i, '')
   }
   // "1 cup plus 2 tablespoons sugar" → keep the first amount; the extra goes to the note.
-  const plus = /^plus\s+[\d½⅓⅔¼¾/ .-]+\s*\S+\s+/i.exec(s)
+  const plus = /^(?:plus|\+)\s*[\d½⅓⅔¼¾/ .-]+\s*\S+\s+/i.exec(s)
   if (plus) {
     notes.push(plus[0].trim())
     s = s.slice(plus[0].length)
@@ -195,5 +206,7 @@ export function ingredientLikeness(line: string): number {
   // Sentences with verbs in the imperative read like steps, not ingredients.
   if (/^(add|stir|cook|bake|heat|mix|place|pour|combine|whisk|bring|preheat|remove|serve|let|cover|season|transfer|put|make|using|in a)\b/i.test(rest)) score -= 0.5
   if (/[.!?]\s+\S/.test(s)) score -= 0.3
+  // A numbered method step ("1. Heat the oven…"), not "1 cup" or "1.5 lb".
+  if (/^\d{1,2}[.)]\s+[A-Z][a-z]/.test(s)) score -= 0.5
   return Math.max(0, Math.min(1, score))
 }

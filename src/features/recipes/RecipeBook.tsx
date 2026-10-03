@@ -365,8 +365,10 @@ export function RecipeView({ recipe, today, onEdit, onDelete, onPlan, onAddToGro
           <p className="recipe__source">
             From <cite>{recipe.source.bookTitle}</cite>
             {recipe.source.location ? `, ${recipe.source.location}` : ''}
+            {recipe.credit ? ` · Recipe by ${recipe.credit}` : ''}
           </p>
         )}
+        {recipe.notes && <p className="recipe__notes">{recipe.notes}</p>}
         {online && (
           <p className="recipe__source">
             From <cite>{recipe.credit || recipe.source?.siteName}</cite>

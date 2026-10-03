@@ -122,3 +122,30 @@ export async function makeScannedPdf(): Promise<Buffer> {
   const content = `q 612 0 0 792 0 0 cm /Im1 Do Q`
   return buildPdf([{ content, xobject: { name: 'Im1', data: Buffer.from(jpeg), width, height } }])
 }
+
+export interface PdfLine {
+  x: number
+  y: number
+  size: number
+  text: string
+}
+
+/** A text PDF from positioned lines, one array per page (612×792, Helvetica). */
+export function makePdf(pages: PdfLine[][]): Buffer {
+  return buildPdf(pages.map((lines) => ({ content: textOps(lines) })))
+}
+
+/** Word-wraps text to lines no wider than `width` points (Helvetica averages about half an em per character). */
+export function wrap(text: string, width: number, size: number): string[] {
+  const max = Math.floor(width / (0.5 * size))
+  const out: string[] = []
+  let line = ''
+  for (const word of text.split(' ')) {
+    if (line && line.length + 1 + word.length > max) {
+      out.push(line)
+      line = word
+    } else line = line ? `${line} ${word}` : word
+  }
+  if (line) out.push(line)
+  return out
+}

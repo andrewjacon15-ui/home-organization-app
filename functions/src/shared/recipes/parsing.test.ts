@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { familyOf, lookupPhrase, singular } from './dictionary.js'
-import { extractRecipes, parseMinutes, type Block } from './extract.js'
+import { extractRecipes, parseMinutes, sentences, stepsForCooking, type Block } from './extract.js'
 import { ingredientLikeness, parseIngredient } from './ingredient.js'
 import { formatQuantity, formatRange, normalizeFractions, readQuantity } from './quantity.js'
 
@@ -233,5 +233,37 @@ describe('recipe extraction', () => {
       { kind: 'text', text: 'Every recipe here has been tested many times.' },
     ]
     expect(extractRecipes(essay, true).recipes).toEqual([])
+  })
+})
+
+describe('method steps for cooking', () => {
+  it('splits sentences, but not after abbreviations', () => {
+    expect(sentences('Add 1 Tbs. butter and stir. Bake approx. 20 minutes. Serve.')).toEqual(['Add 1 Tbs. butter and stir.', 'Bake approx. 20 minutes.', 'Serve.'])
+  })
+
+  it('breaks one long method paragraph into short steps and leaves written-out steps alone', () => {
+    const blob =
+      'Preheat oven to 350F. Grease a 9x13 pan. Cream the butter and sugar until light and fluffy, then beat in the eggs one at a time. Fold in the flour. Pour into the pan and bake for 30 minutes, until a toothpick comes out clean.'
+    const steps = stepsForCooking([blob])
+    expect(steps).toEqual([
+      'Preheat oven to 350F. Grease a 9x13 pan.',
+      'Cream the butter and sugar until light and fluffy, then beat in the eggs one at a time. Fold in the flour.',
+      'Pour into the pan and bake for 30 minutes, until a toothpick comes out clean.',
+    ])
+    const written = ['Heat the oil.', 'Add the onion.', 'Cook until soft.']
+    expect(stepsForCooking(written)).toBe(written)
+  })
+
+  it('reads a cookbook credit and splits a "Yield | Recipe by" line', () => {
+    const blocks: Block[] = [
+      { kind: 'heading', text: 'Party Mix' },
+      { kind: 'text', text: '4 C cereal' },
+      { kind: 'text', text: '2 C pretzels' },
+      { kind: 'text', text: 'Mix everything and bake at 250F for 1 hour, stirring every 15 minutes.' },
+      { kind: 'text', text: 'Yield: 12 servings | Recipe by Aunt Jo' },
+    ]
+    const [r] = extractRecipes(blocks, true).recipes
+    expect(r).toMatchObject({ credit: 'Aunt Jo', servings: 12, yieldText: 'Yield: 12 servings' })
+    expect(r.steps.join(' ')).not.toContain('Recipe by')
   })
 })

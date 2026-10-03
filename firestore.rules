@@ -271,11 +271,12 @@ service cloud.firestore {
           return onlyKeys(['title', 'servings', 'minutes', 'ingredients', 'steps', 'url', 'createdBy', 'createdAt', 'updatedAt',
               // Structured recipe system (cookbooks, web imports, cooking mode)
               'source', 'dedupeKey', 'yieldText', 'prepMinutes', 'cookMinutes', 'totalMinutes', 'items', 'stepList',
-              'tags', 'tagsEdited', 'favorite', 'confidence', 'needsReview', 'edited', 'rating', 'credit', 'image'])
+              'tags', 'tagsEdited', 'favorite', 'confidence', 'needsReview', 'edited', 'rating', 'credit', 'image', 'notes'])
             && (!('source' in d) || d.source == null || (d.source is map && d.source.type in ['manual', 'cookbook', 'online']))
             && optList(d, 'items', 100) && optList(d, 'stepList', 100)
             && optMap(d, 'tags') && optMap(d, 'rating')
             && optBoolean(d, 'favorite') && optBoolean(d, 'needsReview') && optBoolean(d, 'edited') && optBoolean(d, 'tagsEdited')
+            && (!('notes' in d) || d.notes == null || (d.notes is string && d.notes.size() <= 2000))
             && optNum(d, 'confidence') && optNum(d, 'prepMinutes') && optNum(d, 'cookMinutes') && optNum(d, 'totalMinutes')
             && d.title is string && d.title.size() > 0 && d.title.size() <= 120
             && d.ingredients is string && d.ingredients.size() <= 5000
