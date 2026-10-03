@@ -363,6 +363,11 @@ describe('photos', () => {
     const photo = { storagePath: 'families/famA/photos/p1.jpg', uploadedBy: BOB.uid, caption: '', createdAt: 1 }
     await assertSucceeds(setDoc(doc(dbFor(BOB), `families/${FAM_A}/photos/p1`), photo))
     await assertFails(setDoc(doc(dbFor(BOB), `families/${FAM_A}/photos/p2`), { ...photo, uploadedBy: ALICE.uid }))
+    // A thumbnail beside it, and the stored size.
+    const withThumb = { ...photo, thumbPath: 'families/famA/photos/p3_thumb.jpg', thumbUrl: 'https://x/t.jpg', bytes: 512_000 }
+    await assertSucceeds(setDoc(doc(dbFor(BOB), `families/${FAM_A}/photos/p3`), withThumb))
+    await assertFails(setDoc(doc(dbFor(BOB), `families/${FAM_A}/photos/p4`), { ...withThumb, thumbPath: 'families/famB/photos/p4_thumb.jpg' }))
+    await assertFails(setDoc(doc(dbFor(BOB), `families/${FAM_A}/photos/p5`), { ...withThumb, bytes: -1 }))
   })
 
   it('lets anyone in the household remove any photo, but nobody outside it', async () => {

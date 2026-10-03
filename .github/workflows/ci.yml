@@ -1,5 +1,6 @@
 # Every pull request and every push to main: lint, typecheck, all three test suites,
-# both builds, and a production dependency audit. Branch protection can require
+# both builds with a bundle budget, cost and repository guards, and a production
+# dependency audit. Branch protection can require
 # the "CI passed" job.
 name: CI
 
@@ -39,6 +40,8 @@ jobs:
         run: npm run test:functions
       - name: Web build (tsc + vite)
         run: npm run build
+      - name: Bundle budget (size, no emulator hosts, no source maps)
+        run: npm run check:bundle
       - name: Functions build
         run: npm run build --prefix functions
 
@@ -65,6 +68,20 @@ jobs:
       - name: Rules tests
         run: npm run test:rules
 
+  guards:
+    name: Cost and repository checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Free-tier guards (scheduler jobs, scaling, memory, paid APIs, TTLs, upload caps, caching)
+        run: npm run check:costs
+      - name: Repository hygiene (file sizes, media, secrets)
+        run: npm run check:repo
+
   audit:
     name: Dependency audit (production)
     runs-on: ubuntu-latest
@@ -82,7 +99,7 @@ jobs:
   passed:
     name: CI passed
     if: always()
-    needs: [app, rules, audit]
+    needs: [app, rules, guards, audit]
     runs-on: ubuntu-latest
     steps:
       - name: All jobs succeeded

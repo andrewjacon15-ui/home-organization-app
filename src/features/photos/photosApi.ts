@@ -9,15 +9,26 @@ export interface Photo {
   kind: 'image' | 'video'
   width?: number
   height?: number
+  /** A small copy for the grid (photos uploaded since thumbnails were added). */
+  thumbPath?: string
+  thumbUrl?: string
+  /** Stored size of the file and its thumbnail, for the storage readout. */
+  bytes?: number
   caption: string
   uploadedBy: string
   createdAt?: Date
 }
 
 const photosCol = (familyId: string) => collection(db, 'families', familyId, 'photos')
+/** Photos never change once uploaded, so browsers keep them for a year (no repeat downloads). */
+const CACHE = 'public, max-age=31536000'
 
 /** Longest side for uploaded photos: sharp on the wall tablet, a fraction of a phone photo's size. */
 export const MAX_EDGE = 2560
+/** Longest side for the grid's thumbnails: sharp in a 160 px tile on any screen, about 40 KB. */
+export const THUMB_EDGE = 480
+/** Cloud Storage keeps 5 GB at no cost. */
+export const FREE_STORAGE_BYTES = 5 * 1024 ** 3
 
 export function watchPhotos(familyId: string, onChange: (photos: Photo[]) => void) {
   return onSnapshot(photosCol(familyId), (snap) => {
@@ -31,6 +42,9 @@ export function watchPhotos(familyId: string, onChange: (photos: Photo[]) => voi
           kind: x.kind === 'video' ? 'video' : 'image',
           width: x.width,
           height: x.height,
+          thumbPath: typeof x.thumbPath === 'string' ? x.thumbPath : undefined,
+          thumbUrl: typeof x.thumbUrl === 'string' ? x.thumbUrl : undefined,
+          bytes: typeof x.bytes === 'number' ? x.bytes : undefined,
           caption: x.caption ?? '',
           uploadedBy: x.uploadedBy,
           createdAt: x.createdAt?.toDate?.(),
@@ -49,15 +63,15 @@ export function fitWithin(width: number, height: number, max = MAX_EDGE): { widt
 }
 
 /** Downscales a photo to JPEG in the browser (respecting phone camera rotation). */
-async function shrinkImage(file: File): Promise<{ blob: Blob; width: number; height: number }> {
+async function shrinkImage(file: Blob, max = MAX_EDGE, quality = 0.86): Promise<{ blob: Blob; width: number; height: number }> {
   const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
-  const { width, height } = fitWithin(bitmap.width, bitmap.height)
+  const { width, height } = fitWithin(bitmap.width, bitmap.height, max)
   const canvas = document.createElement('canvas')
   canvas.width = width
   canvas.height = height
   canvas.getContext('2d')!.drawImage(bitmap, 0, 0, width, height)
   bitmap.close()
-  const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Could not process that photo.'))), 'image/jpeg', 0.86))
+  const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Could not process that photo.'))), 'image/jpeg', quality))
   return { blob, width, height }
 }
 
@@ -84,16 +98,33 @@ export async function uploadMedia(familyId: string, userId: string, file: File, 
   }
 
   const storagePath = `families/${familyId}/photos/${id}.${ext}`
-  const task = uploadBytesResumable(ref(storage, storagePath), body, { contentType, cacheControl: 'public, max-age=31536000' })
+  const task = uploadBytesResumable(ref(storage, storagePath), body, { contentType, cacheControl: CACHE })
   await new Promise<void>((resolve, reject) => {
     task.on('state_changed', (s) => onProgress?.(s.totalBytes ? s.bytesTransferred / s.totalBytes : 0), reject, () => resolve())
   })
   const url = await getDownloadURL(task.snapshot.ref)
+
+  // A small thumbnail for the grid, so browsing the library doesn't download every full photo.
+  let thumb: { thumbPath: string; thumbUrl: string } | Record<string, never> = {}
+  let bytes = body.size
+  if (!isVideo && contentType === 'image/jpeg') {
+    try {
+      const small = await shrinkImage(body, THUMB_EDGE, 0.8)
+      const thumbPath = `families/${familyId}/photos/${id}_thumb.jpg`
+      const t = await uploadBytesResumable(ref(storage, thumbPath), small.blob, { contentType: 'image/jpeg', cacheControl: CACHE })
+      thumb = { thumbPath, thumbUrl: await getDownloadURL(t.ref) }
+      bytes += small.blob.size
+    } catch {
+      // The grid falls back to the full photo.
+    }
+  }
   await setDoc(doc(photosCol(familyId), id), {
     storagePath,
     url,
     kind: isVideo ? 'video' : 'image',
     ...size,
+    ...thumb,
+    bytes,
     caption: '',
     uploadedBy: userId,
     createdAt: serverTimestamp(),
@@ -105,9 +136,11 @@ export function updateCaption(familyId: string, photoId: string, caption: string
 }
 
 export async function deletePhoto(familyId: string, photo: Photo) {
-  await deleteObject(ref(storage, photo.storagePath)).catch((e: { code?: string }) => {
-    if (e?.code !== 'storage/object-not-found') throw e
-  })
+  for (const path of [photo.storagePath, photo.thumbPath].filter((p): p is string => !!p)) {
+    await deleteObject(ref(storage, path)).catch((e: { code?: string }) => {
+      if (e?.code !== 'storage/object-not-found') throw e
+    })
+  }
   await deleteDoc(doc(photosCol(familyId), photo.id))
 }
 
@@ -119,4 +152,17 @@ export function shuffled<T>(items: T[], random = Math.random): T[] {
     ;[a[i], a[j]] = [a[j], a[i]]
   }
   return a
+}
+
+/** "312 MB": a size in friendly units. */
+export function formatBytes(n: number): string {
+  if (n >= 1024 ** 3) return `${(n / 1024 ** 3).toFixed(1)} GB`
+  if (n >= 1024 ** 2) return `${Math.round(n / 1024 ** 2)} MB`
+  return `${Math.max(1, Math.round(n / 1024))} KB`
+}
+
+/** How much of the free storage the photo library uses (photos from before sizes were kept aren't counted). */
+export function libraryUsage(photos: Photo[]): { bytes: number; uncounted: number; share: number } {
+  const bytes = photos.reduce((n, p) => n + (p.bytes ?? 0), 0)
+  return { bytes, uncounted: photos.filter((p) => p.bytes == null).length, share: bytes / FREE_STORAGE_BYTES }
 }

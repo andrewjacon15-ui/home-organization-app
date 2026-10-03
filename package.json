@@ -12,8 +12,11 @@
     "test": "npm run test:web && npm run test:functions && npm run test:rules",
     "test:web": "vitest run",
     "test:rules": "firebase emulators:exec --only firestore,storage --project demo-family-rules \"vitest run --config vitest.rules.config.ts\"",
-    "deploy": "npm run lint && npm test && npm run build && firebase deploy --only hosting,firestore,functions,storage",
-    "test:functions": "npm --prefix functions test"
+    "deploy": "npm run lint && npm run check:costs && npm test && npm run build && npm run check:bundle && firebase deploy --only hosting,firestore,functions,storage",
+    "test:functions": "npm --prefix functions test",
+    "check:costs": "node scripts/check-costs.mjs",
+    "check:repo": "node scripts/check-repo.mjs",
+    "check:bundle": "node scripts/check-bundle.mjs"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",

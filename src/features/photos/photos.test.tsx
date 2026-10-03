@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { StaticSettings } from '../settings/SettingsContext'
 import { PhotoLibrary } from './PhotoLibrary'
-import { fitWithin, shuffled, type Photo } from './photosApi'
+import { fitWithin, formatBytes, libraryUsage, shuffled, type Photo } from './photosApi'
 import { ScreensaverProvider } from './ScreensaverContext'
 import { Slideshow } from './Slideshow'
 import { clockLayout } from './slideshowLayout'
@@ -79,7 +79,25 @@ describe('Slideshow', () => {
   })
 })
 
+describe('photo storage', () => {
+  it('adds up what the library stores, against the 5 GB free', () => {
+    const u = libraryUsage([photo('a', { bytes: 600_000 }), photo('b', { bytes: 400_000 }), photo('c')])
+    expect(u).toMatchObject({ bytes: 1_000_000, uncounted: 1 })
+    expect(formatBytes(1_000_000)).toBe('977 KB')
+    expect(formatBytes(312 * 1024 ** 2)).toBe('312 MB')
+    expect(formatBytes(4.6 * 1024 ** 3)).toBe('4.6 GB')
+  })
+})
+
 describe('PhotoLibrary', () => {
+  it('shows thumbnails in the grid and how much storage is used', () => {
+    const props = { progress: null, onUpload: vi.fn(), onCaption: vi.fn(), onDelete: vi.fn(), onStart: vi.fn() }
+    const { container } = render(<PhotoLibrary photos={[photo('a', { thumbUrl: 'https://img/a_thumb.jpg', bytes: 4.5 * 1024 ** 3 }), photo('b')]} {...props} />)
+    expect(container.querySelector('.photos__grid img')).toHaveAttribute('src', 'https://img/a_thumb.jpg')
+    expect(screen.getByText(/Photos use 4\.5 GB of the 5 GB of free storage \(1 older photo isn’t counted\)\. Remove some videos/)).toBeInTheDocument()
+  })
+
+
   const props = { progress: null, onUpload: vi.fn(), onCaption: vi.fn(), onDelete: vi.fn(), onStart: vi.fn() }
 
   it('explains the empty state and disables the slideshow', () => {
