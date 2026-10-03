@@ -27,8 +27,9 @@ Design rules (type, color, icons, components, devices): [docs/STYLE-GUIDE.md](do
 
 ## Wall tablet
 
-See [docs/TABLET-SETUP.md](docs/TABLET-SETUP.md) to turn a Skylight Calendar 15"
-into the kitchen display (no rooting needed).
+See [docs/TABLET-SETUP.md](docs/TABLET-SETUP.md) to turn an Android tablet
+(a Skylight Calendar 15" or an ordinary one like a Galaxy Tab A9+) into the
+kitchen display (no rooting needed).
 
 ## How families work
 
