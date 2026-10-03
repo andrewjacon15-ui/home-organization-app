@@ -35,12 +35,14 @@ const items: Record<string, ListItem[]> = {
   todo: [{ id: 't1', text: 'Reseal shower', done: false, memberId: 'a', order: 1 }],
 }
 
-function setup(panels?: ('lists' | 'tasks' | 'calendar')[]) {
+function setup(panels?: ('lists' | 'tasks' | 'calendar')[], calendarDays: 1 | 3 | 7 = 7) {
   const props = {
     panels,
+    calendarDays,
+    onCalendarDays: vi.fn(),
     today: TODAY,
     now: local('2026-09-28T07:00'),
-    weekStart: '2026-09-27',
+    start: calendarDays === 7 ? '2026-09-27' : TODAY,
     events,
     calendars: [],
     members,
@@ -80,7 +82,30 @@ describe('HomeView', () => {
     expect(within(within(cal).getByLabelText(/Friday, October 2/)).getByText('Oil change')).toBeInTheDocument()
     const next = within(cal).getByRole('button', { name: 'Next week' })
     expect(within(next).getByText('2 events')).toBeInTheDocument()
-    expect(within(next).getByText('Dentist')).toBeInTheDocument()
+    expect(within(next).getByText(/Dentist/)).toBeInTheDocument()
+  })
+
+  it('shows 3 days from today with what is coming up after, and switches between 1, 3, and 7 days', async () => {
+    const { props, user } = setup(['calendar'], 3)
+    const cal = screen.getByRole('region', { name: 'Next 3 days' })
+    expect(within(cal).getByLabelText(/Monday, September 28/)).toBeInTheDocument()
+    expect(within(cal).getByLabelText(/Wednesday, September 30/)).toBeInTheDocument()
+    expect(within(cal).queryByLabelText(/Thursday, October 1/)).not.toBeInTheDocument()
+    const later = within(cal).getByRole('button', { name: 'Coming up' })
+    expect(within(later).getByText('October 1 – 7')).toBeInTheDocument()
+    expect(within(later).getByText('2 events')).toBeInTheDocument()
+    expect(within(later).getByText(/Oil change/)).toBeInTheDocument()
+    expect(within(cal).getByRole('button', { name: '3 days' })).toHaveAttribute('aria-pressed', 'true')
+    await user.click(within(cal).getByRole('button', { name: '1 day' }))
+    expect(props.onCalendarDays).toHaveBeenCalledWith(1)
+  })
+
+  it('lists every event on a busy day (the day scrolls) instead of cutting it off', () => {
+    const many = Array.from({ length: 12 }, (_, i) => ev(`b${i}`, `Meeting ${i + 1}`, `2026-09-28T${String(8 + (i % 10)).padStart(2, '0')}:00`, `2026-09-28T${String(9 + (i % 10)).padStart(2, '0')}:00`))
+    render(<HomeView panels={['calendar']} calendarDays={1} start={TODAY} today={TODAY} now={local('2026-09-28T07:00')} events={many} calendars={[]} members={members} chores={[]} lists={[]} items={{}} onNavigate={vi.fn()} onToggleChore={vi.fn()} onDeleteChore={vi.fn()} onAddItem={vi.fn()} onToggleItem={vi.fn()} />)
+    const day = screen.getByLabelText(/Monday, September 28/)
+    expect(within(day).getAllByRole('listitem')).toHaveLength(12)
+    expect(within(day).queryByText(/more$/)).not.toBeInTheDocument()
   })
 
   it("shows today's tasks by person, with Up for Grabs when there are any", async () => {

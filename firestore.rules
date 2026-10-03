@@ -449,7 +449,7 @@ service cloud.firestore {
               'showPhotosTab', 'theme', 'accentColor', 'colorEventsBy',
               'sleepEnabled', 'sleepFrom', 'sleepTo',
               'screensaverEnabled', 'screensaverAfterMinutes', 'screensaverSeconds', 'screensaverShuffle',
-              'hiddenTabs', 'homePanels', 'listDoneDays'])
+              'hiddenTabs', 'homePanels', 'homePanelsVersion', 'homeCalendarDays', 'listDoneDays'])
             && (!('calendarName' in d) || (d.calendarName is string && d.calendarName.size() <= 80))
             && optIntIn(d, 'weekStartsOn', 0, 6)
             && optOneOf(d, 'showCountdowns', ['always', 'never'])
@@ -474,6 +474,8 @@ service cloud.firestore {
             && (!('accentColor' in d) || isHexColor(d.accentColor))
             && (!('hiddenTabs' in d) || validHiddenTabs(d.hiddenTabs))
             && (!('homePanels' in d) || validHiddenTabs(d.homePanels))
+            && optIntIn(d, 'homePanelsVersion', 0, 100)
+            && optOneOf(d, 'homeCalendarDays', [1, 3, 7])
             && optIntIn(d, 'listDoneDays', 0, 365);
         }
         function validWeatherView(v) {

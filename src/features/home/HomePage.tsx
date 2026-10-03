@@ -10,7 +10,7 @@ import { addItems, ensureDefaultLists, setItemDone, watchItems, watchLists, type
 import { useDevice } from '../../lib/DeviceContext'
 import { useSettings } from '../settings/SettingsContext'
 import { addCountdown, removeCountdown, watchCountdowns, type Countdown } from '../countdowns/countdownsApi'
-import { homePanelsFor } from './homePanels'
+import { homeCalendarDays, homePanelsFor } from './homePanels'
 import { HomeView, type HomeTarget } from './HomeView'
 
 interface Props {
@@ -21,9 +21,10 @@ interface Props {
 }
 
 export function HomePage({ familyId, userId, members, onNavigate }: Props) {
-  const { settings } = useSettings()
+  const { settings, update } = useSettings()
   const { device } = useDevice()
-  const panels = homePanelsFor(settings.homePanels, device)
+  const panels = homePanelsFor(settings.homePanels, device, settings.homePanelsVersion)
+  const calendarDays = homeCalendarDays(settings.homeCalendarDays)
   // Hidden panels don't load their data, so they cost no reads.
   const showCalendar = panels.includes('calendar')
   const showTasks = panels.includes('tasks')
@@ -32,7 +33,8 @@ export function HomePage({ familyId, userId, members, onNavigate }: Props) {
   const [countdowns, setCountdowns] = useState<Countdown[]>([])
   const today = useToday()
   const now = useNow()
-  const weekStart = settings.weekStartToday ? today : startOfWeek(today, settings.weekStartsOn)
+  // A week follows the calendar's week setting; 1 or 3 days always start today.
+  const start = calendarDays === 7 && !settings.weekStartToday ? startOfWeek(today, settings.weekStartsOn) : today
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [calendars, setCalendars] = useState<SyncedCalendar[]>([])
   const [chores, setChores] = useState<Chore[]>([])
@@ -43,8 +45,8 @@ export function HomePage({ familyId, userId, members, onNavigate }: Props) {
   const report = (e: unknown) => setError(e instanceof Error ? e.message : String(e))
 
   useEffect(() => {
-    if (showCalendar) return watchEvents(familyId, fromDateKey(weekStart), fromDateKey(addDays(weekStart, 14)), setEvents)
-  }, [familyId, weekStart, showCalendar])
+    if (showCalendar) return watchEvents(familyId, fromDateKey(start), fromDateKey(addDays(start, calendarDays + 7)), setEvents)
+  }, [familyId, start, calendarDays, showCalendar])
   useEffect(() => {
     if (showCalendar) return watchCalendars(familyId, setCalendars)
   }, [familyId, showCalendar])
@@ -83,7 +85,9 @@ export function HomePage({ familyId, userId, members, onNavigate }: Props) {
       <HomeView
         today={today}
         now={now}
-        weekStart={weekStart}
+        start={start}
+        calendarDays={calendarDays}
+        onCalendarDays={(n) => void update({ homeCalendarDays: n })}
         events={visible}
         calendars={calendars}
         members={members}

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useNow } from '../../lib/hooks'
 import { shuffled, type Photo } from './photosApi'
-import { clockLayout } from './slideshowLayout'
 
 interface Props {
   photos: Photo[]
@@ -11,32 +10,25 @@ interface Props {
 }
 
 const MAX_VIDEO_MS = 60_000
+/** The cross-fade in index.css (.slideshow__layer): the drift keeps moving through it. */
+const FADE_MS = 1600
+/** Each photo drifts a different way, so the slideshow never feels like a loop. */
+const DRIFTS = ['in-left', 'in-right', 'out-up', 'in-down'] as const
 
 /**
- * Full-screen slideshow: slow cross-fade and drift for photos, muted videos play
- * through (up to a minute). Any tap exits. The next photo is preloaded.
+ * Full-screen slideshow: a slow cross-fade and a gentle drift for photos; muted videos
+ * play through (up to a minute). The clock and date stay in one place, bottom left, for
+ * every photo. Any tap exits. The next photo is preloaded.
  */
 export function Slideshow({ photos, seconds, shuffle, onExit }: Props) {
   const order = useMemo(() => (shuffle ? shuffled(photos) : photos), [photos, shuffle])
   const [index, setIndex] = useState(0)
   const [layer, setLayer] = useState(0) // which of two stacked layers is visible
-  const [slots, setSlots] = useState<(Photo | null)[]>([order[0] ?? null, null])
+  // n counts showings, so each photo gets a fresh layer (and drift) every time it appears.
+  const [slots, setSlots] = useState<{ photo: Photo; n: number }[]>(order[0] ? [{ photo: order[0], n: 0 }] : [])
   const now = useNow(30_000)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  // Each picture's width/height, learned when it loads (Firestore doesn't store it).
-  const [aspects, setAspects] = useState<Record<string, number>>({})
-  const [screen, setScreen] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }))
-  useEffect(() => {
-    const onResize = () => setScreen({ w: window.innerWidth, h: window.innerHeight })
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [])
-  // Saved dimensions first (no layout jump); measured on load for older photos without them.
-  const aspectOf = (p: Photo) => aspects[p.id] ?? (p.width && p.height ? p.width / p.height : undefined)
-  const learn = (id: string, w: number, h: number) => w > 0 && h > 0 && setAspects((a) => (a[id] ? a : { ...a, [id]: w / h }))
-
-  const current = slots[layer]
-  const side = clockLayout(current ? aspectOf(current) : undefined, screen.w, screen.h)
+  const current = slots[layer]?.photo ?? null
 
   const advance = () => {
     if (order.length < 2) return
@@ -44,7 +36,7 @@ export function Slideshow({ photos, seconds, shuffle, onExit }: Props) {
     const other = layer === 0 ? 1 : 0
     setSlots((s) => {
       const copy = [...s]
-      copy[other] = order[next]
+      copy[other] = { photo: order[next], n: (s[layer]?.n ?? 0) + 1 }
       return copy
     })
     setLayer(other)
@@ -65,27 +57,26 @@ export function Slideshow({ photos, seconds, shuffle, onExit }: Props) {
     if (upcoming?.kind === 'image') new Image().src = upcoming.url
   }, [order, index])
 
+  // The drift lasts the photo's whole time on screen, fades included, so it never stops mid-way.
+  const drift = { '--drift-ms': `${seconds * 1000 + 2 * FADE_MS}ms` } as CSSProperties
+
   return (
     // Close on click (not pointerdown) so the tap doesn't fall through to a button underneath.
-    <div className="slideshow" role="dialog" aria-label="Photo slideshow. Tap to close." onClick={onExit}>
-      {slots.map((p, i) =>
-        p ? (
-          <div key={`${i}-${p.id}`} className={`slideshow__layer${i === layer ? ' slideshow__layer--on' : ''}${clockLayout(aspectOf(p), screen.w, screen.h).side ? ' slideshow__layer--side' : ''}`}>
-            {p.kind === 'video' ? (
-              <video className="slideshow__media" src={p.url} autoPlay={i === layer} muted playsInline onEnded={() => i === layer && advance()} onLoadedMetadata={(e) => learn(p.id, e.currentTarget.videoWidth, e.currentTarget.videoHeight)} />
-            ) : (
-              <img className="slideshow__media slideshow__media--drift" src={p.url} alt={p.caption || 'Family photo'} onLoad={(e) => learn(p.id, e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)} />
-            )}
-          </div>
-        ) : null,
-      )}
-      <div
-        className={`slideshow__overlay${side.side ? ' slideshow__overlay--side' : ''}`}
-        style={side.side ? ({ '--band': `${side.band}px` } as CSSProperties) : undefined}
-        aria-hidden
-      >
-        <span className="slideshow__time">{now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span>
-        <span className="slideshow__date">{now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</span>
+    <div className="slideshow" role="dialog" aria-label="Photo slideshow. Tap to close." onClick={onExit} style={drift}>
+      {slots.map(({ photo: p, n }, i) => (
+        <div key={`${n}-${p.id}`} className={`slideshow__layer${i === layer ? ' slideshow__layer--on' : ''}`}>
+          {p.kind === 'video' ? (
+            <video className="slideshow__media" src={p.url} autoPlay={i === layer} muted playsInline onEnded={() => i === layer && advance()} />
+          ) : (
+            <img className={`slideshow__media slideshow__media--drift slideshow__media--${DRIFTS[n % DRIFTS.length]}`} src={p.url} alt={p.caption || 'Family photo'} />
+          )}
+        </div>
+      ))}
+      <div className="slideshow__overlay" aria-hidden>
+        <span className="slideshow__clock">
+          <span className="slideshow__time">{now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span>
+          <span className="slideshow__date">{now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</span>
+        </span>
         {current?.caption && <span className="slideshow__caption">{current.caption}</span>}
       </div>
     </div>

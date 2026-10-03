@@ -135,7 +135,7 @@ export function HouseholdsAdmin({ userId, api = realApi }: { userId: string; api
 
       <h3>Households</h3>
       {households === null ? (
-        <button type="button" className="button" onClick={() => api.households().then(setHouseholds, report)}>
+        <button type="button" className="button admin-show" onClick={() => api.households().then(setHouseholds, report)}>
           Show households and usage
         </button>
       ) : (

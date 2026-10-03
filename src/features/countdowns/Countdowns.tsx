@@ -58,9 +58,11 @@ export function CountdownPanel({ countdowns, today, onAdd, onRemove }: Props) {
             const day = fromDateKey(c.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
             return (
               <li key={c.id} className={`countdown${c.date === today ? ' countdown--today' : ''}`} aria-label={`${c.title}: ${unit ? `${count} ${unit}` : count}, ${day}`}>
-                <span className="countdown__count">{count}</span>
+                <span className="countdown__days">
+                  <span className="countdown__count">{count}</span>
+                  {unit && <span className="countdown__unit">{unit}</span>}
+                </span>
                 <span className="countdown__text">
-                  {unit && <span className="countdown__unit">{unit} until</span>}
                   <span className="countdown__title">{c.title}</span>
                   <span className="countdown__date">{day}</span>
                 </span>
