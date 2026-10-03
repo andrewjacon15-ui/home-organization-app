@@ -1,3 +1,4 @@
+import { CloseIcon } from '../../components/Icons'
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import type { CalendarEvent, Chore, Member } from '../../types'
 import { watchEvents } from '../calendar/calendarApi'
@@ -82,7 +83,7 @@ export function ReminderToasts({ alerts, members, onDismiss }: { alerts: Reminde
               </span>
             </div>
             <button type="button" className="icon-button" onClick={() => onDismiss(r.key)} aria-label={`Dismiss reminder for ${r.title}`}>
-              ✕
+              <CloseIcon size={18} />
             </button>
           </div>
         )

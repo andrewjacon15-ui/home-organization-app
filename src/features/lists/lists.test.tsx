@@ -56,7 +56,7 @@ describe('ListsBoard', () => {
     const t = screen.getByRole('article', { name: 'To-Do List' })
     expect(within(t).getByText('Call plumber')).toBeInTheDocument()
     const lydia = within(t).getByRole('region', { name: "Lydia's items" })
-    expect(within(lydia).getAllByRole('listitem').map((li) => li.textContent?.replace('✕', ''))).toEqual(['Drop off returns', 'Hem dress'])
+    expect(within(lydia).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Drop off returns', 'Hem dress'])
     expect(within(within(t).getByRole('region', { name: "Andrew's items" })).getByText('Buy dumbbells')).toBeInTheDocument()
   })
 

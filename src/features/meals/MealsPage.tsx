@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { DEFAULT_KITCHEN } from '@shared/recipes/kitchen.js'
 import { groceryLines } from '@shared/recipes/groceries.js'
-import { ShoppingCart } from 'lucide-react'
-import { ICON_STROKE } from '../../components/Icons'
+import { CartIcon, CloseIcon } from '../../components/Icons'
 import { addItems, groceryListId, openItemTexts, watchLists, type FamilyList } from '../lists/listsApi'
 import { watchKitchen } from '../recipes/kitchenApi'
 import { MealGroceries } from './MealGroceries'
@@ -73,7 +72,7 @@ export function MealsPage({ familyId, userId }: Props) {
       )}
       <div className="meals__tools">
         <button type="button" className="button" onClick={() => setShopping(true)}>
-          <ShoppingCart size={18} strokeWidth={ICON_STROKE} aria-hidden /> Groceries for upcoming meals
+          <CartIcon size={18} /> Groceries for upcoming meals
         </button>
       </div>
       <MealPlanner
@@ -97,7 +96,7 @@ export function MealsPage({ familyId, userId }: Props) {
         <div className="overlay" role="dialog" aria-modal="true" aria-label={open.title} onClick={() => setOpen(null)}>
           <div className="overlay__panel" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="icon-button overlay__close" onClick={() => setOpen(null)} aria-label="Close recipe">
-              ✕
+              <CloseIcon size={22} />
             </button>
             <RecipeView recipe={open} today={today} />
           </div>

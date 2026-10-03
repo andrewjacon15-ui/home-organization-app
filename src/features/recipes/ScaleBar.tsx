@@ -1,6 +1,5 @@
-import { Minus, Plus } from 'lucide-react'
 import { formatQuantity } from '@shared/recipes/quantity.js'
-import { ICON_STROKE } from '../../components/Icons'
+import { AddIcon, RemoveIcon } from '../../components/Icons'
 import { clampScale } from './amounts'
 
 const PRESETS = [
@@ -45,11 +44,11 @@ export function ScaleBar({ base, factor, onScale, metric, onMetric }: Props) {
       {servings != null && (
         <div className="scale-bar__servings" role="group" aria-label="Servings">
           <button type="button" className="icon-button" aria-label="Fewer servings" disabled={servings <= 1} onClick={() => step(-1)}>
-            <Minus size={18} strokeWidth={ICON_STROKE} aria-hidden />
+            <RemoveIcon size={18} />
           </button>
           <span aria-live="polite">Serves {formatQuantity(servings)}</span>
           <button type="button" className="icon-button" aria-label="More servings" disabled={factor >= 16} onClick={() => step(1)}>
-            <Plus size={18} strokeWidth={ICON_STROKE} aria-hidden />
+            <AddIcon size={18} />
           </button>
         </div>
       )}

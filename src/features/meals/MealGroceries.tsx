@@ -1,3 +1,4 @@
+import { CloseIcon } from '../../components/Icons'
 import { useState } from 'react'
 import { addDays, fromDateKey } from '../../lib/dates'
 import { mealKey, SLOT_LABELS, SPANS, type GroceryResult, type PlannedMeal } from './upcomingMeals'
@@ -54,7 +55,7 @@ export function MealGroceries({ today, days, onDays, meals, onAdd, onClose }: Pr
     <div className="overlay" role="dialog" aria-modal="true" aria-label="Groceries for upcoming meals" onClick={onClose}>
       <div className="overlay__panel meal-groceries" onClick={(e) => e.stopPropagation()}>
         <button type="button" className="icon-button overlay__close" onClick={onClose} aria-label="Close">
-          ✕
+          <CloseIcon size={22} />
         </button>
         <h2>Groceries for upcoming meals</h2>
         <p className="muted">Pick the meals you’re shopping for. Their ingredients go on the grocery list, added up across recipes; pantry staples and anything already on the list are left off.</p>

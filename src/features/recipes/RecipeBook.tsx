@@ -1,8 +1,8 @@
-import { ChevronLeft, ExternalLink, SlidersHorizontal, Star } from 'lucide-react'
+import { ExternalLink, SlidersHorizontal, Star } from 'lucide-react'
 import { Select } from '../../components/Select'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { TAG_LABELS, TAG_OPTIONS, type RecipeTags } from '@shared/recipes/tagger.js'
-import { ICON_STROKE } from '../../components/Icons'
+import { BackIcon, ICON_STROKE } from '../../components/Icons'
 import { addDays, fromDateKey } from '../../lib/dates'
 import type { MealSlot } from '../../types'
 import { amountText, stepText, useMetric } from './amounts'
@@ -190,7 +190,7 @@ export function RecipeBook(p: BookProps) {
       <div className="recipe-book__detail" ref={detailRef}>
         {selected && (
           <button type="button" className="recipe-book__back" onClick={backToList}>
-            <ChevronLeft size={18} strokeWidth={ICON_STROKE} aria-hidden /> All recipes
+            <BackIcon size={18} /> All recipes
           </button>
         )}
         {current && current.id === selected ? (

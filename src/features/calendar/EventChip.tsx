@@ -1,3 +1,4 @@
+import { CloseIcon } from '../../components/Icons'
 import type { CSSProperties } from 'react'
 import type { Member, SyncedCalendar } from '../../types'
 import { useSettings } from '../settings/SettingsContext'
@@ -60,7 +61,7 @@ export function EventChip({ event, members, calendars, now, today, compact, onDe
       </div>
       {onDelete && event.source === 'manual' && (
         <button type="button" className="icon-button event__delete" onClick={() => onDelete(event)} aria-label={`Delete "${event.title}"`}>
-          ✕
+          <CloseIcon size={16} />
         </button>
       )}
     </div>

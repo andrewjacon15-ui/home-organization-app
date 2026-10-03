@@ -101,8 +101,8 @@ or white text for anything filled with a person or accent color.
 - Icons inherit text color: `--ink-2` at rest, accent when selected.
 - Weather uses Lucide's sun/cloud/rain set (`WeatherBadges.tsx`), not emoji — emoji
   render differently on every device.
-- Buttons use icons for arrows, "add", and ticks (`BackIcon`, `NextIcon`, `AddIcon`,
-  `DoneIcon`), not text characters like ‹ › → + or ✓.
+- Buttons use icons for arrows, add/remove, ticks, and close (`BackIcon`, `NextIcon`,
+  `AddIcon`, `RemoveIcon`, `DoneIcon`, `CloseIcon`), not text characters like ‹ › → + − ✓ or ✕.
 - Decorative icons are `aria-hidden`; icon-only buttons need an `aria-label`.
 
 ## Components
@@ -127,7 +127,8 @@ or white text for anything filled with a person or accent color.
 - **Dropdowns:** always `components/Select` (never a native `<select>`, whose list Android
   draws in its own colors). The open list is a floating surface; the chosen option has an
   `--accent-soft` background and a check; it opens upward near the bottom of the screen.
-- **Sheets & dialogs:** floating, 18px radius, `--shadow-lg`, dimmed backdrop.
+- **Sheets & dialogs:** floating, 18px radius, `--shadow-lg`, dimmed backdrop. On phones a
+  dialog fills the screen, and a short one (the welcome tour) is a bottom sheet.
 
 ### Calendar
 
@@ -136,13 +137,28 @@ or white text for anything filled with a person or accent color.
   `--accent-soft` wash.
 - **Events:** rounded chips — 3px left bar + soft tint in the owner's/calendar's color;
   title 600, time in `--ink-2`; past events at reduced opacity.
-- **Views per device:** phones get Day, List, and Month (a grid of dots; tap a day to see
-  its events underneath). Tablets and computers add 3 Day and Week columns. Swipe left or
-  right to page.
+- **Views per device:** every device gets Day, 3 Day, Week, Month, and a list (Schedule;
+  "List" on phones). On a phone, Week and 3 Day stack the days, and Month is a grid of dots
+  (tap a day to see its events underneath). Swipe left or right to page.
 - **Busy days** scroll inside their column with a faded edge and a "Scroll for more"
   cue — never a page scroll, and never cut off at a count. The Home calendar does the same.
 - **Home calendar:** 3 days from today by default; 1 or 7 days from the panel's switch or
   Settings → Home screen. The last tile sums up the following week.
+
+### Recipes
+
+- **Our recipes:** the list is its own scrolling box beside the open recipe (above it on a
+  phone), never a page that runs on; more rows load as it scrolls.
+- **Amounts:** ½× / 1× / 2× (a small segmented control), a servings stepper with round
+  − / + buttons, and a Metric switch, above the ingredients and in cooking mode. Whatever is
+  shown is what goes to the grocery list.
+- **Steps** all show by default; "Step by step" is a button, never the starting view.
+
+### Welcome tour
+
+New household members get a short tour, one card at a time: a "1 of 7" count in accent,
+a `--fs-title` heading, body text in `--ink-2`, an optional "Open …" link, progress dots,
+and Skip / Back / Next. The last card is about setting up their kind of device.
 
 ## Devices
 

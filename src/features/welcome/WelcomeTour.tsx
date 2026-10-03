@@ -1,8 +1,7 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useState } from 'react'
 import type { Tab } from '../../components/navTabs'
 import type { TourStep } from './welcome'
-import { ICON_STROKE } from '../../components/Icons'
+import { BackIcon, NextIcon } from '../../components/Icons'
 
 interface Props {
   steps: TourStep[]
@@ -47,11 +46,11 @@ export function WelcomeTour({ steps, onNavigate, onClose }: Props) {
           <span className="row">
             {i > 0 && (
               <button type="button" className="button" onClick={() => setI(i - 1)}>
-                <ChevronLeft size={18} strokeWidth={ICON_STROKE} aria-hidden /> Back
+                <BackIcon size={18} /> Back
               </button>
             )}
             <button type="button" className="button button--primary" onClick={() => (last ? onClose() : setI(i + 1))}>
-              {last ? 'Get started' : 'Next'} {!last && <ChevronRight size={18} strokeWidth={ICON_STROKE} aria-hidden />}
+              {last ? 'Get started' : 'Next'} {!last && <NextIcon size={18} />}
             </button>
           </span>
         </div>

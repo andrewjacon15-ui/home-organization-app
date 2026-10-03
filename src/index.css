@@ -411,6 +411,9 @@ input[type='radio']:disabled {
   position: absolute;
   width: 1px;
   height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
@@ -634,6 +637,8 @@ input[type='radio']:disabled {
 
 /* The main panel: its own scroller, content centred up to a comfortable width. */
 .app {
+  /* Anything absolutely placed (screen-reader labels) stays inside this scroller, never stretching the page. */
+  position: relative;
   height: 100dvh;
   min-width: 0;
   overflow-y: auto;
@@ -6683,6 +6688,11 @@ thead .sidebar-grid__current {
   max-height: 100dvh;
   height: 100dvh;
   padding: 20px 16px;
+  border-radius: 0;
+}
+/* Sheets and dialogs float: 18px corners (STYLE-GUIDE → Components). */
+.overlay__panel {
+  border-radius: 18px;
 }
 
 /* Welcome tour for new household members: one card at a time. */
@@ -6693,13 +6703,12 @@ thead .sidebar-grid__current {
   display: grid;
   gap: 12px;
   width: min(520px, 100%);
-  border-radius: var(--r-lg);
 }
 :root[data-device='phone'] .welcome__card {
   height: auto;
   max-height: calc(100dvh - 32px);
   align-self: end;
-  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  border-radius: 18px 18px 0 0;
 }
 .welcome__count {
   margin: 0;
