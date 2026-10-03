@@ -1,4 +1,5 @@
 import { useState, type CSSProperties, type FormEvent } from 'react'
+import { Select } from '../../components/Select'
 import type { Member } from '../../types'
 import type { NewReward, Reward } from './rewardsApi'
 
@@ -115,23 +116,10 @@ function AddRewardForm({ members, onAdd }: { members: Member[]; onAdd: (r: NewRe
 
   return (
     <form className="card reward-form" onSubmit={submit} aria-label="New reward">
-      <select value={emoji} onChange={(e) => setEmoji(e.target.value)} aria-label="Icon">
-        {EMOJIS.map((x) => (
-          <option key={x} value={x}>
-            {x}
-          </option>
-        ))}
-      </select>
+      <Select value={emoji} onChange={setEmoji} aria-label="Icon" options={EMOJIS.map((x) => ({ value: x, label: x }))} />
       <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Add a reward…" aria-label="Reward" maxLength={100} />
       <input type="number" min={1} max={100000} value={cost} onChange={(e) => setCost(Number(e.target.value))} aria-label="Stars needed" />
-      <select value={memberId} onChange={(e) => setMemberId(e.target.value)} aria-label="For">
-        <option value="">Anyone</option>
-        {members.map((m) => (
-          <option key={m.id} value={m.id}>
-            {m.displayName}
-          </option>
-        ))}
-      </select>
+      <Select value={memberId} onChange={setMemberId} aria-label="For" options={[{ value: '', label: 'Anyone' }, ...members.map((m) => ({ value: m.id, label: m.displayName }))]} />
       <button className="button button--primary" disabled={!title.trim()}>
         Add
       </button>

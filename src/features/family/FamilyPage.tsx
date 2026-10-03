@@ -1,4 +1,5 @@
 import { signOut } from 'firebase/auth'
+import { Select } from '../../components/Select'
 import { useEffect, useState, type CSSProperties, type FormEvent } from 'react'
 import { auth } from '../../firebase'
 import { detectTimezone, timezoneOptions } from '../../lib/dates'
@@ -118,18 +119,13 @@ export function FamilyPage({ family, members, userId }: Props) {
         <p className="muted">
           Used for the daily digest and reminders. This device is set to <strong>{deviceTz}</strong>.
         </p>
-        <select
+        <Select
           value={family.timezone}
           disabled={!isOwner}
-          onChange={(e) => updateFamily(family.id, { timezone: e.target.value }).catch(report)}
+          onChange={(v) => updateFamily(family.id, { timezone: v }).catch(report)}
           aria-label="Family time zone"
-        >
-          {timezoneOptions(family.timezone).map((z) => (
-            <option key={z} value={z}>
-              {z}
-            </option>
-          ))}
-        </select>
+          options={timezoneOptions(family.timezone).map((z) => ({ value: z, label: z }))}
+        />
         {isOwner && family.timezone !== deviceTz && (
           <button className="link" onClick={() => updateFamily(family.id, { timezone: deviceTz }).catch(report)}>
             Use this device's time zone

@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import { choose } from '../../test-utils'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { GeneralSettings } from '../settings/GeneralSettings'
@@ -94,11 +95,11 @@ describe('GeneralSettings', () => {
         <GeneralSettings search={vi.fn()} />
       </StaticSettings>,
     )
-    await user.selectOptions(screen.getByLabelText('Temperature'), 'Celsius (°C)')
+    await choose(user, screen.getByLabelText('Temperature'), 'Celsius (°C)')
     expect(update).toHaveBeenLastCalledWith({ temperatureUnit: 'C' })
-    await user.selectOptions(screen.getByLabelText('Text size'), 'Small')
+    await choose(user, screen.getByLabelText('Text size'), 'Small')
     expect(update).toHaveBeenLastCalledWith({ textSize: 'small' })
-    await user.selectOptions(screen.getByLabelText('Density'), 'Compact')
+    await choose(user, screen.getByLabelText('Density'), 'Compact')
     expect(update).toHaveBeenLastCalledWith({ density: 'compact' })
     await user.click(screen.getByRole('button', { name: 'Remove' }))
     expect(update).toHaveBeenLastCalledWith({ weatherLocation: null })

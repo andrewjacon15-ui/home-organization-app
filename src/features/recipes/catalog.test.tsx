@@ -1,4 +1,5 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
+import { choose } from '../../test-utils'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { entryFor, facetOptions, filterCatalog, findEntry, NO_FILTERS } from './catalog'
@@ -59,7 +60,7 @@ describe('Recipe catalog', () => {
     const { user } = setup()
     expect(screen.getByText('3 recipes')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Filters' }))
-    await user.selectOptions(screen.getByLabelText('Diet'), 'vegetarian')
+    await choose(user, screen.getByLabelText('Diet'), 'vegetarian')
     expect(rows()).toEqual([expect.stringContaining('Chickpea Salad'), expect.stringContaining('Chocolate Cake')])
     expect(screen.getByText('2 of 3')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Favorites' }))

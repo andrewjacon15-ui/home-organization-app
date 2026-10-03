@@ -117,6 +117,12 @@ or white text for anything filled with a person or accent color.
 - **Inputs:** surface, 1px `--rule-strong` on hover, accent border + 3px `--accent-soft`
   ring on focus. 16px text on phones (iOS zooms below that).
 - **Switches:** 44×26 rounded track; accent when on; white knob with a small shadow.
+- **Checkboxes and radios:** drawn by the app (22px, 6px radius / round), accent fill
+  with an `--accent-ink` tick when on. Never rely on the system's own colors: Android
+  ignores some of them.
+- **Dropdowns:** always `components/Select` (never a native `<select>`, whose list Android
+  draws in its own colors). The open list is a floating surface; the chosen option has an
+  `--accent-soft` background and a check; it opens upward near the bottom of the screen.
 - **Sheets & dialogs:** floating, 18px radius, `--shadow-lg`, dimmed backdrop.
 
 ### Calendar

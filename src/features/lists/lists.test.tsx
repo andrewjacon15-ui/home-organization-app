@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react'
+import { choose } from '../../test-utils'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Member } from '../../types'
@@ -121,7 +122,7 @@ describe('ListsBoard', () => {
     expect(actions.onAdd).toHaveBeenCalledWith(shop, 'Kale', null, 'p')
 
     await user.click(screen.getByRole('button', { name: 'Edit Birthday card' }))
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Category' }), 'd')
+    await choose(user, screen.getByRole('combobox', { name: 'Category' }), 'd')
     await user.click(screen.getByRole('button', { name: 'Save' }))
     expect(actions.onEditItem).toHaveBeenCalledWith(shop, data.grocery[2], { categoryId: 'd' })
 
