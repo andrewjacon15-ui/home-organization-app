@@ -29,6 +29,8 @@ interface Props {
   members: Member[]
   chores: Chore[]
   lists: FamilyList[]
+  /** The lists haven't arrived yet (show nothing rather than "No lists yet"). */
+  listsLoading?: boolean
   items: Record<string, ListItem[]>
   onNavigate: (target: HomeTarget) => void
   onToggleChore: (o: Occurrence, done: boolean, doneBy: string | null) => void
@@ -174,7 +176,7 @@ export function HomeView(p: Props) {
             {p.lists.slice(0, 2).map((l) => (
               <HomeList key={l.id} list={l} items={p.items[l.id] ?? []} onAdd={p.onAddItem} onToggle={p.onToggleItem} />
             ))}
-            {p.lists.length === 0 && <p className="muted">No lists yet.</p>}
+            {p.lists.length === 0 && !p.listsLoading && <p className="muted">No lists yet.</p>}
           </div>
         </section>
     ),
