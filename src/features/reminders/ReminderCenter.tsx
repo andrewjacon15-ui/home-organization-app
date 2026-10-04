@@ -3,7 +3,8 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import type { CalendarEvent, Chore, Member } from '../../types'
 import { watchEvents } from '../calendar/calendarApi'
 import { watchChores } from '../chores/choresApi'
-import { useNow } from '../../lib/hooks'
+import { fromDateKey } from '../../lib/dates'
+import { useToday } from '../../lib/hooks'
 import { useSettings } from '../settings/SettingsContext'
 import { playChime, unlockAudioOnFirstTouch } from './chime'
 import { remindersBetween, type Reminder } from './reminders'
@@ -36,14 +37,17 @@ export function ReminderCenter({ familyId, members }: { familyId: string; member
   const [alerts, setAlerts] = useState<Reminder[]>([])
   // Start a minute back so a reminder due right as the app loads still shows.
   const lastCheck = useRef<Date | null>(null)
-  // Re-anchor the watched window every hour so a long-running display keeps looking two days ahead.
-  const hour = Math.floor(useNow(60_000).getTime() / 3_600_000)
-
+  // Only what's switched on is watched (no reminders, no reads). The event window is anchored
+  // to the day (an hour before midnight through three days ahead), so it changes once a day,
+  // not every hour: each new window re-reads every event in it.
+  const today = useToday()
+  const eventReminders = settings.remindAtStart || (settings.remindBeforeEnabled && settings.remindBeforeMinutes > 0)
   useEffect(() => {
-    const start = hour * 3_600_000
-    return watchEvents(familyId, new Date(start - 3_600_000), new Date(start + 2 * 86_400_000), setEvents, 0)
-  }, [familyId, hour])
-  useEffect(() => watchChores(familyId, setChores), [familyId])
+    if (!eventReminders) return
+    const midnight = fromDateKey(today).getTime()
+    return watchEvents(familyId, new Date(midnight - 3_600_000), new Date(midnight + 3 * 86_400_000), setEvents, 0)
+  }, [familyId, today, eventReminders])
+  useEffect(() => (settings.remindChoresDue ? watchChores(familyId, setChores) : undefined), [familyId, settings.remindChoresDue])
   useEffect(() => unlockAudioOnFirstTouch(), [])
 
   useEffect(() => {
@@ -51,7 +55,7 @@ export function ReminderCenter({ familyId, members }: { familyId: string; member
       const now = new Date()
       lastCheck.current ??= new Date(now.getTime() - 60_000)
       const fired = loadFired()
-      const due = remindersBetween(events, chores, settings, lastCheck.current, now).filter((r) => !fired.includes(r.key))
+      const due = remindersBetween(eventReminders ? events : [], settings.remindChoresDue ? chores : [], settings, lastCheck.current, now).filter((r) => !fired.includes(r.key))
       lastCheck.current = now
       if (due.length === 0) return
       saveFired([...fired, ...due.map((r) => r.key)])
@@ -61,7 +65,7 @@ export function ReminderCenter({ familyId, members }: { familyId: string; member
     tick()
     const id = setInterval(tick, TICK_MS)
     return () => clearInterval(id)
-  }, [events, chores, settings])
+  }, [events, chores, settings, eventReminders])
 
   return <ReminderToasts alerts={alerts} members={members} onDismiss={(key) => setAlerts((a) => a.filter((r) => r.key !== key))} />
 }

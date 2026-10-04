@@ -66,6 +66,27 @@ Limits that aren't money:
 - No AI or other paid APIs (OpenAI, Anthropic, Vertex, Vision, Maps, Twilio, SendGrid,
   Stripe…). CI fails if one is added to either `package.json`.
 - No Cloud Tasks queues, no warm instances, no paid Firebase extensions.
+- The tablet's speech-to-text runs on the tablet (Vosk), not a paid speech API.
+
+## Read-saving rules in the app
+
+- Each screen reads only what it shows, and the Firestore cache on the device means a
+  reload (the tablet reloads when idle) is charged only for what changed.
+- In-app reminders watch the calendar only when event reminders are on, and chores only when
+  chore reminders are on. Their calendar window moves once a day, not every hour (each move
+  re-reads every event in it).
+- The photo library is read on the wall tablet (for the screensaver) and while a photo screen
+  is open, never in the background on phones.
+- Grocery lists, pantry staples and meal templates load only while the sheet that uses them
+  is open.
+
+## Last checked (2026-10-03)
+
+- Secret Manager: every secret version is in use (\`firebase functions:secrets:prune\` found
+  nothing to remove).
+- Artifact Registry: the cleanup policy deletes function images after 7 days.
+- Cloud Scheduler: 3 of the 3 free jobs.
+- Online search: capped at 900 searches a month (the free credit covers about 1,000).
 
 ## Set a budget alert (recommended, 2 minutes)
 

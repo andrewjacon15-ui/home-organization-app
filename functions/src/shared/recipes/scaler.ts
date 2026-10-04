@@ -64,8 +64,3 @@ export function scaleLine(raw: string, factor: number): string {
   const rest = s.slice(q.length).trim()
   return `${amount} ${agree(rest, q.max ?? q.value, max ?? value)}`.trim()
 }
-
-/** The factor from the recipe's servings to the servings wanted (1 when either is unknown). */
-export function scaleFactor(base: number | null | undefined, wanted: number | null | undefined): number {
-  return base && wanted && base > 0 && wanted > 0 ? wanted / base : 1
-}

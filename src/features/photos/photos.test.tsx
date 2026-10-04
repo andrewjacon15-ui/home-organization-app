@@ -3,15 +3,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { StaticSettings } from '../settings/SettingsContext'
 import { PhotoLibrary } from './PhotoLibrary'
 import { fitWithin, formatBytes, libraryUsage, shuffled, type Photo } from './photosApi'
-import { ScreensaverProvider } from './ScreensaverContext'
+import { ScreensaverProvider, useScreensaver } from './ScreensaverContext'
 import { Slideshow } from './Slideshow'
 
 let library: Photo[] = []
+let watching = 0
 vi.mock('./photosApi', async (importActual) => ({
   ...(await importActual<typeof import('./photosApi')>()),
   watchPhotos: (_familyId: string, onChange: (p: Photo[]) => void) => {
+    watching++
     onChange(library)
-    return () => undefined
+    return () => {
+      watching--
+    }
   },
 }))
 
@@ -192,5 +196,38 @@ describe('ScreensaverProvider', () => {
     mount(true)
     act(() => vi.advanceTimersByTime(60 * 60_000))
     expect(slideshow()).not.toBeInTheDocument()
+  })
+
+  it('reads the photo library on a phone only while a photo screen is open', () => {
+    library = [photo('a')]
+    function PhotoScreen() {
+      const { photos } = useScreensaver()
+      return <p>{photos.length} photos</p>
+    }
+    const { rerender } = render(
+      <StaticSettings>
+        <ScreensaverProvider familyId="f" kiosk={false}>
+          <p>app</p>
+        </ScreensaverProvider>
+      </StaticSettings>,
+    )
+    expect(watching).toBe(0)
+    rerender(
+      <StaticSettings>
+        <ScreensaverProvider familyId="f" kiosk={false}>
+          <PhotoScreen />
+        </ScreensaverProvider>
+      </StaticSettings>,
+    )
+    expect(screen.getByText('1 photos')).toBeInTheDocument()
+    expect(watching).toBe(1)
+    rerender(
+      <StaticSettings>
+        <ScreensaverProvider familyId="f" kiosk={false}>
+          <p>app</p>
+        </ScreensaverProvider>
+      </StaticSettings>,
+    )
+    expect(watching).toBe(0)
   })
 })

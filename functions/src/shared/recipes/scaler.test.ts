@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { scaleFactor, scaleLine } from './scaler.js'
+import { scaleLine } from './scaler.js'
 
 describe('scaleLine', () => {
   it('scales the leading amount in kitchen fractions and keeps the wording', () => {
@@ -30,11 +30,5 @@ describe('scaleLine', () => {
     expect(scaleLine('Salt and pepper, to taste', 3)).toBe('Salt and pepper, to taste')
     expect(scaleLine('  1 ½ cups milk ', 1)).toBe('1 ½ cups milk')
     expect(scaleLine('2 cups rice', 0)).toBe('2 cups rice')
-  })
-
-  it('works out the factor from servings', () => {
-    expect(scaleFactor(4, 6)).toBe(1.5)
-    expect(scaleFactor(null, 6)).toBe(1)
-    expect(scaleFactor(4, null)).toBe(1)
   })
 })
