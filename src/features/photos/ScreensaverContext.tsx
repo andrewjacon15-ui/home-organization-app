@@ -11,9 +11,11 @@ interface ScreensaverValue {
   /** The idle screensaver runs here (the wall tablet). */
   applies: boolean
   startNow: () => void
+  /** A screen that shows photos asks for the library while it's open; returns the "done". */
+  want: () => () => void
 }
 
-const ScreensaverContext = createContext<ScreensaverValue>({ photos: [], applies: false, startNow: () => undefined })
+const ScreensaverContext = createContext<ScreensaverValue>({ photos: [], applies: false, startNow: () => undefined, want: () => () => undefined })
 
 const CHECK_MS = 5_000
 
@@ -26,8 +28,16 @@ export function ScreensaverProvider({ familyId, children, kiosk: kioskProp }: { 
   const [photos, setPhotos] = useState<Photo[]>([])
   const [active, setActive] = useState(false)
   const lastActivity = useRef(0)
+  const [wanted, setWanted] = useState(0)
+  const want = useCallback(() => {
+    setWanted((n) => n + 1)
+    return () => setWanted((n) => n - 1)
+  }, [])
 
-  useEffect(() => watchPhotos(familyId, setPhotos), [familyId])
+  // The photo library is read only where it's used: the tablet's screensaver, or a screen
+  // showing photos (Photos, Settings → Photos). Phones don't read it in the background.
+  const listen = (kiosk && settings.screensaverEnabled) || wanted > 0
+  useEffect(() => (listen ? watchPhotos(familyId, setPhotos) : undefined), [familyId, listen])
 
   useEffect(() => {
     const touch = () => {
@@ -50,7 +60,7 @@ export function ScreensaverProvider({ familyId, children, kiosk: kioskProp }: { 
   const showing = active && photos.length > 0 && !asleep
 
   return (
-    <ScreensaverContext.Provider value={{ photos, applies: kiosk, startNow }}>
+    <ScreensaverContext.Provider value={{ photos, applies: kiosk, startNow, want }}>
       {children}
       {showing && (
         <Slideshow
@@ -69,5 +79,8 @@ export function ScreensaverProvider({ familyId, children, kiosk: kioskProp }: { 
 
 // eslint-disable-next-line react-refresh/only-export-components
 export function useScreensaver() {
-  return useContext(ScreensaverContext)
+  const value = useContext(ScreensaverContext)
+  const { want } = value
+  useEffect(() => want(), [want])
+  return value
 }

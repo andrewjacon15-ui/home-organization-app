@@ -332,8 +332,3 @@ export function lookupPhrase(phrase: string): string | undefined {
   built()
   return phrases.get(singularPhrase(phrase.toLowerCase()))
 }
-
-export function allKeys(): string[] {
-  built()
-  return [...entries.keys()]
-}
