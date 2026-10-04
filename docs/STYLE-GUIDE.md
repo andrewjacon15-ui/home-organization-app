@@ -90,7 +90,10 @@ or white text for anything filled with a person or accent color.
   pixel offsets. A control at the edge of a card gets the same space on every side.
 - **Spacing:** a 4px grid — 4, 8, 12, 16, 20, 24, 32. Page gutter `--gutter` (24px;
   16px on phones). Cards pad 12–16px; settings sections 18–20px.
-- **Touch targets:** `--tap` (48px; 52px on tablets) for anything tappable.
+- **Touch targets:** `--tap` (48px; 52px on tablets) for anything tappable. A control drawn smaller (a corner ✕, an inline "Recipe ›") gets an invisible
+  `::before` hit area around it, so it still takes a ~42px tap without moving anything.
+- **Never wider than its column:** cards and rows can shrink (`min-width: 0`); on phones a
+  settings row wraps its control under the label rather than running off the card.
 
 ## Icons
 

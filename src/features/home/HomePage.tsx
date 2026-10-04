@@ -38,7 +38,8 @@ export function HomePage({ familyId, userId, members, onNavigate }: Props) {
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [calendars, setCalendars] = useState<SyncedCalendar[]>([])
   const [chores, setChores] = useState<Chore[]>([])
-  const [lists, setLists] = useState<FamilyList[]>([])
+  // null until the first read, so Home never says "No lists yet" while they load.
+  const [lists, setLists] = useState<FamilyList[] | null>(null)
   const [items, setItems] = useState<Record<string, ListItem[]>>({})
   const [error, setError] = useState<string | null>(null)
   const [fitRef, fitStyle] = useFitHeight<HTMLDivElement>(true)
@@ -61,7 +62,7 @@ export function HomePage({ familyId, userId, members, onNavigate }: Props) {
     ensureDefaultLists(familyId, userId).catch(() => undefined)
     return watchLists(familyId, setLists)
   }, [familyId, userId, showLists])
-  const shownIds = (showLists ? lists : [])
+  const shownIds = (showLists ? (lists ?? []) : [])
     .slice(0, 2)
     .map((l) => l.id)
     .join(',')
@@ -92,7 +93,8 @@ export function HomePage({ familyId, userId, members, onNavigate }: Props) {
         calendars={calendars}
         members={members}
         chores={chores}
-        lists={lists}
+        lists={lists ?? []}
+        listsLoading={lists === null}
         items={items}
         onNavigate={onNavigate}
         panels={panels}

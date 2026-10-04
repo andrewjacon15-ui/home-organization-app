@@ -1185,7 +1185,7 @@ letter-spacing: -0.015em;
 
 .day--today .day__date,
 .schedule-day--today .day__date,
-.month-cell--today .month-cell__date {
+.month-cell--today .month-cell__num {
   color: var(--accent-text);
 }
 
@@ -3884,7 +3884,7 @@ thead .sidebar-grid__current {
 /* Today's date sits in a filled circle, the way every modern calendar marks it. */
 .day--today .day__date,
 .schedule-day--today .day__date,
-.month-cell--today .month-cell__date,
+.month-cell--today .month-cell__num,
 .home-day--today .home-day__name b {
   display: inline-flex;
   align-items: center;
@@ -6912,4 +6912,96 @@ thead .sidebar-grid__current {
 .countdowns__hint {
   flex-basis: 100%;
   margin: 0;
+}
+
+/* UI pass (2026-10-04) ----------------------------------------------------- */
+
+/* Settings cards may shrink to the page: a long word or a wide row inside one used to
+   stretch every card past a phone's edge. */
+.settings-section {
+  min-width: 0;
+}
+
+/* Phone Home calendar: the 1 / 3 / 7 days switch gets its own full-width row under
+   "Calendar … Open", with even, easy-to-tap segments. */
+:root[data-device='phone'] .home-panel__head:has(.segmented) {
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+:root[data-device='phone'] .home-panel__head .segmented {
+  order: 3;
+  flex-basis: 100%;
+  margin-left: 0;
+}
+:root[data-device='phone'] .home-panel__head .segmented__item {
+  flex: 1;
+}
+
+/* Phone settings rows: a label and a dropdown or text box share the line when they fit;
+   otherwise the control drops under its label, full width, instead of running off the card. */
+.settings-rows > * {
+  min-width: 0;
+}
+:root[data-device='phone'] .setting-row {
+  flex-wrap: wrap;
+}
+:root[data-device='phone'] .setting-row__label {
+  flex: 1 1 150px;
+  min-width: 0;
+}
+:root[data-device='phone'] .setting-row > .select,
+:root[data-device='phone'] .setting-row > input:not(.switch):not([type='color']):not([type='checkbox']):not([type='radio']) {
+  flex: 1 1 160px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Month cells: the date and its forecast side by side; on the 1st ("Oct 1") today's circle
+   stretches into a pill so the words stay inside it. */
+.month-cell__date {
+  gap: 6px;
+}
+.month-cell--today .month-cell__num {
+  flex: none;
+  width: auto;
+  min-width: 1.6em;
+  padding: 0 0.35em;
+}
+
+/* Lists share the width instead of leaving empty column slots (auto-fit, not auto-fill);
+   a lone list stops at a comfortable reading width. */
+.lists__columns {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+.lists__columns > .list-col {
+  max-width: 640px;
+}
+.reward-columns {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+.reward-columns > * {
+  max-width: 640px;
+}
+
+/* Small controls get a bigger invisible tap area (at least ~42px), without moving anything. */
+.countdown__remove::before,
+.chore-card__delete::before,
+.meal__recipe::before {
+  content: '';
+  position: absolute;
+}
+.countdown__remove::before {
+  inset: -8px;
+}
+.chore-card__delete {
+  position: relative;
+}
+.chore-card__delete::before {
+  inset: -4px;
+}
+.meal__recipe {
+  position: relative;
+}
+.meal__recipe::before {
+  inset: -12px -8px;
 }

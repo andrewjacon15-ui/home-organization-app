@@ -130,7 +130,8 @@ export function CalendarBoard({ kind, layout = 'desktop', range, today, now, eve
             return (
               <div key={key} role="gridcell" className={dayClass(key, 'month-cell')} aria-label={longLabel(key)} aria-current={key === today ? 'date' : undefined}>
                 <span className="month-cell__date">
-                  {date.getDate() === 1 ? date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : date.getDate()}
+                  {/* The number alone gets today's circle; the forecast sits beside it. */}
+                  <span className="month-cell__num">{date.getDate() === 1 ? date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : date.getDate()}</span>
                   <DayWeather date={key} />
                 </span>
                 <ul className="events">{list.slice(0, MONTH_CELL_LIMIT).map((e) => chip(e, true))}</ul>
