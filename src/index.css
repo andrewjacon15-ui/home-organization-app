@@ -4610,8 +4610,236 @@ thead .sidebar-grid__current {
 }
 
 .finder__mic--on {
+  position: relative;
   background: var(--accent);
   color: var(--accent-ink);
+  border-color: var(--accent);
+}
+
+/* Listening: two rings ripple out from the mic. */
+.finder__mic--on::before,
+.finder__mic--on::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  border: 2px solid var(--accent);
+  pointer-events: none;
+  animation: mic-ripple 1.6s ease-out infinite;
+}
+
+.finder__mic--on::after {
+  animation-delay: 0.8s;
+}
+
+/* Getting voice ready: a ring turns around the mic instead. */
+.finder__mic--preparing::before {
+  inset: -5px;
+  border-color: var(--accent) transparent transparent transparent;
+  animation: spin 0.9s linear infinite;
+}
+
+.finder__mic--preparing::after {
+  display: none;
+}
+
+@keyframes mic-ripple {
+  from {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  to {
+    transform: scale(1.7);
+    opacity: 0;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* What the mic is hearing, live. */
+.listening {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 10px 14px;
+  border-radius: var(--r);
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+.listening__bars {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex: none;
+  height: 24px;
+}
+
+.listening__bars span {
+  width: 4px;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--accent);
+  transform-origin: center;
+  animation: voice-bar 0.9s ease-in-out infinite, voice-bump 0.35s ease-out;
+}
+
+.listening__bars span:nth-child(2) {
+  animation-delay: -0.6s, 0s;
+}
+
+.listening__bars span:nth-child(3) {
+  animation-delay: -0.3s, 0s;
+}
+
+.listening__bars span:nth-child(4) {
+  animation-delay: -0.75s, 0s;
+}
+
+.listening__bars span:nth-child(5) {
+  animation-delay: -0.15s, 0s;
+}
+
+.listening--preparing .listening__bars span {
+  animation: voice-wait 1.2s ease-in-out infinite;
+}
+
+.listening__text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: 500;
+}
+
+.listening__label {
+  color: var(--accent-text);
+  font-weight: 700;
+}
+
+@keyframes voice-bar {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+/* Each new word: the bars jump. */
+@keyframes voice-bump {
+  from {
+    filter: brightness(1.35);
+  }
+}
+
+@keyframes voice-wait {
+  0%,
+  100% {
+    transform: scaleY(0.25);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scaleY(0.25);
+    opacity: 1;
+  }
+}
+
+/* A web search running: a moving magnifier and placeholder cards. */
+.searching {
+  display: grid;
+  gap: 12px;
+}
+
+.searching__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-weight: 600;
+  color: var(--accent-text);
+}
+
+.searching__icon {
+  display: inline-grid;
+  place-items: center;
+  animation: search-look 1.4s ease-in-out infinite;
+}
+
+.searching__cards {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.searching__card {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+}
+
+.searching__line {
+  display: block;
+  height: 12px;
+  width: 80%;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--rule) 0%, var(--accent-soft) 50%, var(--rule) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.3s linear infinite;
+}
+
+.searching__line--title {
+  height: 16px;
+  width: 55%;
+}
+
+.searching__line--short {
+  width: 35%;
+}
+
+@keyframes search-look {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0);
+  }
+  25% {
+    transform: translate(4px, -2px) rotate(8deg);
+  }
+  75% {
+    transform: translate(-4px, 2px) rotate(-8deg);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .finder__mic--on::before,
+  .finder__mic--on::after,
+  .listening__bars span,
+  .searching__icon,
+  .searching__line {
+    animation: none;
+  }
+
+  .listening__bars span {
+    transform: scaleY(0.6);
+  }
 }
 
 .finder__go {
@@ -5527,6 +5755,30 @@ thead .sidebar-grid__current {
   font-variant-numeric: tabular-nums;
   font-weight: 600;
   color: var(--accent-text);
+}
+
+.timer-chip__more {
+  align-self: center;
+  min-width: 24px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: var(--fs-small);
+  font-weight: 700;
+  line-height: 22px;
+  text-align: center;
+}
+
+/* On a phone the corner chip is small: it sits over the content, above the tab bar. */
+:root[data-device='phone'] .timer-dock:not(.timer-dock--inline) .timer-chip {
+  min-height: 40px;
+  padding: 6px 12px;
+  gap: 8px;
+}
+
+:root[data-device='phone'] .timer-dock:not(.timer-dock--inline) .timer-chip__label {
+  max-width: 110px;
 }
 
 .timer-chip--paused,

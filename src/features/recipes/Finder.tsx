@@ -3,6 +3,7 @@ import { listFromSpeech, matchRecipe, rankByMatch, tokenizeHave, type MatchResul
 import { BookIcon, GlobeIcon, MicIcon, MicOffIcon, SearchIcon } from '../../components/Icons'
 import { useSpeech } from '../../lib/useSpeech'
 import { catalogReasons, type CatalogEntry, type ImportResult } from './catalog'
+import { ListeningPanel, SearchingPanel } from './Feedback'
 import { ImportForm } from './ImportForm'
 import type { OnlineResult } from './kitchenApi'
 
@@ -206,7 +207,7 @@ export function KitchenSearch({ entries, staples, onOpen, onFindOnline, onCookOn
             <textarea id="finder-ingredients" rows={2} value={text} onChange={(e) => setText(e.target.value)} placeholder="chicken thighs, rice, broccoli…" maxLength={1000} />
             <button
               type="button"
-              className={`icon-button finder__mic${speech.listening ? ' finder__mic--on' : ''}`}
+              className={`icon-button finder__mic${speech.listening ? ' finder__mic--on' : ''}${speech.preparing ? ' finder__mic--preparing' : ''}`}
               aria-label={speech.listening ? 'Stop listening' : 'Say what you have'}
               aria-pressed={speech.listening}
               onClick={speech.listening ? speech.stop : speech.start}
@@ -215,11 +216,7 @@ export function KitchenSearch({ entries, staples, onOpen, onFindOnline, onCookOn
             </button>
           </div>
         </div>
-        {speech.listening && (
-          <p className="muted" role="status">
-            {speech.preparing ? 'Getting voice ready… The first time, this downloads about 40 MB to this screen.' : 'Listening…'}
-          </p>
-        )}
+        {speech.listening && <ListeningPanel preparing={speech.preparing} heard={speech.heard} />}
         {speech.error && <p className="muted">{speech.error}</p>}
         {understood.length > 0 && <p className="finder__understood">Using: {names(understood.map((h) => h.key))}</p>}
         <p className="settings-note">Salt, pepper, oil and your other pantry staples (Settings → Kitchen) don't count against a recipe.</p>
@@ -285,6 +282,7 @@ export function KitchenSearch({ entries, staples, onOpen, onFindOnline, onCookOn
           </ol>
         </>
       )}
+      {where === 'online' && online.busy && <SearchingPanel what="your recipe sites" />}
       {where === 'online' && online.results && <OnlineResults results={online.results} byIngredients onCook={onCookOnline} />}
     </section>
   )
@@ -331,6 +329,7 @@ export function WebSearch({ onFind, onCookOnline, onImport, onOpen }: WebProps) 
           {online.error}
         </p>
       )}
+      {online.busy && <SearchingPanel what={`for “${dish.trim()}”`} />}
       {online.results && <OnlineResults results={online.results} byIngredients={false} onCook={onCookOnline} />}
 
       <div className="finder__link">

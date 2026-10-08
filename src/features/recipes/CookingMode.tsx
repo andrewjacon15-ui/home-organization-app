@@ -80,13 +80,13 @@ function StepTimers({ recipeId, step, text, big }: { recipeId: string; step: num
 
 /**
  * The cooking screen: ingredients on one side, steps on the other (either can fill the
- * screen), serving scaler, and kitchen timers. When the step you're on calls for a time
- * ("bake 35 minutes"), its timer appears ready to start.
+ * screen), serving scaler, and kitchen timers. A step that calls for a time ("bake 35
+ * minutes") has a button that starts its timer; nothing is added until you tap it.
  */
 export function CookingView({ recipe, state, onAction, onReset, onDone, oneStep: initialOneStep = false }: ViewProps) {
   const [oneStep, setOneStep] = useState(initialOneStep)
   const [focus, setFocus] = useState<Focus>('both')
-  const { add, hasSource, timers, dismiss, setPanelOpen } = useTimers()
+  const { timers, dismiss, setPanelOpen } = useTimers()
   const ingredients = lines(recipe.ingredients)
   const steps = lines(recipe.steps)
   const [metric, setMetric] = useMetric()
@@ -105,20 +105,8 @@ export function CookingView({ recipe, state, onAction, onReset, onDone, oneStep:
     }
   }, [])
 
-  // A step that calls for a time gets its timer, ready to start, when you reach it.
-  const currentText = current >= 0 ? steps[current] : undefined
-  useEffect(() => {
-    if (currentText == null) return
-    findTimes(currentText).forEach((t, k) => {
-      const source = sourceOf(recipe.id, current, k)
-      if (!hasSource(source)) add(stepLabel(currentText, current + 1), t.seconds, { source })
-    })
-    // Only when the step changes; hasSource/add change with every tick.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recipe.id, current, currentText])
-
-  /** Timers this recipe spawned that were never started go away with the recipe. */
-  const tidy = () => timers.filter((t) => t.state === 'ready' && t.source?.startsWith(`${recipe.id}#`)).forEach((t) => dismiss(t.id))
+  /** Timers from this recipe's steps that aren't counting down go away with the recipe. */
+  const tidy = () => timers.filter((t) => (t.state === 'ready' || t.state === 'paused') && t.source?.startsWith(`${recipe.id}#`)).forEach((t) => dismiss(t.id))
 
   const expand = (pane: Exclude<Focus, 'both'>, name: string) => (
     <button

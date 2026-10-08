@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -150,6 +150,37 @@ describe("What's in my kitchen", () => {
       delete (window as unknown as { webkitSpeechRecognition?: unknown }).webkitSpeechRecognition
     }
   })
+
+  it('shows what it hears while you talk', async () => {
+    const recs: { onresult: ((e: unknown) => void) | null }[] = []
+    class FakeRecognition {
+      lang = ''
+      interimResults = false
+      continuous = false
+      onresult: ((e: unknown) => void) | null = null
+      onend: (() => void) | null = null
+      onerror = null
+      start() {
+        recs.push(this)
+      }
+      stop() {
+        this.onend?.()
+      }
+    }
+    ;(window as unknown as { webkitSpeechRecognition: unknown }).webkitSpeechRecognition = FakeRecognition
+    try {
+      const { user } = kitchen()
+      await user.click(screen.getByRole('button', { name: 'Say what you have' }))
+      expect(screen.getByRole('status')).toHaveTextContent(/Listening/)
+      act(() => recs[0].onresult?.({ results: [[{ transcript: 'chicken rice' }]] }))
+      expect(screen.getByRole('status')).toHaveTextContent('Heard “chicken rice”')
+      await user.click(screen.getByRole('button', { name: 'Stop listening' }))
+      expect(screen.queryByRole('status')).not.toBeInTheDocument()
+      expect(screen.getByLabelText('Ingredients')).toHaveValue('chicken, rice')
+    } finally {
+      delete (window as unknown as { webkitSpeechRecognition?: unknown }).webkitSpeechRecognition
+    }
+  })
 })
 
 describe('Search the web', () => {
@@ -162,6 +193,19 @@ describe('Search the web', () => {
     expect(onFind).toHaveBeenCalledWith('fried rice')
     expect(await screen.findByText(/Ranked by cooks’ ratings \(60%\) and where the web search placed it \(40%\)/)).toBeInTheDocument()
     expect(screen.queryByLabelText(/^Ingredients \d+%$/)).not.toBeInTheDocument()
+  })
+
+  it('shows that it is searching until the results arrive', async () => {
+    let done: (r: never[]) => void = () => undefined
+    const onFind = vi.fn(() => new Promise<never[]>((r) => (done = r)))
+    const user = userEvent.setup()
+    render(<WebSearch onFind={onFind} onImport={vi.fn()} onOpen={vi.fn()} />)
+    await user.type(screen.getByLabelText('Dish'), 'fried rice')
+    await user.click(screen.getByRole('button', { name: 'Search' }))
+    expect(screen.getByRole('status')).toHaveTextContent('Searching for “fried rice”…')
+    await act(async () => done([]))
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.getByText(/Nothing found/)).toBeInTheDocument()
   })
 
   it('adds a recipe from a link and opens it, even with online search off', async () => {

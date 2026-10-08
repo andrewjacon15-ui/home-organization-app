@@ -11,7 +11,6 @@ export interface TimersValue {
   addTime: (id: string, seconds: number) => void
   /** Stops a ringing timer, or removes any timer. */
   dismiss: (id: string) => void
-  hasSource: (source: string) => boolean
   panelOpen: boolean
   setPanelOpen: (open: boolean) => void
 }

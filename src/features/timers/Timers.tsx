@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { useDevice } from '../../lib/DeviceContext'
 import { AddIcon, AlarmClockIcon, CloseIcon, PauseIcon, PlayIcon, TimerIcon } from '../../components/Icons'
 import { canRaiseVolume } from './alarm'
 import { formatClock, formatLength, PRESETS } from './timerMath'
@@ -136,19 +137,38 @@ export function TimerPanel() {
 }
 
 /**
- * Running timers, always in view: in the corner on every screen, or (inline) in the cooking
- * screen's header, where the corner would cover its Next button.
+ * Timers you've started, always in view: in the corner on every screen, or (inline) in the
+ * cooking screen's header, where the corner would cover its Next button. Timers set up but
+ * not started stay in the timers sheet. On a phone the corner holds one small chip (the timer
+ * ending first, and how many others), so it never covers the screen.
  */
 export function TimerDock({ inline = false }: { inline?: boolean }) {
   const { timers, now, setPanelOpen } = useTimers()
-  const shown = timers.filter((t) => t.state !== 'ringing')
-  if (!shown.length) return null
+  const { device } = useDevice()
+  const going = timers.filter((t) => t.state === 'running' || t.state === 'paused' || t.state === 'done')
+  if (!going.length) return null
+  const order = { done: 0, running: 1, paused: 2 } as Record<string, number>
+  const sorted = [...going].sort((a, b) => order[a.state] - order[b.state] || timeLeft(a, now) - timeLeft(b, now))
+  const compact = device === 'phone' && sorted.length > 1
+  const shown = compact ? sorted.slice(0, 1) : sorted
+  const more = sorted.length - shown.length
   return (
     <div className={`timer-dock${inline ? ' timer-dock--inline' : ''}`} aria-label="Running timers">
       {shown.map((t) => (
-        <button key={t.id} type="button" className={`timer-chip timer-chip--${t.state}`} onClick={() => setPanelOpen(true)}>
+        <button
+          key={t.id}
+          type="button"
+          className={`timer-chip timer-chip--${t.state}`}
+          aria-label={more ? `${t.label}, ${t.state === 'done' ? 'done' : formatClock(timeLeft(t, now))}, and ${more} more timer${more > 1 ? 's' : ''}` : undefined}
+          onClick={() => setPanelOpen(true)}
+        >
           <span className="timer-chip__label">{t.label}</span>
-          <span className="timer-chip__clock">{t.state === 'done' ? 'Done' : t.state === 'ready' ? `Ready · ${formatClock(t.leftMs)}` : formatClock(timeLeft(t, now))}</span>
+          <span className="timer-chip__clock">{t.state === 'done' ? 'Done' : formatClock(timeLeft(t, now))}</span>
+          {more > 0 && (
+            <span className="timer-chip__more" aria-hidden>
+              +{more}
+            </span>
+          )}
         </button>
       ))}
     </div>
