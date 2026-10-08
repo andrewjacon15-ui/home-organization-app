@@ -6664,6 +6664,159 @@ thead .sidebar-grid__current {
   flex: none;
 }
 
+/* Settings: Household | Admin switch (the admin only). */
+.settings-tabs {
+  display: flex;
+  margin: 0 0 12px;
+}
+.settings-tabs .segmented__item {
+  flex: 1;
+}
+:root[data-device='phone'] .settings-tabs {
+  margin: 0 0 4px;
+}
+
+/* Settings → Admin: usage across every household. */
+.usage-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+.usage-stats div {
+  padding: 12px 14px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  background: var(--surface);
+}
+.usage-stats dt {
+  font-size: var(--fs-small);
+  color: var(--ink-2);
+}
+.usage-stats dd {
+  margin: 2px 0 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.usage-meter {
+  display: grid;
+  gap: 6px;
+}
+.usage-meter p {
+  margin: 0;
+}
+.usage-meter__track {
+  display: flex;
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--rule);
+}
+.usage-meter__track span {
+  min-width: 0;
+  height: 100%;
+}
+.usage-meter__photos {
+  background: var(--accent);
+}
+.usage-meter__books {
+  background: var(--warn);
+}
+.usage-meter__key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: var(--fs-small);
+  color: var(--ink-2);
+}
+.usage-key::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 6px;
+  border-radius: 3px;
+  vertical-align: -1px;
+}
+.usage-key--photos::before {
+  background: var(--accent);
+}
+.usage-key--books::before {
+  background: var(--warn);
+}
+
+/* Settings → Admin: one card per household. */
+.household-cards {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.household-card {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+.household-card p {
+  margin: 0;
+}
+.household-card__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.household-card__name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--fs-lead);
+}
+.household-card__meta {
+  font-size: var(--fs-small);
+  overflow-wrap: anywhere;
+}
+.household-card__stats {
+  font-size: var(--fs-small);
+}
+.household-card__bar {
+  height: 6px;
+}
+.household-card__people summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: var(--fs-small);
+}
+.household-card__people ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  font-size: var(--fs-small);
+  overflow-wrap: anywhere;
+}
+.household-card__actions,
+.household-card__form,
+.household-card__delete .row {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.household-card__form input,
+.household-card__delete input {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+.household-card__delete {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--r);
+  border: 1px solid var(--danger);
+}
+
 /* Settings → Households (admin) */
 .invite-link {
   display: flex;
