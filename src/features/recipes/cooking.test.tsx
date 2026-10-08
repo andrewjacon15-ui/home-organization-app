@@ -131,25 +131,24 @@ describe('CookingView', () => {
     expect(cooking).toHaveClass('cooking--ingredients')
   })
 
-  it('readies a timer when you reach a step that calls for one, and starts it from the step', () => {
+  it('adds no timer until you start one from the step', () => {
     localStorage.clear()
     render(<Harness oneStep />)
-    expect(screen.queryByRole('button', { name: /Step 3/ })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Next' }))
     fireEvent.click(screen.getByRole('button', { name: 'Next' }))
-    // Spawned, ready, in the header…
-    expect(screen.getByRole('button', { name: /Step 3: Cook on a/ })).toHaveTextContent('Ready · 2:00')
-    // …and started from the step itself.
+    // The step offers its timer, but nothing is running or waiting in the header.
+    expect(screen.queryByRole('button', { name: /Step 3: Cook on a/ })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Start 2–3 min timer' }))
     expect(screen.getByRole('button', { name: /Pause timer, 2:00 left/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Step 3: Cook on a/ })).toHaveTextContent('2:00')
   })
 
-  it('clears timers it readied but nobody started when you finish', () => {
+  it('clears its paused step timers when you finish', () => {
     localStorage.clear()
     const onDone = vi.fn()
     render(<Harness onDone={onDone} />)
-    fireEvent.click(screen.getByRole('button', { name: /Whisk the dry ingredients/ }))
-    fireEvent.click(screen.getByRole('button', { name: /Add milk and eggs/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Start 2–3 min timer' }))
+    fireEvent.click(screen.getByRole('button', { name: /Pause timer/ }))
     expect(screen.getByRole('button', { name: /Step 3: Cook on a/ })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Done' }))
     expect(screen.queryByRole('button', { name: /Step 3: Cook on a/ })).not.toBeInTheDocument()

@@ -73,6 +73,8 @@ export function useSpeech(onText: (text: string) => void) {
   const [error, setError] = useState<string | null>(null)
   /** The tablet's recognizer is getting ready (the first time, downloading its model). */
   const [preparing, setPreparing] = useState(false)
+  /** What's been heard so far in this dictation (cleared when it ends). */
+  const [heard, setHeard] = useState('')
   const rec = useRef<Recognition | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const handler = useRef(onText)
@@ -91,6 +93,7 @@ export function useSpeech(onText: (text: string) => void) {
     const Cls = recognitionClass()
     if (!Cls) return setError("Voice isn't available on this screen. Type instead.")
     setError(null)
+    setHeard('')
     const r = new Cls()
     r.lang = navigator.language || 'en-US'
     // Interim results show the person is still talking, so a pause mid-list doesn't end it.
@@ -103,6 +106,7 @@ export function useSpeech(onText: (text: string) => void) {
     }
     r.onresult = (e) => {
       heard = joinResults(Array.from(e.results).map((res) => res[0]?.transcript ?? ''))
+      setHeard(heard)
       quietFor(PAUSE_MS)
     }
     r.onerror = (e) => {
@@ -113,6 +117,7 @@ export function useSpeech(onText: (text: string) => void) {
       clearTimeout(timer.current)
       setListening(false)
       setPreparing(false)
+      setHeard('')
       if (heard) handler.current(heard)
       heard = ''
     }
@@ -135,5 +140,5 @@ export function useSpeech(onText: (text: string) => void) {
   }, [])
 
   const stop = useCallback(() => rec.current?.stop(), [])
-  return { listening, preparing, error, start, stop, supported: speechSupported() }
+  return { listening, preparing, heard, error, start, stop, supported: speechSupported() }
 }

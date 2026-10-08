@@ -10,7 +10,8 @@ function load(): KitchenTimer[] {
   try {
     const raw = localStorage.getItem(STORE)
     const list = raw ? (JSON.parse(raw) as KitchenTimer[]) : []
-    return Array.isArray(list) ? list.filter((t) => t && typeof t.id === 'string' && typeof t.total === 'number').slice(0, 20) : []
+    // Unstarted timers a recipe step left behind (older versions readied them on their own) are dropped.
+    return Array.isArray(list) ? list.filter((t) => t && typeof t.id === 'string' && typeof t.total === 'number' && !(t.state === 'ready' && t.source)).slice(0, 20) : []
   } catch {
     return []
   }
@@ -96,7 +97,6 @@ export function TimersProvider({ children, clock = Date.now }: { children: React
           return { ...t, leftMs: t.leftMs + ms, total: t.total + seconds }
         }),
       dismiss: (id) => update(id, () => null),
-      hasSource: (source) => timers.some((t) => t.source === source),
       panelOpen,
       setPanelOpen,
     }),
