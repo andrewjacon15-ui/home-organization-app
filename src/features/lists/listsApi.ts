@@ -1,6 +1,7 @@
-import { collection, deleteDoc, deleteField, doc, getDocs, limit, onSnapshot, query, serverTimestamp, setDoc, Timestamp, updateDoc, writeBatch } from 'firebase/firestore'
+import { collection, deleteField, doc, getDocs, limit, onSnapshot, query, serverTimestamp, setDoc, Timestamp, updateDoc, writeBatch } from 'firebase/firestore'
 import { AISLES, categoryFor } from '@shared/recipes/aisles.js'
 import { db } from '../../firebase'
+import { removeDocs, type Restore } from '../../lib/undo'
 
 export type ListKind = 'grocery' | 'todo' | 'custom'
 
@@ -13,6 +14,8 @@ export interface FamilyList {
   order: number
   /** Smaller lists inside this one ("Produce", "Pantry"…), in display order. */
   categories?: ListCategory[]
+  /** Grocery lists sort themselves into store aisles unless this is false. */
+  autoSort?: boolean
 }
 
 export interface ListCategory {
@@ -90,13 +93,10 @@ export function updateList(familyId: string, listId: string, changes: Partial<Pi
   return updateDoc(doc(listsCol(familyId), listId), changes)
 }
 
-/** Deletes a list and everything on it. */
+/** Deletes a list and everything on it (and returns how to put it all back). */
 export async function deleteList(familyId: string, listId: string) {
   const items = await getDocs(itemsCol(familyId, listId))
-  const batch = writeBatch(db)
-  items.docs.forEach((d) => batch.delete(d.ref))
-  batch.delete(doc(listsCol(familyId), listId))
-  await batch.commit()
+  return removeDocs([...items.docs.map((d) => d.ref), doc(listsCol(familyId), listId)])
 }
 
 /**
@@ -137,6 +137,27 @@ export function addCategories(familyId: string, list: FamilyList, names: string[
   return updateDoc(doc(listsCol(familyId), list.id), { categories: [...(list.categories ?? []), ...added].slice(0, 30) })
 }
 
+/** A grocery list that sorts itself but doesn't have its store aisles yet. */
+export function needsAisles(list: FamilyList): boolean {
+  if (list.kind !== 'grocery' || list.autoSort === false) return false
+  const names = new Set((list.categories ?? []).map((c) => c.name.trim().toLowerCase()))
+  return !AISLES.some((a) => names.has(a.toLowerCase()))
+}
+
+/** Turns aisle sorting on (adds the aisles and files what's there) or off (removes the aisles; items stay). */
+export async function setAutoSort(familyId: string, list: FamilyList, items: ListItem[], on: boolean) {
+  if (on) {
+    await updateDoc(doc(listsCol(familyId), list.id), { autoSort: true })
+    return addAisles(familyId, { ...list, autoSort: true }, items)
+  }
+  const aisle = new Set(AISLES.map((a) => a.toLowerCase()))
+  const gone = new Set((list.categories ?? []).filter((c) => aisle.has(c.name.trim().toLowerCase())).map((c) => c.id))
+  const batch = writeBatch(db)
+  batch.update(doc(listsCol(familyId), list.id), { autoSort: false, categories: (list.categories ?? []).filter((c) => !gone.has(c.id)) })
+  items.filter((i) => i.categoryId && gone.has(i.categoryId)).forEach((i) => batch.update(doc(itemsCol(familyId, list.id), i.id), { categoryId: null }))
+  await batch.commit()
+}
+
 /** Store aisles for a grocery list: what's already on it is sorted in, and new items sort themselves. */
 export async function addAisles(familyId: string, list: FamilyList, items: ListItem[]) {
   const have = new Set((list.categories ?? []).map((c) => c.name.trim().toLowerCase()))
@@ -165,16 +186,24 @@ export function moveCategory(familyId: string, list: FamilyList, categoryId: str
   return updateDoc(doc(listsCol(familyId), list.id), { categories: cats })
 }
 
-/** Removes a category; its items move to the top of the list (nothing is deleted). */
-export async function deleteCategory(familyId: string, list: FamilyList, categoryId: string, items: ListItem[]) {
+/** Removes a category; its items move to the top of the list (nothing is deleted). Returns how to undo it. */
+export async function deleteCategory(familyId: string, list: FamilyList, categoryId: string, items: ListItem[]): Promise<Restore> {
+  const before = list.categories ?? []
+  const moved = items.filter((i) => i.categoryId === categoryId)
   const batch = writeBatch(db)
-  batch.update(doc(listsCol(familyId), list.id), { categories: (list.categories ?? []).filter((c) => c.id !== categoryId) })
-  items.filter((i) => i.categoryId === categoryId).forEach((i) => batch.update(doc(itemsCol(familyId, list.id), i.id), { categoryId: null }))
+  batch.update(doc(listsCol(familyId), list.id), { categories: before.filter((c) => c.id !== categoryId) })
+  moved.forEach((i) => batch.update(doc(itemsCol(familyId, list.id), i.id), { categoryId: null }))
   await batch.commit()
+  return async () => {
+    const back = writeBatch(db)
+    back.update(doc(listsCol(familyId), list.id), { categories: before })
+    moved.forEach((i) => back.update(doc(itemsCol(familyId, list.id), i.id), { categoryId }))
+    await back.commit()
+  }
 }
 
 export function deleteItem(familyId: string, listId: string, itemId: string) {
-  return deleteDoc(doc(itemsCol(familyId, listId), itemId))
+  return removeDocs([doc(itemsCol(familyId, listId), itemId)])
 }
 
 export async function clearCompleted(familyId: string, listId: string, items: ListItem[]) {

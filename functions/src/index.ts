@@ -117,7 +117,9 @@ function adminCallable<T>(name: string, handler: (store: admin.AdminStore, calle
   })
 }
 
-export const adminHouseholds = adminCallable('adminHouseholds', (store, caller) => admin.listHouseholds(store, caller))
+export const adminHouseholds = adminCallable('adminHouseholds', (store, caller) => admin.listHouseholds(store, caller, new Date(), onlineSearch.MONTHLY_CAP))
+export const adminSetCreator = adminCallable('adminSetCreator', admin.setCreator)
+export const adminRemoveMember = adminCallable('adminRemoveMember', admin.removeMember)
 export const adminRenameHousehold = adminCallable('adminRenameHousehold', admin.renameHousehold)
 export const adminDeleteHousehold = adminCallable('adminDeleteHousehold', admin.deleteHousehold)
 

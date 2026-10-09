@@ -4717,7 +4717,7 @@ thead .sidebar-grid__current {
 
 .listening__label {
   color: var(--accent-text);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 @keyframes voice-bar {
@@ -5765,7 +5765,7 @@ thead .sidebar-grid__current {
   background: var(--accent);
   color: var(--accent-ink);
   font-size: var(--fs-small);
-  font-weight: 700;
+  font-weight: 600;
   line-height: 22px;
   text-align: center;
 }
@@ -6695,8 +6695,8 @@ thead .sidebar-grid__current {
 }
 .usage-stats dd {
   margin: 2px 0 0;
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-size: var(--fs-title);
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 .usage-meter {
@@ -7409,4 +7409,639 @@ thead .sidebar-grid__current {
 }
 .meal__recipe::before {
   inset: -12px -8px;
+}
+
+/* Chores: "Take turns" — people picked in turn order, each with their number. */
+.chore-form2__turns {
+  flex: 1 1 100%;
+  display: grid;
+  gap: 8px;
+}
+.chore-form2__turns-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+.chore-form2__people {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.turn-chip {
+  gap: 8px;
+}
+.turn-chip__num {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid var(--rule-strong);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.turn-chip--on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.turn-chip--on .turn-chip__num {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* Settings: search box above the section index. */
+.settings-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin: 0 0 12px;
+  color: var(--ink-2);
+}
+.settings-search > svg {
+  position: absolute;
+  left: 12px;
+  pointer-events: none;
+}
+.settings-search input {
+  width: 100%;
+  min-width: 0;
+  padding-left: 38px;
+  padding-right: 44px;
+}
+.settings-search__clear {
+  position: absolute;
+  right: 2px;
+}
+.settings-section[hidden],
+.settings-index li[hidden] {
+  display: none;
+}
+:root[data-device='phone'] .settings-search {
+  margin: 4px 0 2px;
+}
+
+/* Undo: after a delete, a floating message along the bottom with an Undo button. */
+.undo-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(560px, calc(100vw - 32px));
+  padding: 6px 6px 6px 16px;
+  transform: translateX(-50%);
+  border-radius: var(--r-lg);
+  background: var(--ink);
+  color: var(--paper);
+  box-shadow: var(--shadow-lg);
+  animation: undo-in 160ms ease-out;
+}
+:root[data-device='phone'] .undo-toast {
+  bottom: calc(76px + env(safe-area-inset-bottom));
+}
+.undo-toast__text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.undo-toast__undo {
+  flex: none;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--r);
+  background: transparent;
+  color: var(--paper);
+  font: inherit;
+  font-weight: 600;
+  box-shadow: inset 0 0 0 1px var(--ink-3);
+  cursor: pointer;
+}
+.undo-toast__close {
+  flex: none;
+  color: var(--paper);
+}
+@keyframes undo-in {
+  from {
+    transform: translate(-50%, 8px);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .undo-toast {
+    animation: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Home: the daily summary (features/home/DailySummary.tsx)
+   -------------------------------------------------------------------------- */
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+}
+.summary__hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px 24px;
+}
+.summary__intro {
+  min-width: 0;
+}
+.summary__greeting {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--fs-lead);
+  font-weight: 500;
+}
+.summary__headline {
+  margin: 2px 0 0;
+  font-size: var(--fs-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.summary__weather {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--tap);
+  padding: 4px 16px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.summary__weather .weather-icon {
+  color: var(--accent-text);
+  flex: none;
+}
+.summary__alert {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 4px 14px;
+  border: 1px solid var(--danger);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--danger);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Two columns on tablets and computers: what's next and today's timeline; everything else. */
+.summary__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+}
+.summary__main,
+.summary__side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  min-width: 0;
+}
+.summary__side {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.summary__pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+.summary-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.summary-card__head .link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--fs-small);
+}
+.summary-card__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+
+/* Up next: the one thing to know right now. */
+.summary-next {
+  flex: none;
+  background: var(--accent-soft);
+  border-color: transparent;
+}
+.summary-next__body {
+  display: grid;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.summary-next__title {
+  font-size: var(--fs-title);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  overflow-wrap: anywhere;
+}
+.summary-next__when {
+  color: var(--accent-text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.summary-next__where,
+.summary-next__who {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+  overflow-wrap: anywhere;
+}
+.summary-next__bar {
+  display: block;
+  height: 4px;
+  margin-top: 4px;
+  border-radius: 999px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.summary-next__bar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.summary-next__empty {
+  margin: 0;
+  color: var(--ink-2);
+}
+.summary-avatars {
+  display: inline-flex;
+}
+.summary-avatars .initial + .initial {
+  margin-left: -4px;
+}
+
+/* Today: one timeline of events and timed chores; scrolls inside its card. */
+.summary-day {
+  flex: 1;
+  min-height: 0;
+}
+.summary-day__empty {
+  margin: 0;
+}
+.summary-allday {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.summary-allday__item {
+  position: relative;
+  min-height: 32px;
+  padding: 4px 10px 4px 13px;
+  border: 0;
+  border-radius: var(--r);
+  background: var(--paper-2);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  cursor: pointer;
+  overflow: hidden;
+}
+.summary-allday__item::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--pill);
+}
+.summary-timeline {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.summary-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--tap);
+  padding: 4px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.summary-row:last-child {
+  border-bottom: 0;
+}
+.summary-row__time {
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+.summary-row__body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 2px 0 2px 12px;
+  border: 0;
+  border-left: 3px solid var(--pill);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+}
+button.summary-row__body {
+  cursor: pointer;
+}
+.summary-row--chore .summary-row__body {
+  border-left-style: dashed;
+}
+.summary-row__title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.summary-row__meta {
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+}
+.summary-row--past {
+  opacity: 0.5;
+}
+/* Now: an accent line above the first thing still to come. */
+.summary-row--after-now::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent);
+}
+.summary-row--after-now::after {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: 78px;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+.summary-row .check-circle {
+  width: 32px;
+  height: 32px;
+}
+
+/* Chores: a ring per person that fills as they finish. */
+.summary-people {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.summary-person {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.summary-ring {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+}
+.summary-ring > svg {
+  position: absolute;
+  inset: 0;
+  transform: rotate(-90deg);
+}
+.summary-ring > svg circle {
+  fill: none;
+  stroke-width: 3;
+}
+.summary-ring__track {
+  stroke: var(--rule);
+}
+.summary-ring__fill {
+  stroke: var(--pill);
+  stroke-linecap: round;
+  transition: stroke-dasharray 180ms ease-out;
+}
+.summary-ring__mark {
+  display: grid;
+  place-items: center;
+  line-height: 1;
+  font-weight: 600;
+  color: var(--pill);
+}
+.summary-person__text {
+  display: grid;
+  min-width: 0;
+}
+.summary-person__name {
+  font-weight: 600;
+}
+.summary-person__meta {
+  overflow: hidden;
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Dinner and the grocery list: one tap to their tabs. */
+.summary-tile {
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.summary-tile__value {
+  font-size: var(--fs-lead);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.summary-tile__meta {
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+  overflow-wrap: anywhere;
+}
+@media (hover: hover) {
+  .summary-tile:hover,
+  .summary__weather:hover {
+    border-color: var(--rule-strong);
+  }
+}
+
+.summary-ahead {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.summary-ahead li {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 12px;
+  overflow-wrap: anywhere;
+}
+.summary-ahead__when {
+  color: var(--accent-text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Phones: one column, top to bottom; the panel scrolls rather than each card. */
+:root[data-device='phone'] .summary__grid,
+:root[data-device='phone'] .summary__pair {
+  grid-template-columns: minmax(0, 1fr);
+}
+:root[data-device='phone'] .summary__side,
+:root[data-device='phone'] .summary-timeline {
+  overflow: visible;
+}
+:root[data-device='phone'] .summary__headline {
+  font-size: var(--fs-title);
+}
+:root[data-device='phone'] .summary-row {
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  gap: 10px;
+}
+:root[data-device='phone'] .summary-row--after-now::after {
+  left: 69px;
+}
+
+/* Settings → Admin: find and sort households; people with a Remove. */
+.admin-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.admin-tools input {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+.admin-tools__search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1 1 220px;
+  min-width: 0;
+  color: var(--ink-2);
+}
+.admin-tools__search svg {
+  position: absolute;
+  left: 12px;
+  pointer-events: none;
+}
+.admin-tools__search input {
+  width: 100%;
+  padding-left: 38px;
+}
+.household-person {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  padding: 4px 0;
+}
+.household-person__who {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.household-person__confirm {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Admin usage: room between the counts and each meter. */
+.usage-meter {
+  margin-top: 8px;
+}
+
+/* Phones: search and the Household | Admin switch share one row above the section index. */
+:root[data-device='phone'] .settings-index:has(.settings-tabs) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: 'search tabs' 'index index';
+  column-gap: 8px;
+  align-items: center;
+}
+:root[data-device='phone'] .settings-index:has(.settings-tabs) .settings-search {
+  grid-area: search;
+  margin: 4px 0 2px;
+}
+:root[data-device='phone'] .settings-index:has(.settings-tabs) .settings-tabs {
+  grid-area: tabs;
+  margin: 4px 0 2px;
+}
+:root[data-device='phone'] .settings-index:has(.settings-tabs) .settings-tabs .segmented__item {
+  padding: 0 12px;
+}
+:root[data-device='phone'] .settings-index:has(.settings-tabs) ol {
+  grid-area: index;
 }

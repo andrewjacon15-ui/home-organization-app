@@ -92,10 +92,7 @@ export function CountdownPanel({ countdowns, today, holidays = true, onAdd, onRe
                     type="button"
                     className="icon-button countdown__remove"
                     aria-label={`Remove ${c.title}`}
-                    onClick={() => {
-                      const yearly = c.kind === 'birthday' || c.kind === 'anniversary'
-                      if (confirm(yearly ? `Remove ${c.title}? It won’t come back next year.` : `Remove the countdown to ${c.title}?`)) onRemove(c.source!)
-                    }}
+                    onClick={() => onRemove(c.source!)}
                   >
                     <CloseIcon size={14} />
                   </button>

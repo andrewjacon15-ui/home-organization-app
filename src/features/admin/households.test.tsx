@@ -82,8 +82,8 @@ describe('Households (admin)', () => {
     createdAt: '2026-09-27T00:00:00Z',
     members: 2,
     people: [
-      { name: 'Andrew', email: 'andrew@example.com', owner: true },
-      { name: 'Lydia', email: 'lydia@example.com', owner: false },
+      { id: 'u1', name: 'Andrew', email: 'andrew@example.com', owner: true },
+      { id: 'u2', name: 'Lydia', email: 'lydia@example.com', owner: false },
     ],
     events: 180,
     recipes: 196,
@@ -101,9 +101,27 @@ describe('Households (admin)', () => {
     }),
     create: vi.fn(async () => 'NEWCODE'),
     revoke: vi.fn(async () => undefined),
-    households: vi.fn(async () => [household('f1', 'The Jacobs Family'), household('f2', 'The Smiths', { members: 1, photos: 0, photoBytes: 0, cookbookBytes: 0, people: [] })]),
+    households: vi.fn(async () => ({
+      households: [
+        household('f1', 'The Jacobs Family'),
+        household('f2', 'The Smiths', {
+          createdAt: '2026-10-05T00:00:00Z',
+          members: 2,
+          photos: 0,
+          photoBytes: 0,
+          cookbookBytes: 0,
+          people: [
+            { id: 's1', name: 'Sam Smith', email: 'sam@example.com', owner: true },
+            { id: 's2', name: 'Pat Smith', email: 'pat@example.com', owner: false },
+          ],
+        }),
+      ],
+      app: { searches: 412, searchCap: 900, creators: ['kim@example.com'] },
+    })),
     rename: vi.fn(async () => undefined),
     remove: vi.fn(async () => undefined),
+    setCreator: vi.fn(async (email: string, allow: boolean) => (allow ? ['kim@example.com', email] : [])),
+    removeMember: vi.fn(async () => undefined),
   })
 
   function AdminGate({ a }: { a: ReturnType<typeof api> }) {
@@ -124,7 +142,7 @@ describe('Households (admin)', () => {
     const u = userEvent.setup()
     render(<AdminPage userId="u1" familyId="f1" api={a} />)
     expect(await screen.findByText('For Sam')).toBeInTheDocument()
-    expect(screen.getByText(/kim@example.com/)).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'Invite links' })).getByText(/kim@example.com/)).toBeInTheDocument()
     await u.type(screen.getByLabelText('Who it’s for'), 'For Pat')
     await u.click(screen.getByRole('button', { name: 'Create invite link' }))
     expect(a.create).toHaveBeenCalledWith('u1', 'For Pat')
@@ -153,7 +171,43 @@ describe('Households (admin)', () => {
     // Your own household can be renamed but not deleted from here.
     expect(within(card).queryByRole('button', { name: 'Delete…' })).not.toBeInTheDocument()
     expect(screen.getByLabelText('Storage: 230 MB of 5 GB free')).toHaveTextContent('Photos and videos 200 MB')
-    expect(screen.getByRole('region', { name: 'Usage' })).toHaveTextContent(/Households2People3Photos40Recipes392/)
+    expect(screen.getByRole('region', { name: 'Usage' })).toHaveTextContent(/Households2People4Photos40Recipes392/)
+    expect(screen.getByLabelText('Online recipe searches: 412 of 900 this month')).toBeInTheDocument()
+  })
+
+  it('finds and sorts households', async () => {
+    const a = api(true)
+    const u = userEvent.setup()
+    render(<AdminPage userId="u1" familyId="f1" api={a} />)
+    await screen.findByRole('listitem', { name: 'The Smiths' })
+    const names = () => [...screen.getByRole('list', { name: 'Households' }).children].map((li) => li.getAttribute('aria-label'))
+    expect(names()).toEqual(['The Jacobs Family', 'The Smiths'])
+    await u.click(screen.getByRole('combobox', { name: 'Sort households' }))
+    await u.click(screen.getByRole('option', { name: 'Newest first' }))
+    expect(names()).toEqual(['The Smiths', 'The Jacobs Family'])
+    await u.type(screen.getByLabelText('Find a household or person'), 'pat@')
+    expect(names()).toEqual(['The Smiths'])
+  })
+
+  it('removes a person from another household after asking, and manages who can start one', async () => {
+    const a = api(true)
+    const u = userEvent.setup()
+    render(<AdminPage userId="u1" familyId="f1" api={a} />)
+    const smiths = await screen.findByRole('listitem', { name: 'The Smiths' })
+    // The owner has no Remove; Pat does.
+    expect(within(smiths).getAllByRole('button', { name: 'Remove' })).toHaveLength(1)
+    await u.click(within(smiths).getByRole('button', { name: 'Remove' }))
+    expect(within(smiths).getByText('Remove Pat from The Smiths?')).toBeInTheDocument()
+    await u.click(within(smiths).getAllByRole('button', { name: 'Remove' })[0])
+    expect(a.removeMember).toHaveBeenCalledWith('f2', 's2')
+    await vi.waitFor(() => expect(within(smiths).queryByText(/pat@example.com/)).not.toBeInTheDocument())
+
+    const access = screen.getByRole('region', { name: 'Starting households' })
+    expect(access).toHaveTextContent('kim@example.com')
+    await u.type(within(access).getByLabelText('Email to allow'), 'lee@example.com')
+    await u.click(within(access).getByRole('button', { name: 'Allow' }))
+    expect(a.setCreator).toHaveBeenCalledWith('lee@example.com', true)
+    expect(await within(access).findByText('lee@example.com')).toBeInTheDocument()
   })
 
   it('renames a household, and deletes another only once its name is typed', async () => {

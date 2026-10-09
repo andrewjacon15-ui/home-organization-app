@@ -40,7 +40,8 @@ No serif, no italics, no all-caps labels, no monospace (`<code>` is set in Inter
 - **Tracking:** −0.02em on display sizes, −0.015em on titles, 0 elsewhere.
 - **Numbers:** `tabular-nums` for clocks, times, and counts so they don't jitter.
 - **Case:** sentence case everywhere ("Add event", not "ADD EVENT").
-- **Root size:** 16px (15 small / 19 large via Settings → General). Tablets get 17px.
+- **Root size:** 16px (15 small / 19 large via Settings → Display, or per kind of device in
+  Settings → Device & side bar). Tablets get 17px.
 
 ## Color
 
@@ -159,6 +160,34 @@ or white text for anything filled with a person or accent color.
   − / + buttons, and a Metric switch, above the ingredients and in cooking mode. Whatever is
   shown is what goes to the grocery list.
 - **Steps** all show by default; "Step by step" is a button, never the starting view.
+
+### Daily summary (Home)
+
+Home tells the day rather than repeating the other tabs. Top to bottom (one column on phones;
+two on tablets and computers, fitting the screen with only the timeline scrolling):
+
+- A greeting in `--ink-2` and **one sentence for the day** at `--fs-display` ("3 events, 4 chores
+  to do and tacos for dinner."), with the weather as a pill: now, high/low, and when rain is likely.
+- **Up next** on an `--accent-soft` card: title at `--fs-title`, "in 25 min" in accent, place and
+  people; "Happening now" adds a thin progress bar.
+- **Today:** one timeline of timed events and timed chores (dashed edge, with a tick to check off),
+  all-day events as chips above it, past rows faded, and an accent "now" line.
+- **Chores:** a ring per person in their color that fills as they finish.
+- **Dinner** and **Grocery list** tiles, and **Coming up** (tomorrow and the nearest countdowns).
+
+Every part opens its own tab. Settings → Home screen switches a kind of device back to panels.
+
+### Undo, not "are you sure?"
+
+Deleting happens at once and shows a dark floating message along the bottom ("Deleted “Trash
+out”" · Undo) for 7 seconds. Only things Undo can't bring back still ask first (photos, redeeming
+stars, removing a calendar link, the admin's household tools).
+
+### Settings
+
+A search box sits above the section index; it hides the sections (and index entries) whose words
+don't match. The admin sees a **Household | Admin** switch: Usage, Households (find, sort, rename,
+remove a person, delete), Invite links and Starting households.
 
 ### Countdowns
 

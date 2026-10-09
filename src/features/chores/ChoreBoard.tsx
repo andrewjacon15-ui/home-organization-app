@@ -4,7 +4,7 @@ import { addDays, fromDateKey, startOfWeek } from '../../lib/dates'
 import { useFitHeight } from '../../lib/useFitHeight'
 import type { Chore, Member, NewChore } from '../../types'
 import { ChoreForm } from './ChoreForm'
-import { dueLabel, occurrencesOn, repeatLabel, type Occurrence } from './schedule'
+import { dueLabel, occurrencesOn, repeatLabel, rotationLabel, type Occurrence } from './schedule'
 import { AddIcon, BackIcon, CloseIcon, DoneIcon, GrabsIcon, NextIcon } from '../../components/Icons'
 
 const GRABS = '__grabs__'
@@ -78,7 +78,7 @@ export function ChoreBoard({ chores, members, stars, today, now, weekStartsOn, o
       {view === 'day' ? (
         <div className="chore-columns" ref={fitRef} style={fitStyle}>
           {columns.map(({ id, member }) => {
-            const list = occurrencesOn(chores.filter((c) => belongs(c, id)), day, today)
+            const list = occurrencesOn(chores, day, today).filter((o) => belongs(o.chore, id))
             const done = list.filter((o) => o.done).length
             const name = member ? member.displayName.split(' ')[0] : 'Up for Grabs'
             return (
@@ -140,7 +140,8 @@ export function ChoreBoard({ chores, members, stars, today, now, weekStartsOn, o
 export function ChoreCard({ o, members, now, today, onToggle, onDelete }: { o: Occurrence; members: Member[]; now: Date; today: string; onToggle: Props['onToggle']; onDelete: Props['onDelete'] }) {
   const [asking, setAsking] = useState(false)
   const label = dueLabel(o, now, today)
-  const repeats = repeatLabel(o.chore.repeat)
+  const turns = rotationLabel(o.chore, new Map(members.map((m) => [m.id, m.displayName])))
+  const repeats = [repeatLabel(o.chore.repeat), turns].filter(Boolean).join(' · ') || null
   const doer = o.doneBy ? members.find((m) => m.id === o.doneBy) : undefined
   const grabs = !o.chore.assigneeId
 
@@ -162,6 +163,7 @@ export function ChoreCard({ o, members, now, today, onToggle, onDelete }: { o: O
             </span>
           )}
           {label.text}
+          {turns && <span className="chore-card__turns"> · takes turns</span>}
           {o.chore.points > 0 && <span className="chore-card__pts"> · ★ {o.chore.points}</span>}
           {o.done && doer && grabs && <span> · by {doer.displayName.split(' ')[0]}</span>}
         </span>
@@ -189,7 +191,7 @@ export function ChoreCard({ o, members, now, today, onToggle, onDelete }: { o: O
           </div>
         )}
       </div>
-      <button type="button" className="icon-button chore-card__delete" onClick={() => confirm(`Delete "${o.chore.title}"${o.chore.repeat ? ' and all its repeats' : ''}?`) && onDelete(o.chore)} aria-label={`Delete ${o.chore.title}`}>
+      <button type="button" className="icon-button chore-card__delete" onClick={() => onDelete(o.chore)} aria-label={`Delete ${o.chore.title}`}>
         <CloseIcon size={18} />
       </button>
       <button type="button" className={`check-circle${o.done ? ' check-circle--on' : ''}`} onClick={toggle} aria-pressed={o.done} aria-label={`${o.done ? 'Undo' : 'Mark done'}: ${o.chore.title}`} />
@@ -229,7 +231,7 @@ function WeekGrid({
         ))}
       </div>
       {columns.map(({ id, member }) => {
-        const mine = chores.filter((c) => belongs(c, id))
+
         return (
           <div key={id} className="chore-week__row" role="row" style={{ '--pill': member?.color ?? 'var(--ink-2)' } as CSSProperties}>
             <span role="rowheader" className="chore-week__who">
@@ -237,7 +239,7 @@ function WeekGrid({
             </span>
             {days.map((d) => (
               <div key={d} role="cell" className={`chore-week__cell${d === today ? ' chore-week__cell--today' : ''}`}>
-                {occurrencesOn(mine, d, today).map((o) => (
+                {occurrencesOn(chores, d, today).filter((o) => belongs(o.chore, id)).map((o) => (
                   <button
                     key={`${o.chore.id}_${o.date}`}
                     type="button"

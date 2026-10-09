@@ -6,7 +6,9 @@ import { PinPad } from '../lock/PinPad'
 import { AdminPage } from '../admin/HouseholdsAdmin'
 import { ADMIN_SECTIONS, adminApi, type AdminApi } from '../admin/householdInvites'
 import { useIsAdmin } from '../admin/useIsAdmin'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { useSettingsSearch } from './useSettingsSearch'
+import { CloseIcon, SearchIcon } from '../../components/Icons'
 import { AboutSettings } from './AboutSettings'
 import { AppearanceSettings } from './AppearanceSettings'
 import { CookbookSettings } from '../cookbooks/CookbookSettings'
@@ -63,6 +65,11 @@ export function SettingsPage({ family, members, userId, onOpenRecipes, onShowTou
   const [view, setView] = useState<'household' | 'admin'>('household')
   const admin = isAdmin && view === 'admin'
   const sections = admin ? ADMIN_SECTIONS : SECTIONS
+  const [query, setQuery] = useState('')
+  const pageRef = useRef<HTMLDivElement>(null)
+  const indexRef = useRef<HTMLOListElement>(null)
+
+  useSettingsSearch(pageRef, indexRef, query, admin)
 
   if (locked) {
     return (
@@ -95,9 +102,18 @@ export function SettingsPage({ family, members, userId, onOpenRecipes, onShowTou
             ))}
           </div>
         )}
-        <ol>
+        <div className="settings-search">
+          <SearchIcon size={18} aria-hidden />
+          <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search" aria-label="Search settings" maxLength={60} />
+          {query && (
+            <button type="button" className="icon-button settings-search__clear" aria-label="Clear search" onClick={() => setQuery('')}>
+              <CloseIcon size={18} />
+            </button>
+          )}
+        </div>
+        <ol ref={indexRef}>
           {sections.map((s) => (
-            <li key={s.id}>
+            <li key={s.id} data-id={s.id}>
               <a
                 href={`#${s.id}`}
                 onClick={(e) => {
@@ -112,11 +128,17 @@ export function SettingsPage({ family, members, userId, onOpenRecipes, onShowTou
         </ol>
       </nav>
       {admin ? (
-        <div className="settings-page">
+        <div className="settings-page" ref={pageRef}>
+          <p className="settings-empty muted" hidden>
+            No settings match “{query.trim()}”.
+          </p>
           <AdminPage userId={userId} familyId={family.id} api={adminApiOverride} />
         </div>
       ) : (
-      <div className="settings-page">
+      <div className="settings-page" ref={pageRef}>
+        <p className="settings-empty muted" hidden>
+          No settings match “{query.trim()}”.
+        </p>
         <section className="settings-section" aria-label="Family" id="family">
           <h2>Family</h2>
           <FamilyPage family={family} members={members} userId={userId} />

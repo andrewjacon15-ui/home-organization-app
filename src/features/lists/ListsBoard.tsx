@@ -16,7 +16,8 @@ export interface ListActions {
   onDeleteList: (list: FamilyList) => void
   onCreateList: (title: string) => void
   onAddCategory: (list: FamilyList, name: string) => void
-  onAddAisles: (list: FamilyList) => void
+  /** Grocery lists: sort into store aisles (on by default), or not. */
+  onAutoSort: (list: FamilyList, on: boolean) => void
   onRenameCategory: (list: FamilyList, categoryId: string, name: string) => void
   onMoveCategory: (list: FamilyList, categoryId: string, by: -1 | 1) => void
   onDeleteCategory: (list: FamilyList, categoryId: string) => void
@@ -123,9 +124,9 @@ function ListColumn({ list, items, members, doneDays, ...a }: ColumnProps) {
               <button type="button" role="menuitem" onClick={() => (setMenu(false), setNewCategory(true))}>
                 Add category
               </button>
-              {list.kind === 'grocery' && categories.length === 0 && (
-                <button type="button" role="menuitem" onClick={() => (setMenu(false), a.onAddAisles(list))}>
-                  Add store aisles
+              {list.kind === 'grocery' && (
+                <button type="button" role="menuitemcheckbox" aria-checked={list.autoSort !== false} onClick={() => (setMenu(false), a.onAutoSort(list, list.autoSort === false))}>
+                  {list.autoSort !== false && <DoneIcon width={16} height={16} aria-hidden />}Sort by store aisle
                 </button>
               )}
               <button type="button" role="menuitemcheckbox" aria-checked={list.sections} onClick={() => (setMenu(false), a.onToggleSections(list))}>
@@ -140,7 +141,7 @@ function ListColumn({ list, items, members, doneDays, ...a }: ColumnProps) {
                 className="menu__danger"
                 onClick={() => {
                   setMenu(false)
-                  if (confirm(`Delete "${list.title}" and everything on it?`)) a.onDeleteList(list)
+                  a.onDeleteList(list)
                 }}
               >
                 Delete list
@@ -209,7 +210,7 @@ function CategorySection({ category, first, last, items, rowProps, actions: a }:
               type="button"
               className="link menu__danger"
               onClick={() => {
-                if (confirm(`Remove the "${category.name}" category? Its items stay on the list.`)) a.onDeleteCategory(list, category.id)
+                a.onDeleteCategory(list, category.id)
               }}
             >
               Remove category

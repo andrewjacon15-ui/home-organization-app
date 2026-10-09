@@ -1,4 +1,5 @@
 import { playChime } from '../reminders/chime'
+import { formatHHMM } from '../sleep/sleep'
 import { SelectRow, SettingsSection, ToggleRow } from './SettingRows'
 import { useSettings } from './SettingsContext'
 
@@ -20,6 +21,27 @@ export function ReminderSettings({ chime = playChime }: { chime?: () => void }) 
         )}
         <ToggleRow label="Chores when due" hint="Only applies to chores with due times." checked={settings.remindChoresDue} onChange={(v) => save({ remindChoresDue: v })} />
         <ToggleRow label="Reminder sound" checked={settings.reminderSound} onChange={(v) => save({ reminderSound: v })} />
+        <ToggleRow
+          label="Quiet hours"
+          hint={`No reminder sounds, pop-ups or reminder emails from ${formatHHMM(settings.quietFrom)} to ${formatHHMM(settings.quietTo)}. Kitchen timers still ring.`}
+          checked={settings.quietEnabled}
+          onChange={(v) => save({ quietEnabled: v })}
+        />
+        {settings.quietEnabled && (
+          <div className="setting-row">
+            <span className="setting-row__label">Quiet from</span>
+            <div className="row">
+              <label className="sleep-time">
+                From
+                <input type="time" value={settings.quietFrom} onChange={(e) => e.target.value && save({ quietFrom: e.target.value })} />
+              </label>
+              <label className="sleep-time">
+                To
+                <input type="time" value={settings.quietTo} onChange={(e) => e.target.value && save({ quietTo: e.target.value })} />
+              </label>
+            </div>
+          </div>
+        )}
         <div className="setting-row">
           <span className="setting-row__label">
             Test

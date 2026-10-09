@@ -15,7 +15,7 @@ import { DoneIcon, GrabsIcon, NextIcon } from '../../components/Icons'
 import { useOverflowCue } from '../../lib/useOverflowCue'
 import { DEFAULT_HOME, HOME_CALENDAR_DAYS, PANEL_WEIGHT, type HomeCalendarDays, type HomePanel } from './homePanels'
 
-export type HomeTarget = 'calendar' | 'chores' | 'lists' | 'weather'
+export type HomeTarget = 'calendar' | 'chores' | 'lists' | 'weather' | 'meals'
 
 interface Props {
   today: string
@@ -71,7 +71,7 @@ export function HomeView(p: Props) {
   const cols = p.calendarDays === 7 ? 'repeat(8, minmax(0, 1fr))' : p.calendarDays === 3 ? 'repeat(3, minmax(0, 1fr)) minmax(0, 0.8fr)' : 'minmax(0, 2.4fr) minmax(0, 1fr)'
 
   const people = [...p.members.map((m) => ({ id: m.id, member: m as Member | null })), { id: GRABS, member: null }]
-  const choresFor = (id: string) => p.chores.filter((c) => (id === GRABS ? !c.assigneeId || !memberById.has(c.assigneeId) : c.assigneeId === id))
+  const choresFor = (id: string) => (c: Chore) => (id === GRABS ? !c.assigneeId || !memberById.has(c.assigneeId) : c.assigneeId === id)
 
   const panels = p.panels ?? DEFAULT_HOME
   const shown: Record<HomePanel, () => ReactNode> = {
@@ -130,7 +130,7 @@ export function HomeView(p: Props) {
           <PanelHead title="Today's tasks" onOpen={() => p.onNavigate('chores')} />
           <div className="home-tasks">
             {people.map(({ id, member }) => {
-              const occ = occurrencesOn(choresFor(id), p.today, p.today)
+              const occ = occurrencesOn(p.chores, p.today, p.today).filter((o) => choresFor(id)(o.chore))
               if (!member && occ.length === 0) return null
               const done = occ.filter((o) => o.done).length
               const name = member ? member.displayName.split(' ')[0] : 'Up for Grabs'

@@ -1,4 +1,5 @@
-import { addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp, Timestamp } from 'firebase/firestore'
+import { addDoc, collection, doc, onSnapshot, orderBy, query, serverTimestamp, Timestamp } from 'firebase/firestore'
+import { removeDocs } from '../../lib/undo'
 import { db } from '../../firebase'
 import { fromDateKey } from '../../lib/dates'
 import { upcomingHolidays } from './holidays'
@@ -50,7 +51,7 @@ export function addCountdown(familyId: string, userId: string, title: string, da
   })
 }
 
-export const removeCountdown = (familyId: string, id: string) => deleteDoc(doc(col(familyId), id))
+export const removeCountdown = (familyId: string, id: string) => removeDocs([doc(col(familyId), id)])
 
 /** Whole days from today to the date (negative once it has passed). */
 export function daysUntil(date: string, today: string): number {

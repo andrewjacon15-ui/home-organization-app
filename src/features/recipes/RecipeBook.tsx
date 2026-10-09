@@ -503,7 +503,7 @@ export function RecipeView({ recipe, today, onEdit, onDelete, onPlan, onAddToGro
               type="button"
               className="link"
               onClick={() => {
-                if (confirm(`Delete "${recipe.title}"?`)) onDelete()
+                onDelete()
               }}
             >
               Delete

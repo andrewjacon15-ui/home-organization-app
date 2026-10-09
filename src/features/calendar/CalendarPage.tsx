@@ -15,6 +15,7 @@ import { CalendarConnect } from './CalendarConnect'
 import { useCalendarConnection } from './useCalendarConnection'
 import { viewRange, type CalendarViewKind } from './views'
 import { BackIcon, NextIcon } from '../../components/Icons'
+import { useUndo } from '../../lib/undo'
 
 interface Props {
   familyId: string
@@ -95,6 +96,7 @@ function useSwipe(onPage: (by: 1 | -1) => void) {
 }
 
 export function CalendarPage({ familyId, userId, members }: Props) {
+  const { offer } = useUndo()
   const { settings } = useSettings()
   const today = useToday()
   const now = useNow()
@@ -207,7 +209,7 @@ export function CalendarPage({ familyId, userId, members }: Props) {
           events={visible}
           members={members}
           calendars={calendars}
-          onDelete={(e) => deleteManualEvent(familyId, e.id).catch(report)}
+          onDelete={(e) => deleteManualEvent(familyId, e.id).then((r) => offer(`Deleted “${e.title}”`, r), report)}
         />
         </div>
       </section>

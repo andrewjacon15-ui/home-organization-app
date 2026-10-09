@@ -1,9 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { Select } from '../../components/Select'
+import { CloseIcon, SearchIcon } from '../../components/Icons'
 import { useNow } from '../../lib/hooks'
 import { formatBytes } from '../photos/photosApi'
 import { SettingsSection } from '../settings/SettingRows'
 import { INVITE_DEVICE_LABELS, INVITE_DEVICES, inviteMessage, type InviteDevice } from './inviteMessage'
-import { adminApi, inviteLink, type AdminApi, type HouseholdInvite, type HouseholdSummary } from './householdInvites'
+import { SORTS, sortHouseholds, type Sort } from './householdSort'
+import { adminApi, inviteLink, type AdminApi, type AppUsage, type HouseholdInvite, type HouseholdSummary } from './householdInvites'
 
 /** Free Cloud Storage shared by every household (photos and cookbooks). */
 const FREE_STORAGE = 5 * 1024 ** 3
@@ -11,6 +14,8 @@ const FREE_STORAGE = 5 * 1024 ** 3
 const day = (d: Date | null | undefined) => (d ? d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—')
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
 const bytesOf = (h: HouseholdSummary) => h.photoBytes + h.cookbookBytes + h.otherBytes
+/** A size, or "none" (the formatter rounds anything up to at least 1 KB). */
+const size = (n: number) => (n > 0 ? formatBytes(n) : 'none')
 const pct = (n: number) => `${Math.min(100, Math.max(0, (n / FREE_STORAGE) * 100))}%`
 
 /**
@@ -20,6 +25,9 @@ const pct = (n: number) => `${Math.min(100, Math.max(0, (n / FREE_STORAGE) * 100
  */
 export function AdminPage({ userId, familyId, api = adminApi }: { userId: string; familyId: string; api?: AdminApi }) {
   const [households, setHouseholds] = useState<HouseholdSummary[] | null>(null)
+  const [app, setApp] = useState<AppUsage | null>(null)
+  const [sort, setSort] = useState<Sort>('oldest')
+  const [query, setQuery] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const report = (e: unknown) => setError(e instanceof Error ? e.message : String(e))
@@ -29,7 +37,10 @@ export function AdminPage({ userId, familyId, api = adminApi }: { userId: string
     setError(null)
     api
       .households()
-      .then(setHouseholds, report)
+      .then((r) => {
+        setHouseholds(r.households)
+        setApp(r.app)
+      }, report)
       .finally(() => setLoading(false))
   }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -37,14 +48,24 @@ export function AdminPage({ userId, familyId, api = adminApi }: { userId: string
 
   return (
     <>
-      <UsageSection households={households} loading={loading} onRefresh={load} error={error} />
+      <UsageSection households={households} app={app} loading={loading} onRefresh={load} error={error} />
       <SettingsSection title="Households" id="admin-households">
         <p className="settings-note">Each household is private: you see its name, people and size, never its photos, lists or events.</p>
+        {households !== null && households.length > 1 && (
+          <div className="admin-tools">
+            <label className="admin-tools__search">
+              <SearchIcon size={18} aria-hidden />
+              <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Find a household or person" aria-label="Find a household or person" maxLength={80} />
+            </label>
+            <Select value={sort} onChange={(v) => setSort(v as Sort)} options={SORTS} aria-label="Sort households" />
+          </div>
+        )}
         {households === null ? (
           <p className="muted">{loading ? 'Loading households…' : 'Couldn’t load the households.'}</p>
         ) : (
           <ul className="household-cards" aria-label="Households">
-            {households.map((h) => (
+            {sortHouseholds(households, sort, query).length === 0 && <li className="muted">No household matches “{query.trim()}”.</li>}
+            {sortHouseholds(households, sort, query).map((h) => (
               <HouseholdCard
                 key={h.id}
                 h={h}
@@ -57,17 +78,79 @@ export function AdminPage({ userId, familyId, api = adminApi }: { userId: string
                   await api.remove(h.id, confirm)
                   setHouseholds((list) => list?.filter((x) => x.id !== h.id) ?? null)
                 }}
+                onRemovePerson={async (uid) => {
+                  await api.removeMember(h.id, uid)
+                  setHouseholds((list) => list?.map((x) => (x.id === h.id ? { ...x, members: x.members - 1, people: x.people.filter((p) => p.id !== uid) } : x)) ?? null)
+                }}
+                userId={userId}
               />
             ))}
           </ul>
         )}
       </SettingsSection>
       <InvitesSection userId={userId} api={api} />
+      <AccessSection creators={app?.creators ?? null} api={api} onChange={(creators) => setApp((a) => (a ? { ...a, creators } : a))} />
     </>
   )
 }
 
-function UsageSection({ households, loading, onRefresh, error }: { households: HouseholdSummary[] | null; loading: boolean; onRefresh: () => void; error: string | null }) {
+/** Who may start a household without an invite link (everyone else needs one). */
+function AccessSection({ creators, api, onChange }: { creators: string[] | null; api: AdminApi; onChange: (list: string[]) => void }) {
+  const [email, setEmail] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const run = async (address: string, allow: boolean) => {
+    setBusy(true)
+    setError(null)
+    try {
+      onChange(await api.setCreator(address, allow))
+      if (allow) setEmail('')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <SettingsSection title="Starting households" id="admin-access">
+      <p className="settings-note">People on this list can start their own household with their Google account, without an invite link. Anyone else needs a link.</p>
+      {creators === null ? (
+        <p className="muted">Loading…</p>
+      ) : (
+        <ul className="admin-list" aria-label="Can start a household">
+          {creators.length === 0 && <li className="muted">Nobody yet. Invite links still work.</li>}
+          {creators.map((c) => (
+            <li key={c}>
+              <span>{c}</span>
+              <button type="button" className="icon-button" aria-label={`Remove ${c}`} disabled={busy} onClick={() => void run(c, false)}>
+                <CloseIcon size={18} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <form
+        className="row admin-tools"
+        onSubmit={(e) => {
+          e.preventDefault()
+          if (email.trim()) void run(email.trim(), true)
+        }}
+      >
+        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" aria-label="Email to allow" maxLength={200} />
+        <button className="button" disabled={busy || !email.trim()}>
+          Allow
+        </button>
+      </form>
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
+    </SettingsSection>
+  )
+}
+
+function UsageSection({ households, app, loading, onRefresh, error }: { households: HouseholdSummary[] | null; app: AppUsage | null; loading: boolean; onRefresh: () => void; error: string | null }) {
   const list = households ?? []
   const photos = list.reduce((n, h) => n + h.photoBytes, 0)
   const books = list.reduce((n, h) => n + h.cookbookBytes, 0)
@@ -101,14 +184,24 @@ function UsageSection({ households, loading, onRefresh, error }: { households: H
               <span className="usage-meter__books" style={{ width: pct(books + other) }} />
             </div>
             <p className="usage-meter__text">
-              <strong>{formatBytes(stored)}</strong> of the 5 GB free storage ({Math.round((stored / FREE_STORAGE) * 100)}%)
+              <strong>{stored > 0 ? formatBytes(stored) : 'Nothing'}</strong> of the 5 GB free storage ({Math.round((stored / FREE_STORAGE) * 100)}%)
             </p>
             <p className="usage-meter__key">
-              <span className="usage-key usage-key--photos">Photos and videos {formatBytes(photos)}</span>
-              <span className="usage-key usage-key--books">Cookbooks {formatBytes(books + other)}</span>
+              <span className="usage-key usage-key--photos">Photos and videos {size(photos)}</span>
+              <span className="usage-key usage-key--books">Cookbooks {size(books + other)}</span>
             </p>
           </div>
-          <p className="settings-note">Measured from the files in storage. Firestore reads and writes for the day are in the Firebase console (Usage tab).</p>
+          {app && app.searchCap > 0 && (
+            <div className="usage-meter" aria-label={`Online recipe searches: ${app.searches} of ${app.searchCap} this month`}>
+              <div className="usage-meter__track" aria-hidden>
+                <span className="usage-meter__photos" style={{ width: `${Math.min(100, (app.searches / app.searchCap) * 100)}%` }} />
+              </div>
+              <p className="usage-meter__text">
+                <strong>{app.searches}</strong> of {app.searchCap} online recipe searches this month
+              </p>
+            </div>
+          )}
+          <p className="settings-note">{app && app.searchCap > 0 && `Searches stop at ${app.searchCap} a month, inside the free credit. `}Storage is measured from the files themselves. Firestore reads and writes for the day are in the Firebase console (Usage tab).</p>
         </>
       )}
       {error && (
@@ -123,14 +216,29 @@ function UsageSection({ households, loading, onRefresh, error }: { households: H
   )
 }
 
-function HouseholdCard({ h, mine, onRename, onDelete }: { h: HouseholdSummary; mine: boolean; onRename: (name: string) => Promise<void>; onDelete: (confirm: string) => Promise<void> }) {
+function HouseholdCard({
+  h,
+  mine,
+  userId,
+  onRename,
+  onDelete,
+  onRemovePerson,
+}: {
+  h: HouseholdSummary
+  mine: boolean
+  userId: string
+  onRename: (name: string) => Promise<void>
+  onDelete: (confirm: string) => Promise<void>
+  onRemovePerson: (uid: string) => Promise<void>
+}) {
   const [mode, setMode] = useState<'view' | 'rename' | 'delete'>('view')
+  const [removing, setRemoving] = useState<string | null>(null)
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const size = bytesOf(h)
 
-  const act = async (e: FormEvent, run: () => Promise<void>) => {
+  const act = async (e: FormEvent | React.MouseEvent, run: () => Promise<void>) => {
     e.preventDefault()
     setBusy(true)
     setError(null)
@@ -164,11 +272,39 @@ function HouseholdCard({ h, mine, onRename, onDelete }: { h: HouseholdSummary; m
         <details className="household-card__people">
           <summary>People</summary>
           <ul>
-            {h.people.map((p, i) => (
-              <li key={i}>
-                {p.name || 'No name'}
-                {p.email && <span className="muted"> · {p.email}</span>}
-                {p.owner && <span className="muted"> · owner</span>}
+            {h.people.map((p) => (
+              <li key={p.id} className="household-person">
+                <span className="household-person__who">
+                  {p.name || 'No name'}
+                  {p.email && <span className="muted"> · {p.email}</span>}
+                  {p.owner && <span className="muted"> · owner</span>}
+                </span>
+                {!p.owner && p.id !== userId && removing !== p.id && (
+                  <button type="button" className="link" onClick={() => setRemoving(p.id)}>
+                    Remove
+                  </button>
+                )}
+                {removing === p.id && (
+                  <span className="row household-person__confirm">
+                    <span>Remove {p.name.split(' ')[0] || 'them'} from {h.name || 'this household'}?</span>
+                    <button
+                      type="button"
+                      className="button button--danger"
+                      disabled={busy}
+                      onClick={(e) =>
+                        void act(e, async () => {
+                          await onRemovePerson(p.id)
+                          setRemoving(null)
+                        })
+                      }
+                    >
+                      Remove
+                    </button>
+                    <button type="button" className="button" onClick={() => setRemoving(null)}>
+                      Cancel
+                    </button>
+                  </span>
+                )}
               </li>
             ))}
           </ul>
