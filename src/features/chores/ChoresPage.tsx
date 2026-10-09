@@ -7,6 +7,7 @@ import { backfillChoreStars, balances, watchStars, type StarEntry } from '../rew
 import { useSettings } from '../settings/SettingsContext'
 import { ChoreBoard } from './ChoreBoard'
 import { addChore, deleteChore, setOccurrenceDone, watchChores } from './choresApi'
+import { useUndo } from '../../lib/undo'
 
 interface Props {
   familyId: string
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export function ChoresPage({ familyId, userId, members }: Props) {
+  const { offer } = useUndo()
   const [chores, setChores] = useState<Chore[]>([])
   const [entries, setEntries] = useState<StarEntry[] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -52,7 +54,7 @@ export function ChoresPage({ familyId, userId, members }: Props) {
         weekStartsOn={settings.weekStartsOn}
         onToggle={(o, done, doneBy) => setOccurrenceDone(familyId, o, done, doneBy, userId, today).catch(report)}
         onAdd={(c) => addChore(familyId, userId, c).catch(report)}
-        onDelete={(c) => deleteChore(familyId, c.id).catch(report)}
+        onDelete={(c) => deleteChore(familyId, c.id).then((r) => offer(`Deleted “${c.title}”`, r), report)}
       />
     </>
   )

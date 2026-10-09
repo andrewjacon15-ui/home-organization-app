@@ -33,7 +33,7 @@ function setup(lists: FamilyList[] = [grocery, todo], data: Record<string, ListI
     onCreateList: vi.fn(),
     onEditItem: vi.fn(),
     onAddCategory: vi.fn(),
-    onAddAisles: vi.fn(),
+    onAutoSort: vi.fn(),
     onRenameCategory: vi.fn(),
     onMoveCategory: vi.fn(),
     onDeleteCategory: vi.fn(),
@@ -134,15 +134,17 @@ describe('ListsBoard', () => {
     expect(actions.onDeleteCategory).toHaveBeenCalledWith(shop, 'p')
   })
 
-  it('offers store aisles on a grocery list, and new categories on any list', async () => {
+  it('sorts a grocery list by store aisle (switchable), and adds categories on any list', async () => {
     const { actions, user } = setup()
     const g = screen.getByRole('article', { name: 'Grocery List' })
     await user.click(within(g).getByRole('button', { name: 'Grocery List options' }))
-    await user.click(within(g).getByRole('menuitem', { name: 'Add store aisles' }))
-    expect(actions.onAddAisles).toHaveBeenCalledWith(grocery)
+    const sort = within(g).getByRole('menuitemcheckbox', { name: 'Sort by store aisle' })
+    expect(sort).toHaveAttribute('aria-checked', 'true')
+    await user.click(sort)
+    expect(actions.onAutoSort).toHaveBeenCalledWith(grocery, false)
     const t = screen.getByRole('article', { name: 'To-Do List' })
     await user.click(within(t).getByRole('button', { name: 'To-Do List options' }))
-    expect(within(t).queryByRole('menuitem', { name: 'Add store aisles' })).not.toBeInTheDocument()
+    expect(within(t).queryByRole('menuitemcheckbox', { name: 'Sort by store aisle' })).not.toBeInTheDocument()
     await user.click(within(t).getByRole('menuitem', { name: 'Add category' }))
     await user.type(within(t).getByLabelText('New category name'), 'Errands{Enter}')
     expect(actions.onAddCategory).toHaveBeenCalledWith(todo, 'Errands')

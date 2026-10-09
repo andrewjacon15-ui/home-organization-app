@@ -12,6 +12,14 @@ import { useSettings } from '../settings/SettingsContext'
 import { addCountdown, removeCountdown, watchCountdowns, type Countdown } from '../countdowns/countdownsApi'
 import { homeCalendarDays, homePanelsFor } from './homePanels'
 import { HomeView, type HomeTarget } from './HomeView'
+import { DailySummary } from './DailySummary'
+import { homeStyleFor } from '../settings/settingsApi'
+import { occurrencesOn } from '../chores/schedule'
+import { shownCountdowns } from '../countdowns/countdownsApi'
+import { withOwners } from '../calendar/views'
+import { watchMealPlans } from '../meals/mealsApi'
+import type { MealPlan } from '../../types'
+import { useUndo } from '../../lib/undo'
 
 interface Props {
   familyId: string
@@ -21,20 +29,26 @@ interface Props {
 }
 
 export function HomePage({ familyId, userId, members, onNavigate }: Props) {
+  const { offer } = useUndo()
   const { settings, update } = useSettings()
   const { device } = useDevice()
+  // The daily summary (default) or the panels chosen in Settings → Home screen.
+  const summary = homeStyleFor(settings, device) === 'summary'
   const panels = homePanelsFor(settings.homePanels, device, settings.homePanelsVersion)
   const calendarDays = homeCalendarDays(settings.homeCalendarDays)
   // Hidden panels don't load their data, so they cost no reads.
-  const showCalendar = panels.includes('calendar')
-  const showTasks = panels.includes('tasks')
-  const showLists = panels.includes('lists')
-  const showCountdowns = panels.includes('countdowns')
+  const showCalendar = summary || panels.includes('calendar')
+  const showTasks = summary || panels.includes('tasks')
+  const showLists = summary || panels.includes('lists')
+  const showCountdowns = summary || panels.includes('countdowns')
   const [countdowns, setCountdowns] = useState<Countdown[]>([])
   const today = useToday()
   const now = useNow()
   // A week follows the calendar's week setting; 1 or 3 days always start today.
-  const start = calendarDays === 7 && !settings.weekStartToday ? startOfWeek(today, settings.weekStartsOn) : today
+  // The summary needs today and tomorrow (from a week back, for all-day events still going).
+  const start = summary ? addDays(today, -7) : calendarDays === 7 && !settings.weekStartToday ? startOfWeek(today, settings.weekStartsOn) : today
+  const span = summary ? 9 : calendarDays + 7
+  const [meals, setMeals] = useState<Record<string, MealPlan>>({})
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [calendars, setCalendars] = useState<SyncedCalendar[]>([])
   const [chores, setChores] = useState<Chore[]>([])
@@ -46,8 +60,11 @@ export function HomePage({ familyId, userId, members, onNavigate }: Props) {
   const report = (e: unknown) => setError(e instanceof Error ? e.message : String(e))
 
   useEffect(() => {
-    if (showCalendar) return watchEvents(familyId, fromDateKey(start), fromDateKey(addDays(start, calendarDays + 7)), setEvents)
-  }, [familyId, start, calendarDays, showCalendar])
+    if (showCalendar) return watchEvents(familyId, fromDateKey(start), fromDateKey(addDays(start, span)), setEvents)
+  }, [familyId, start, span, showCalendar])
+  useEffect(() => {
+    if (summary) return watchMealPlans(familyId, today, addDays(today, 1), setMeals)
+  }, [familyId, today, summary])
   useEffect(() => {
     if (showCalendar) return watchCalendars(familyId, setCalendars)
   }, [familyId, showCalendar])
@@ -62,7 +79,9 @@ export function HomePage({ familyId, userId, members, onNavigate }: Props) {
     ensureDefaultLists(familyId, userId).catch(() => undefined)
     return watchLists(familyId, setLists)
   }, [familyId, userId, showLists])
+  // Panels show the first two lists; the summary only needs the grocery list.
   const shownIds = (showLists ? (lists ?? []) : [])
+    .filter((l, i) => (summary ? l.kind === 'grocery' : i < 2))
     .slice(0, 2)
     .map((l) => l.id)
     .join(',')
@@ -75,6 +94,36 @@ export function HomePage({ familyId, userId, members, onNavigate }: Props) {
   // Same per-device filter as the Calendar tab.
   const calendarByKey = useMemo(() => new Map(calendars.map((c) => [c.key, c])), [calendars])
   const visible = useMemo(() => applyFilter(events, loadHidden(), calendarByKey), [events, calendarByKey])
+
+  const owned = useMemo(() => withOwners(visible, calendarByKey), [visible, calendarByKey])
+  const groceryId = (lists ?? []).find((l) => l.kind === 'grocery')?.id
+  const groceryOpen = groceryId && items[groceryId] ? items[groceryId].filter((i) => !i.done) : lists === null || (groceryId && !items[groceryId]) ? null : []
+
+  if (summary) {
+    return (
+      <div ref={fitRef} style={fitStyle} className="home-fit home-fit--summary">
+        {error && (
+          <p className="error" role="alert">
+            {error} <button className="link" onClick={() => setError(null)}>Dismiss</button>
+          </p>
+        )}
+        <DailySummary
+          today={today}
+          now={now}
+          events={owned}
+          members={members}
+          calendars={calendars}
+          chores={occurrencesOn(chores, today, today)}
+          dinner={meals[today]?.dinner ?? ''}
+          tomorrowDinner={meals[addDays(today, 1)]?.dinner ?? ''}
+          grocery={groceryOpen}
+          countdowns={shownCountdowns(countdowns, today, { holidays: settings.countdownHolidays })}
+          onNavigate={onNavigate}
+          onToggleChore={(o, done, doneBy) => setOccurrenceDone(familyId, o, done, doneBy, userId, today).catch(report)}
+        />
+      </div>
+    )
+  }
 
   return (
     <div ref={fitRef} style={fitStyle} className="home-fit">
@@ -101,9 +150,9 @@ export function HomePage({ familyId, userId, members, onNavigate }: Props) {
         countdowns={countdowns}
         onAddCountdown={(title, date, kind) => addCountdown(familyId, userId, title, date, kind).catch(report)}
         countdownHolidays={settings.countdownHolidays}
-        onRemoveCountdown={(c) => removeCountdown(familyId, c.id).catch(report)}
+        onRemoveCountdown={(c) => removeCountdown(familyId, c.id).then((r) => offer(`Removed “${c.title}”`, r), report)}
         onToggleChore={(o, done, doneBy) => setOccurrenceDone(familyId, o, done, doneBy, userId, today).catch(report)}
-        onDeleteChore={(c) => deleteChore(familyId, c.id).catch(report)}
+        onDeleteChore={(c) => deleteChore(familyId, c.id).then((r) => offer(`Deleted “${c.title}”`, r), report)}
         onAddItem={(l, text) => addItems(familyId, l.id, userId, [text], null, { categories: l.categories }).catch(report)}
         onToggleItem={(l, i) => setItemDone(familyId, l.id, i.id, !i.done, settings.listDoneDays).catch(report)}
       />

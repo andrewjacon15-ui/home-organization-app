@@ -80,10 +80,8 @@ export function EventDetails({ event, members, calendars, onClose, onDelete }: P
               type="button"
               className="button button--danger"
               onClick={() => {
-                if (confirm(`Delete "${event.title}"?`)) {
-                  onDelete(event)
-                  onClose()
-                }
+                onDelete(event)
+                onClose()
               }}
             >
               Delete

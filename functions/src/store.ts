@@ -210,6 +210,7 @@ export function firestoreAdminStore(db: Firestore, files: AdminFiles): AdminStor
           }
           const ownerId = String(f.get('ownerId') ?? '')
           const people = members.docs.map((m) => ({
+            id: m.id,
             name: String(m.get('displayName') ?? ''),
             email: typeof m.get('email') === 'string' ? (m.get('email') as string) : null,
             owner: m.id === ownerId,
@@ -232,6 +233,31 @@ export function firestoreAdminStore(db: Firestore, files: AdminFiles): AdminStor
           }
         }),
       )
+    },
+    async householdOwner(id) {
+      const snap = await family(id).get()
+      return snap.exists ? ((snap.get('ownerId') as string | undefined) ?? null) : undefined
+    },
+    async searchesThisMonth(month) {
+      return Number((await db.doc(`apiUsage/brave_${month}`).get()).get('count') ?? 0)
+    },
+    async creators() {
+      const list = (await db.doc('config/access').get()).get('familyCreators')
+      return Array.isArray(list) ? list.filter((x): x is string => typeof x === 'string') : []
+    },
+    async setCreators(emails) {
+      await db.doc('config/access').set({ familyCreators: emails }, { merge: true })
+    },
+    async member(id, uid) {
+      const snap = await db.doc(`families/${id}/members/${uid}`).get()
+      return snap.exists ? { email: typeof snap.get('email') === 'string' ? (snap.get('email') as string).toLowerCase() : null } : null
+    },
+    async removeMember(id, uid, email) {
+      if (email) {
+        const invite = db.doc(`invites/${email}`)
+        if ((await invite.get()).get('familyId') === id) await invite.delete()
+      }
+      await db.recursiveDelete(db.doc(`families/${id}/members/${uid}`))
     },
     async householdName(id) {
       const snap = await family(id).get()

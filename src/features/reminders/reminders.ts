@@ -1,3 +1,4 @@
+import { assigneeOn } from '@shared/chores/rotation.js'
 import type { CalendarEvent, Chore } from '../../types'
 import { toDateKey } from '../../lib/dates'
 import { withOwners } from '../calendar/views'
@@ -59,7 +60,8 @@ export function remindersBetween(events: CalendarEvent[], chores: Chore[], s: Re
         if (!occursOn(c, day) || isDoneOn(c, day)) continue
         const at = choreDueAt({ ...c, dueDate: day })
         if (at && inWindow(at)) {
-          out.push({ key: `c:${c.id}:${day}T${c.dueTime}`, at, kind: 'chore', title: c.title, detail: `Chore due · ${time(at)}`, ownerIds: c.assigneeId ? [c.assigneeId] : [] })
+          const who = assigneeOn(c, day)
+          out.push({ key: `c:${c.id}:${day}T${c.dueTime}`, at, kind: 'chore', title: c.title, detail: `Chore due · ${time(at)}`, ownerIds: who ? [who] : [] })
         }
       }
     }

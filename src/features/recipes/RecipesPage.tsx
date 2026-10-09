@@ -11,6 +11,7 @@ import { deleteRecipe, getRecipe, markReviewed, planRecipe, saveRecipe, watchRec
 import { RecipeBook } from './RecipeBook'
 import { RecipeHome, RecipeTrail, type RecipeView } from './RecipeHome'
 import { takeRecipesFilter } from './recipesFilter'
+import { useUndo } from '../../lib/undo'
 
 /**
  * Recipes: three ways in (our recipes, what's in my kitchen, search the web), each one
@@ -18,6 +19,7 @@ import { takeRecipesFilter } from './recipesFilter'
  * cooking screen.
  */
 export function RecipesPage({ familyId, userId }: { familyId: string; userId: string }) {
+  const { offer } = useUndo()
   const [entries, setEntries] = useState<CatalogEntry[] | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
   const [current, setCurrent] = useState<Recipe | null>(null)
@@ -90,7 +92,7 @@ export function RecipesPage({ familyId, userId }: { familyId: string; userId: st
           onSelect={setSelected}
           today={today}
           onSave={(draft, id) => saveRecipe(familyId, userId, draft, id).catch((e) => void report(e))}
-          onDelete={(r) => deleteRecipe(familyId, r.id).catch(report)}
+          onDelete={(r) => deleteRecipe(familyId, r.id).then((undo) => offer(`Deleted “${r.title}”`, undo), report)}
           onMarkReviewed={(r) => markReviewed(familyId, r.id).catch(report)}
           onFavorite={(id, fav) => setFavorite(familyId, id, fav).catch(report)}
           onSaveTags={(r, tags) => saveTags(familyId, r.id, tags).catch(report)}

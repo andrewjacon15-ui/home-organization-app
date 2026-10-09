@@ -9,6 +9,7 @@ import {
   eventReminderEmail,
   eventsOnDay,
   hourIn,
+  inQuietHours,
   sendDueEmails,
   type Email,
   type Meals,
@@ -158,7 +159,11 @@ class FakeStore implements ReminderStore {
     public prefs: Map<string, ReminderPrefs>,
     public events: ReminderEvent[] = [],
     public chores: ReminderChore[] = [],
+    public quiet: { from: string; to: string } | null = null,
   ) {}
+  async quietHours() {
+    return this.quiet
+  }
   async listFamilies() {
     return [{ id: 'f', name: 'Family', timezone: TZ }]
   }
@@ -188,6 +193,21 @@ class FakeStore implements ReminderStore {
 }
 
 describe('sendDueEmails', () => {
+  it('sends no event reminders during the household’s quiet hours (digests still go out)', async () => {
+    // NOW is 7:00 AM in New York; quiet until 7:30.
+    const store = new FakeStore(new Map([['a', prefs({ dailyDigestEnabled: true })]]), [ev('Dentist', '2026-10-01T11:30:00Z')], [], { from: '21:00', to: '07:30' })
+    const sent: Email[] = []
+    expect(await sendDueEmails({ store, mailer: { send: async (m: Email) => void sent.push(m) } }, NOW)).toEqual({ eventEmails: 0, digests: 1, failures: 0 })
+  })
+
+  it('knows quiet hours that run past midnight, in the household’s zone', () => {
+    const t = (iso: string) => new Date(iso)
+    expect(inQuietHours(t('2026-10-02T02:30:00Z'), 'America/New_York', '21:00', '07:00')).toBe(true) // 10:30 PM
+    expect(inQuietHours(t('2026-10-01T12:00:00Z'), 'America/New_York', '21:00', '07:00')).toBe(false) // 8:00 AM
+    expect(inQuietHours(t('2026-10-01T17:00:00Z'), 'America/New_York', '12:00', '14:00')).toBe(true) // 1:00 PM
+    expect(inQuietHours(t('2026-10-01T17:00:00Z'), 'America/New_York', '09:00', '09:00')).toBe(false)
+  })
+
   it('sends each reminder and digest exactly once across repeated runs', async () => {
     const store = new FakeStore(new Map([['a', prefs({ dailyDigestEnabled: true })]]), [ev('Dentist', '2026-10-01T11:30:00Z')])
     const sent: Email[] = []

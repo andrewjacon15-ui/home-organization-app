@@ -5,7 +5,7 @@ import { useDevice } from '../../lib/DeviceContext'
 import { HOME_CALENDAR_DAYS, HOME_PANELS, HOME_PANELS_VERSION, homeCalendarDays, homePanelsFor, type HomePanel } from '../home/homePanels'
 import { SettingsSection, ToggleRow } from './SettingRows'
 import { useSettings } from './SettingsContext'
-import type { DisplaySettings } from './settingsApi'
+import { homeStyleFor, type DisplaySettings } from './settingsApi'
 
 const DEVICES: Device[] = ['tablet', 'phone', 'desktop']
 type Setting = DisplaySettings['homePanels']
@@ -96,7 +96,7 @@ export function HomeScreenSettings() {
   const [device, setDevice] = useState<Device>(current)
   return (
     <SettingsSection title="Home screen" id="home">
-      <p className="settings-note">Choose what the Home screen shows and in what order, top to bottom. Each kind of device has its own; hidden panels don't load at all.</p>
+      <p className="settings-note">Each kind of device has its own Home: the daily summary (your day told in one screen), or panels you choose and order. Hidden panels don't load at all.</p>
       <div className="segmented" role="group" aria-label="Device">
         {DEVICES.map((d) => (
           <button key={d} type="button" className={`segmented__item${d === device ? ' segmented__item--active' : ''}`} aria-pressed={d === device} onClick={() => setDevice(d)}>
@@ -105,13 +105,34 @@ export function HomeScreenSettings() {
           </button>
         ))}
       </div>
+      <div className="setting-row">
+        <span className="setting-row__label" id="home-style">
+          Home shows
+          <span className="setting-row__hint">On {DEVICE_LABELS[device].toLowerCase()}s</span>
+        </span>
+        <div className="segmented" role="group" aria-labelledby="home-style">
+          {(['summary', 'panels'] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              className={`segmented__item${homeStyleFor(settings, device) === v ? ' segmented__item--active' : ''}`}
+              aria-pressed={homeStyleFor(settings, device) === v}
+              onClick={() => void update({ homeStyle: { ...settings.homeStyle, [device]: v } })}
+            >
+              {v === 'summary' ? 'Daily summary' : 'Panels'}
+            </button>
+          ))}
+        </div>
+      </div>
+      {homeStyleFor(settings, device) === 'panels' && (
       <HomePanelEditor
         value={settings.homePanels}
         device={device}
         version={settings.homePanelsVersion}
         onChange={(homePanels) => void update({ homePanels: migrated(settings.homePanels, settings.homePanelsVersion, homePanels), homePanelsVersion: HOME_PANELS_VERSION })}
       />
-      <HomeCalendarDaysRow />
+      )}
+      {homeStyleFor(settings, device) === 'panels' && <HomeCalendarDaysRow />}
       <ToggleRow
         label="US holidays in Countdowns"
         hint="Thanksgiving, Christmas, Mother’s Day and the rest, for the next two months. Add birthdays and anniversaries from the Countdowns panel; they repeat every year."

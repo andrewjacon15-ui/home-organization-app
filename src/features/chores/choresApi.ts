@@ -1,4 +1,5 @@
-import { addDoc, collection, deleteDoc, doc, onSnapshot, serverTimestamp, writeBatch } from 'firebase/firestore'
+import { addDoc, collection, doc, onSnapshot, serverTimestamp, writeBatch } from 'firebase/firestore'
+import { removeDocs } from '../../lib/undo'
 import { db } from '../../firebase'
 import type { Chore, NewChore } from '../../types'
 import { pruneCompletions, type Occurrence } from './schedule'
@@ -21,6 +22,7 @@ export function watchChores(familyId: string, onChange: (chores: Chore[]) => voi
           ...(data.repeat ? { repeat: data.repeat } : {}),
           ...(data.completions ? { completions: data.completions } : {}),
           ...(data.doneBy ? { doneBy: data.doneBy } : {}),
+          ...(Array.isArray(data.rotation) && data.rotation.length > 1 ? { rotation: data.rotation } : {}),
         }
       }),
     )
@@ -33,7 +35,7 @@ export function addChore(familyId: string, createdBy: string, chore: NewChore) {
 
 
 export function deleteChore(familyId: string, choreId: string) {
-  return deleteDoc(doc(choresCol(familyId), choreId))
+  return removeDocs([doc(choresCol(familyId), choreId)])
 }
 
 /**

@@ -17,6 +17,7 @@ import { saveMealPlan, watchMealPlans } from './mealsApi'
 import { findEntry, watchCatalog, type CatalogEntry } from '../recipes/catalog'
 import { getRecipe, lines, type Recipe } from '../recipes/recipesApi'
 import { RecipeView } from '../recipes/RecipeBook'
+import { useUndo } from '../../lib/undo'
 
 interface Props {
   familyId: string
@@ -24,6 +25,7 @@ interface Props {
 }
 
 export function MealsPage({ familyId, userId }: Props) {
+  const { offer } = useUndo()
   const today = useToday()
   const { settings } = useSettings()
   const currentWeekStart = startOfWeek(today, settings.weekStartsOn)
@@ -128,7 +130,7 @@ export function MealsPage({ familyId, userId }: Props) {
             await saveTemplate(familyId, userId, name, templateFromWeek(plans, weekStart))
           }}
           onApply={applyToWeek}
-          onDelete={(t) => void deleteTemplate(familyId, t.id).catch((e) => setError(e instanceof Error ? e.message : String(e)))}
+          onDelete={(t) => void deleteTemplate(familyId, t.id).then((r) => offer(`Deleted the template “${t.name}”`, r), (e) => setError(e instanceof Error ? e.message : String(e)))}
           onClose={() => setTemplating(false)}
         />
       )}

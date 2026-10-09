@@ -58,6 +58,12 @@ export function firestoreReminderStore(db: Firestore): ReminderStore {
       return snap.docs.map((d) => ({ ...(d.data() as Omit<ReminderChore, 'id'>), id: d.id }))
     },
 
+    async quietHours(familyId) {
+      const snap = await db.doc(`families/${familyId}/settings/display`).get()
+      if (snap.get('quietEnabled') !== true) return null
+      return { from: String(snap.get('quietFrom') ?? '21:00'), to: String(snap.get('quietTo') ?? '07:00') }
+    },
+
     async getMeals(familyId, dateKey) {
       const snap = await col(familyId, 'mealPlans').doc(dateKey).get()
       return snap.exists ? (snap.data() as Record<string, string>) : null

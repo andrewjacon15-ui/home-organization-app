@@ -3,6 +3,7 @@
 import { CalendarError } from './calendar.js'
 
 export interface HouseholdPerson {
+  id: string
   name: string
   email: string | null
   owner: boolean
@@ -31,10 +32,28 @@ export interface AdminStore {
   households(): Promise<HouseholdSummary[]>
   /** The household's name, or null when there's no such household. */
   householdName(familyId: string): Promise<string | null>
+  /** The owner's id; undefined when there's no such household. */
+  householdOwner(familyId: string): Promise<string | null | undefined>
   isMember(familyId: string, uid: string): Promise<boolean>
   rename(familyId: string, name: string): Promise<void>
   /** Deletes the household's documents, its files, and email invites to it. */
   remove(familyId: string): Promise<void>
+  /** Online recipe searches used this month (all households together). */
+  searchesThisMonth(month: string): Promise<number>
+  /** Who may start a household without an invite link (config/access.familyCreators). */
+  creators(): Promise<string[]>
+  setCreators(emails: string[]): Promise<void>
+  /** The member's record, or null. */
+  member(familyId: string, uid: string): Promise<{ email: string | null } | null>
+  /** Takes someone out of a household (their member record, saved tokens, and email invite). */
+  removeMember(familyId: string, uid: string, email: string | null): Promise<void>
+}
+
+/** App-wide numbers for the Admin tab. */
+export interface AppUsage {
+  searches: number
+  searchCap: number
+  creators: string[]
 }
 
 export interface Caller {
@@ -51,11 +70,44 @@ export async function requireAdmin(store: Pick<AdminStore, 'admins'>, caller: Ca
   }
 }
 
-export async function listHouseholds(store: AdminStore, caller: Caller) {
+export async function listHouseholds(store: AdminStore, caller: Caller, now = new Date(), searchCap = 0) {
   await requireAdmin(store, caller)
-  const households = await store.households()
+  const [households, searches, creators] = await Promise.all([store.households(), store.searchesThisMonth(now.toISOString().slice(0, 7)), store.creators()])
   households.sort((a, b) => (a.createdAt ?? '').localeCompare(b.createdAt ?? ''))
-  return { households }
+  const app: AppUsage = { searches, searchCap, creators: [...creators].sort() }
+  return { households, app }
+}
+
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+/** Adds or removes someone who may start a household without an invite link. */
+export async function setCreator(store: AdminStore, caller: Caller, data: unknown) {
+  await requireAdmin(store, caller)
+  const email = String((data as { email?: unknown } | null)?.email ?? '').trim().toLowerCase()
+  const allow = (data as { allow?: unknown } | null)?.allow === true
+  if (!EMAIL.test(email) || email.length > 200) throw new CalendarError('invalid-argument', 'That doesn’t look like an email address.')
+  const list = new Set(await store.creators())
+  if (allow) list.add(email)
+  else list.delete(email)
+  if (list.size > 200) throw new CalendarError('failed-precondition', 'That list is full (200 people).')
+  await store.setCreators([...list].sort())
+  return { creators: [...list].sort() }
+}
+
+/** Takes a person out of another household. The owner stays; so do you. */
+export async function removeMember(store: AdminStore, caller: Caller, data: unknown) {
+  await requireAdmin(store, caller)
+  const familyId = familyIdOf(data)
+  const uid = String((data as { uid?: unknown }).uid ?? '')
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(uid)) throw new CalendarError('invalid-argument', 'Which person?')
+  if (uid === caller.uid) throw new CalendarError('failed-precondition', 'You can’t remove yourself from here.')
+  const owner = await store.householdOwner(familyId)
+  if (owner === undefined) throw new CalendarError('not-found', 'That household no longer exists.')
+  if (owner === uid) throw new CalendarError('failed-precondition', 'The household’s owner can’t be removed.')
+  const person = await store.member(familyId, uid)
+  if (!person) throw new CalendarError('not-found', 'They’re no longer in that household.')
+  await store.removeMember(familyId, uid, person.email)
+  return { ok: true }
 }
 
 const familyIdOf = (data: unknown) => {

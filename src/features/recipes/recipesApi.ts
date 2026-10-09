@@ -1,4 +1,5 @@
-import { addDoc, collection, deleteDoc, doc, getDoc, onSnapshot, serverTimestamp, setDoc, updateDoc, type DocumentData } from 'firebase/firestore'
+import { removeDocs } from '../../lib/undo'
+import { addDoc, collection, doc, getDoc, onSnapshot, serverTimestamp, setDoc, updateDoc, type DocumentData } from 'firebase/firestore'
 import { parseIngredient } from '@shared/recipes/ingredient.js'
 import { autoTag, cleanTags, type RecipeTags } from '@shared/recipes/tagger.js'
 import { db } from '../../firebase'
@@ -141,7 +142,7 @@ export function markReviewed(familyId: string, id: string) {
 }
 
 export function deleteRecipe(familyId: string, id: string) {
-  return deleteDoc(doc(recipesCol(familyId), id))
+  return removeDocs([doc(recipesCol(familyId), id)])
 }
 
 /** Puts a recipe on the meal plan, keeping the day's other meals. */

@@ -6,6 +6,7 @@ import { watchChores } from '../chores/choresApi'
 import { fromDateKey } from '../../lib/dates'
 import { useToday } from '../../lib/hooks'
 import { useSettings } from '../settings/SettingsContext'
+import { inSleepWindow } from '../sleep/sleep'
 import { playChime, unlockAudioOnFirstTouch } from './chime'
 import { remindersBetween, type Reminder } from './reminders'
 
@@ -59,6 +60,8 @@ export function ReminderCenter({ familyId, members }: { familyId: string; member
       lastCheck.current = now
       if (due.length === 0) return
       saveFired([...fired, ...due.map((r) => r.key)])
+      // Quiet hours: nothing pops up or plays (the reminders are let go, not saved for later).
+      if (settings.quietEnabled && inSleepWindow(now, settings.quietFrom, settings.quietTo)) return
       setAlerts((current) => [...current, ...due].slice(-MAX_VISIBLE))
       if (settings.reminderSound) playChime()
     }
