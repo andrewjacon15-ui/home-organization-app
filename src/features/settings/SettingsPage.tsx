@@ -3,7 +3,10 @@ import { FamilyPage } from '../family/FamilyPage'
 import { saveLock } from '../lock/lockApi'
 import { useLock } from '../lock/LockContext'
 import { PinPad } from '../lock/PinPad'
-import { HouseholdsAdmin } from '../admin/HouseholdsAdmin'
+import { AdminPage } from '../admin/HouseholdsAdmin'
+import { ADMIN_SECTIONS, adminApi, type AdminApi } from '../admin/householdInvites'
+import { useIsAdmin } from '../admin/useIsAdmin'
+import { useState } from 'react'
 import { AboutSettings } from './AboutSettings'
 import { AppearanceSettings } from './AppearanceSettings'
 import { CookbookSettings } from '../cookbooks/CookbookSettings'
@@ -30,6 +33,7 @@ interface Props {
   onOpenRecipes?: () => void
   /** Replays the welcome tour. */
   onShowTour?: () => void
+  adminApiOverride?: AdminApi
 }
 
 const SECTIONS = [
@@ -53,8 +57,12 @@ const SECTIONS = [
   { id: 'about', label: 'About' },
 ]
 
-export function SettingsPage({ family, members, userId, onOpenRecipes, onShowTour }: Props) {
+export function SettingsPage({ family, members, userId, onOpenRecipes, onShowTour, adminApiOverride = adminApi }: Props) {
   const { locked, unlock } = useLock()
+  const isAdmin = useIsAdmin(adminApiOverride)
+  const [view, setView] = useState<'household' | 'admin'>('household')
+  const admin = isAdmin && view === 'admin'
+  const sections = admin ? ADMIN_SECTIONS : SECTIONS
 
   if (locked) {
     return (
@@ -68,8 +76,27 @@ export function SettingsPage({ family, members, userId, onOpenRecipes, onShowTou
     <div className="settings-layout">
       <nav className="settings-index" aria-label="Settings sections">
         <h1 className="page-title">Settings</h1>
+        {isAdmin && (
+          <div className="segmented settings-tabs" role="tablist" aria-label="Settings or admin">
+            {(['household', 'admin'] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                role="tab"
+                aria-selected={view === v}
+                className={`segmented__item${view === v ? ' segmented__item--active' : ''}`}
+                onClick={() => {
+                  setView(v)
+                  document.querySelector('.app')?.scrollTo({ top: 0 })
+                }}
+              >
+                {v === 'household' ? 'Household' : 'Admin'}
+              </button>
+            ))}
+          </div>
+        )}
         <ol>
-          {SECTIONS.map((s) => (
+          {sections.map((s) => (
             <li key={s.id}>
               <a
                 href={`#${s.id}`}
@@ -84,6 +111,11 @@ export function SettingsPage({ family, members, userId, onOpenRecipes, onShowTou
           ))}
         </ol>
       </nav>
+      {admin ? (
+        <div className="settings-page">
+          <AdminPage userId={userId} familyId={family.id} api={adminApiOverride} />
+        </div>
+      ) : (
       <div className="settings-page">
         <section className="settings-section" aria-label="Family" id="family">
           <h2>Family</h2>
@@ -111,9 +143,9 @@ export function SettingsPage({ family, members, userId, onOpenRecipes, onShowTou
         <ScreensaverSettings />
         <SleepSettings />
         <LockSettings save={(c) => saveLock(family.id, c)} />
-        <HouseholdsAdmin userId={userId} />
         <AboutSettings onShowTour={onShowTour} familyId={family.id} householdName={family.name} />
       </div>
+      )}
     </div>
   )
 }

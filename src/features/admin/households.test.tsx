@@ -1,9 +1,10 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { User } from 'firebase/auth'
 import { describe, expect, it, vi } from 'vitest'
 import { FamilySetup } from '../../components/FamilySetup'
-import { HouseholdsAdmin } from './HouseholdsAdmin'
+import { AdminPage } from './HouseholdsAdmin'
+import { useIsAdmin } from './useIsAdmin'
 import { inviteMessage } from './inviteMessage'
 import { inviteLink, newCode, pendingInvite, takeInviteFromUrl, type HouseholdInvite } from './householdInvites'
 
@@ -74,6 +75,24 @@ describe('Households (admin)', () => {
     { code: 'open1', note: 'For Sam', createdAt: new Date(now), expiresAt: new Date(now + 5 * 86_400_000) },
     { code: 'used1', note: '', createdAt: new Date(now), expiresAt: new Date(now + 5 * 86_400_000), usedBy: 'u9', usedEmail: 'kim@example.com', usedAt: new Date(now) },
   ]
+  const household = (id: string, name: string, extra = {}) => ({
+    id,
+    name,
+    ownerEmail: 'andrew@example.com',
+    createdAt: '2026-09-27T00:00:00Z',
+    members: 2,
+    people: [
+      { name: 'Andrew', email: 'andrew@example.com', owner: true },
+      { name: 'Lydia', email: 'lydia@example.com', owner: false },
+    ],
+    events: 180,
+    recipes: 196,
+    photos: 40,
+    photoBytes: 200 * 1024 ** 2,
+    cookbookBytes: 30 * 1024 ** 2,
+    otherBytes: 0,
+    ...extra,
+  })
   const api = (admin: boolean) => ({
     isAdmin: vi.fn(async () => admin),
     watch: vi.fn((cb: (l: HouseholdInvite[]) => void) => {
@@ -82,23 +101,28 @@ describe('Households (admin)', () => {
     }),
     create: vi.fn(async () => 'NEWCODE'),
     revoke: vi.fn(async () => undefined),
-    households: vi.fn(async () => [
-      { id: 'f1', name: 'The Jacobs Family', ownerEmail: 'andrew@example.com', createdAt: '2026-09-27T00:00:00Z', members: 2, events: 180, recipes: 196, photos: 40, photoBytes: 200 * 1024 ** 2, cookbookBytes: 30 * 1024 ** 2 },
-    ]),
+    households: vi.fn(async () => [household('f1', 'The Jacobs Family'), household('f2', 'The Smiths', { members: 1, photos: 0, photoBytes: 0, cookbookBytes: 0, people: [] })]),
+    rename: vi.fn(async () => undefined),
+    remove: vi.fn(async () => undefined),
   })
 
-  it('shows nothing to anyone but the admin', async () => {
+  function AdminGate({ a }: { a: ReturnType<typeof api> }) {
+    return useIsAdmin(a) ? <AdminPage userId="u1" familyId="f1" api={a} /> : <p>Household settings</p>
+  }
+
+  it('is only for the admin', async () => {
     const a = api(false)
-    const { container } = render(<HouseholdsAdmin userId="u1" api={a} />)
+    render(<AdminGate a={a} />)
     await vi.waitFor(() => expect(a.isAdmin).toHaveBeenCalled())
-    expect(container).toBeEmptyDOMElement()
+    expect(screen.getByText('Household settings')).toBeInTheDocument()
+    expect(a.households).not.toHaveBeenCalled()
     expect(a.watch).not.toHaveBeenCalled()
   })
 
-  it('creates and lists invite links, and shows households with their size', async () => {
+  it('creates invite links and shares the setup message', async () => {
     const a = api(true)
     const u = userEvent.setup()
-    render(<HouseholdsAdmin userId="u1" api={a} />)
+    render(<AdminPage userId="u1" familyId="f1" api={a} />)
     expect(await screen.findByText('For Sam')).toBeInTheDocument()
     expect(screen.getByText(/kim@example.com/)).toBeInTheDocument()
     await u.type(screen.getByLabelText('Who it’s for'), 'For Pat')
@@ -117,9 +141,39 @@ describe('Households (admin)', () => {
     // An older open link can show its message too.
     await u.click(screen.getByRole('button', { name: 'Message' }))
     expect(screen.getByRole('status')).toHaveTextContent('/?household=open1')
-    await u.click(screen.getByRole('button', { name: 'Show households and usage' }))
-    expect(await screen.findByText('The Jacobs Family')).toBeInTheDocument()
-    expect(screen.getByText(/2 people · 180 events · 196 recipes · 40 photos · 230 MB/)).toBeInTheDocument()
-    expect(screen.getByText(/1 household · photos and cookbooks use 230 MB of the 5 GB free/)).toBeInTheDocument()
+  })
+
+  it('shows usage across households, and each household with its people and size', async () => {
+    const a = api(true)
+    render(<AdminPage userId="u1" familyId="f1" api={a} />)
+    const card = await screen.findByRole('listitem', { name: 'The Jacobs Family' })
+    expect(card).toHaveTextContent('2 people · 180 events · 196 recipes · 40 photos · 230 MB')
+    expect(card).toHaveTextContent('Yours')
+    expect(within(card).getByText(/lydia@example.com/)).toBeInTheDocument()
+    // Your own household can be renamed but not deleted from here.
+    expect(within(card).queryByRole('button', { name: 'Delete…' })).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Storage: 230 MB of 5 GB free')).toHaveTextContent('Photos and videos 200 MB')
+    expect(screen.getByRole('region', { name: 'Usage' })).toHaveTextContent(/Households2People3Photos40Recipes392/)
+  })
+
+  it('renames a household, and deletes another only once its name is typed', async () => {
+    const a = api(true)
+    const u = userEvent.setup()
+    render(<AdminPage userId="u1" familyId="f1" api={a} />)
+    const smiths = await screen.findByRole('listitem', { name: 'The Smiths' })
+    await u.click(within(smiths).getByRole('button', { name: 'Rename' }))
+    await u.clear(within(smiths).getByLabelText('New name'))
+    await u.type(within(smiths).getByLabelText('New name'), 'Smith Family')
+    await u.click(within(smiths).getByRole('button', { name: 'Save' }))
+    expect(a.rename).toHaveBeenCalledWith('f2', 'Smith Family')
+    const renamed = await screen.findByRole('listitem', { name: 'Smith Family' })
+
+    await u.click(within(renamed).getByRole('button', { name: 'Delete…' }))
+    const go = within(renamed).getByRole('button', { name: 'Delete forever' })
+    expect(go).toBeDisabled()
+    await u.type(within(renamed).getByLabelText('Household name to confirm'), 'smith family')
+    await u.click(go)
+    expect(a.remove).toHaveBeenCalledWith('f2', 'smith family')
+    await vi.waitFor(() => expect(screen.queryByRole('listitem', { name: 'Smith Family' })).not.toBeInTheDocument())
   })
 })
