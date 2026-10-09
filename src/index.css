@@ -8045,3 +8045,82 @@ button.summary-row__body {
 :root[data-device='phone'] .settings-index:has(.settings-tabs) ol {
   grid-area: index;
 }
+
+/* Weather: the page is never wider than the screen; on a narrower tablet or window (under
+   1000px), the week drops its wind/UV and rain amounts, like phones do. */
+.weather {
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (max-width: 1000px) {
+  :root:not([data-device='phone']) .weather-row {
+    grid-template-columns: 72px minmax(0, 1.2fr) 64px minmax(140px, 1.6fr);
+    gap: 12px;
+  }
+  :root:not([data-device='phone']) .weather-row__amount,
+  :root:not([data-device='phone']) .weather-row__extra {
+    display: none;
+  }
+}
+
+/* Daily summary on a narrow tablet or window (an upright tablet in a browser): one column
+   that scrolls inside Home, like phones, rather than two cramped ones. */
+@media (max-width: 900px) {
+  :root:not([data-device='phone']) .summary {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  :root:not([data-device='phone']) .summary__grid {
+    grid-template-columns: minmax(0, 1fr);
+    flex: none;
+  }
+  :root:not([data-device='phone']) .summary__main,
+  :root:not([data-device='phone']) .summary__side,
+  :root:not([data-device='phone']) .summary-day,
+  :root:not([data-device='phone']) .summary-timeline {
+    flex: none;
+    overflow: visible;
+  }
+}
+
+/* Schedule list: in the narrow date column, a rainy day's chance goes under the high
+   ("73°" over "86%") instead of running out of the column. */
+.schedule-day__header .day-weather {
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-left: 0;
+  white-space: normal;
+  text-align: center;
+}
+.schedule-day__header .day-weather__rain {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+/* Month cells on a narrow screen: events shrink to the cell (their text ellipsizes) instead
+   of pushing the grid wider; the delete button stays its size. */
+.month-cell .events,
+.month-cell .events > li,
+.month-cell .event {
+  min-width: 0;
+}
+.month-cell .event > :not(.event__delete) {
+  min-width: 0;
+}
+.month-cell .event__delete {
+  flex: none;
+}
+.month-cell .event__open {
+  overflow: hidden;
+}
+.month-cell .event__title {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Narrow month cells keep the room for the title; Delete is in the event's details sheet. */
+@media (max-width: 900px) {
+  .month-cell .event__delete,
+  .month-cell .day-weather__rain {
+    display: none;
+  }
+}
