@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { addDays, fromDateKey, startOfWeek } from '../../lib/dates'
 import { useNow, useToday } from '../../lib/hooks'
 import { useFitHeight } from '../../lib/useFitHeight'
@@ -11,7 +11,7 @@ import { useDevice } from '../../lib/DeviceContext'
 import { useSettings } from '../settings/SettingsContext'
 import { addCountdown, removeCountdown, watchCountdowns, type Countdown } from '../countdowns/countdownsApi'
 import { homeCalendarDays, homePanelsFor } from './homePanels'
-import { HomeView, type HomeTarget } from './HomeView'
+import type { HomeTarget } from './HomeView'
 import { DailySummary } from './DailySummary'
 import { homeStyleFor } from '../settings/settingsApi'
 import { occurrencesOn } from '../chores/schedule'
@@ -20,6 +20,9 @@ import { withOwners } from '../calendar/views'
 import { watchMealPlans } from '../meals/mealsApi'
 import type { MealPlan } from '../../types'
 import { useUndo } from '../../lib/undo'
+
+// The panels view loads only on a device that uses it (the daily summary is the default).
+const HomeView = lazy(() => import('./HomeView').then((m) => ({ default: m.HomeView })))
 
 interface Props {
   familyId: string
@@ -132,6 +135,7 @@ export function HomePage({ familyId, userId, members, onNavigate }: Props) {
           {error} <button className="link" onClick={() => setError(null)}>Dismiss</button>
         </p>
       )}
+      <Suspense fallback={null}>
       <HomeView
         today={today}
         now={now}
@@ -156,6 +160,7 @@ export function HomePage({ familyId, userId, members, onNavigate }: Props) {
         onAddItem={(l, text) => addItems(familyId, l.id, userId, [text], null, { categories: l.categories }).catch(report)}
         onToggleItem={(l, i) => setItemDone(familyId, l.id, i.id, !i.done, settings.listDoneDays).catch(report)}
       />
+      </Suspense>
     </div>
   )
 }
