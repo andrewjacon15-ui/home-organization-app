@@ -4,7 +4,7 @@
  */
 import { parseIngredient } from './ingredient.js'
 
-export const AISLES = ['Produce', 'Meat & Seafood', 'Dairy & Eggs', 'Bakery', 'Pantry', 'Frozen', 'Household'] as const
+export const AISLES = ['Produce', 'Meat & Seafood', 'Dairy & Eggs', 'Bakery', 'Pantry', 'Snacks & Drinks', 'Frozen', 'Household'] as const
 export type Aisle = (typeof AISLES)[number]
 
 const PRODUCE = new Set(

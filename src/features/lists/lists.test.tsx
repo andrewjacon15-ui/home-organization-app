@@ -1,10 +1,11 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { choose } from '../../test-utils'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Member } from '../../types'
 import type { FamilyList, ListItem } from './listsApi'
 import { ListsBoard } from './ListsBoard'
+import { HOLD_MS, placeFor } from './useItemDrag'
 
 const members: Member[] = [
   { id: 'a', displayName: 'Andrew Jacon', email: 'a@x.com', color: '#15803d' },
@@ -34,6 +35,7 @@ function setup(lists: FamilyList[] = [grocery, todo], data: Record<string, ListI
     onEditItem: vi.fn(),
     onAddCategory: vi.fn(),
     onAutoSort: vi.fn(),
+    onMoveItem: vi.fn(),
     onRenameCategory: vi.fn(),
     onMoveCategory: vi.fn(),
     onDeleteCategory: vi.fn(),
@@ -161,5 +163,64 @@ describe('ListsBoard', () => {
     await user.type(screen.getByLabelText('New list name'), 'Packing list')
     await user.click(screen.getByRole('button', { name: 'Create' }))
     expect(actions.onCreateList).toHaveBeenCalledWith('Packing list')
+  })
+
+  describe('press and hold to drag', () => {
+    const shop: FamilyList = { ...grocery, categories: [{ id: 'p', name: 'Produce' }, { id: 'd', name: 'Dairy & Eggs' }] }
+    const data = { grocery: [item('g1', 'Milk', { categoryId: 'd' }), item('g2', 'Limes', { categoryId: 'p' }), item('g3', 'Kale', { categoryId: 'p' }), item('g4', 'Napkins')] }
+    // jsdom has no layout: say which group is under the finger.
+    const pointer = (type: string, el: Element | Window, x: number, y: number) => {
+      const e = new MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0 })
+      Object.assign(e, { pointerId: 1, pointerType: 'touch' })
+      fireEvent(el, e)
+    }
+
+    it('moves an item into another category after a long press, without opening the editor', () => {
+      vi.useFakeTimers()
+      try {
+        const { actions } = setup([shop], data)
+        const produce = screen.getByRole('region', { name: 'Produce' })
+        Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => produce })
+        const napkins = screen.getByText('Napkins').closest('li')!
+        pointer('pointerdown', napkins, 10, 10)
+        act(() => vi.advanceTimersByTime(HOLD_MS + 10))
+        expect(napkins).toHaveClass('list-item--lifted')
+        pointer('pointermove', window, 12, 200)
+        pointer('pointerup', window, 12, 200)
+        fireEvent.click(screen.getByRole('button', { name: 'Edit Napkins' }))
+        expect(actions.onMoveItem).toHaveBeenCalledWith(shop, data.grocery[3], { order: 4, categoryId: 'p', memberId: null })
+        // The click after letting go didn't open the editor.
+        expect(screen.queryByRole('form', { name: 'Edit Napkins' })).not.toBeInTheDocument()
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('a quick tap still edits, and moving first is a scroll, not a drag', () => {
+      vi.useFakeTimers()
+      try {
+        const { actions } = setup([shop], data)
+        const limes = screen.getByText('Limes').closest('li')!
+        pointer('pointerdown', limes, 10, 10)
+        pointer('pointermove', window, 10, 60)
+        act(() => vi.advanceTimersByTime(HOLD_MS + 10))
+        expect(limes).not.toHaveClass('list-item--lifted')
+        pointer('pointerup', window, 10, 60)
+        pointer('pointerdown', limes, 10, 10)
+        pointer('pointerup', window, 10, 10)
+        fireEvent.click(screen.getByRole('button', { name: 'Edit Limes' }))
+        expect(screen.getByRole('form', { name: 'Edit Limes' })).toBeInTheDocument()
+        expect(actions.onMoveItem).not.toHaveBeenCalled()
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+  })
+
+  it('works out the order that puts a dropped item in its place', () => {
+    const others = [item('a', 'A', { order: 10 }), item('b', 'B', { order: 20 }), item('c', 'C', { order: 30 })]
+    expect(placeFor(others, { group: 'x', beforeId: 'b' })).toBe(15)
+    expect(placeFor(others, { group: 'x', beforeId: 'a' })).toBe(9)
+    expect(placeFor(others, { group: 'x', beforeId: null })).toBe(31)
   })
 })

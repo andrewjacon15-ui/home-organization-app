@@ -8124,3 +8124,52 @@ button.summary-row__body {
     display: none;
   }
 }
+
+/* Lists: press and hold an item to drag it (in its category or to another). */
+.list-item--draggable {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.list-item--lifted {
+  position: relative;
+  z-index: 30;
+  pointer-events: none;
+  border-radius: var(--r);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  outline: 2px solid var(--accent);
+  transition: box-shadow 120ms ease-out;
+}
+:root.list-dragging,
+:root.list-dragging * {
+  cursor: grabbing;
+  -webkit-user-select: none;
+  user-select: none;
+}
+/* Where it would land: a line that takes no room, so nothing jumps while dragging. */
+.list-drop {
+  position: relative;
+  height: 0;
+  list-style: none;
+}
+.list-drop::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -2px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+/* The section a held item is over: a soft wash, so it's clear where it's going. */
+.list-col--dragging [data-drop-group]:has(.list-drop) {
+  border-radius: var(--r);
+  background: var(--accent-soft);
+}
+@media (prefers-reduced-motion: reduce) {
+  .list-item--lifted {
+    transition: none;
+  }
+}

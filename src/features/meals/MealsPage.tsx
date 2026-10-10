@@ -69,7 +69,7 @@ export function MealsPage({ familyId, userId }: Props) {
     const ingredientLines = found.flatMap((r) => (r ? lines(r.ingredients) : []))
     const listId = await groceryListId(familyId, userId, lists)
     const plan = groceryLines(ingredientLines, kitchen.staples, await openItemTexts(familyId, listId))
-    await addItems(familyId, listId, userId, plan.lines, null, { categories: lists.find((l) => l.id === listId)?.categories })
+    await addItems(familyId, listId, userId, plan.lines, null, { list: lists.find((l) => l.id === listId) })
     return { added: plan.lines.length, staples: plan.staples.length, onList: plan.onList.length }
   }
 

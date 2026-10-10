@@ -177,6 +177,18 @@ two on tablets and computers, fitting the screen with only the timeline scrollin
 
 Every part opens its own tab. Settings → Home screen switches a kind of device back to panels.
 
+### Lists
+
+- **Tap** an item's words to edit it; **press and hold** (about half a second) anywhere on it to pick
+  it up and drag it, within its category or into another (a person's section too). Mouse, finger and
+  pen work the same. A lifted item is a floating card with an accent outline and `--shadow-lg`; the
+  section it's over gets an `--accent-soft` wash and a 4px accent line marks where it lands. Nothing
+  else moves when an item lifts. Near the panel's top or bottom edge, the panel scrolls.
+- **Grocery lists file themselves** into store aisles (Produce, Meat & Seafood, Dairy & Eggs, Bakery,
+  Pantry, Snacks & Drinks, Frozen, Household), on the device, with no outside service: what the
+  household taught it by moving items, then everyday words and brands read from the end of the phrase,
+  then the recipe dictionary, then typos. Other lists never file items themselves.
+
 ### Undo, not "are you sure?"
 
 Deleting happens at once and shows a dark floating message along the bottom ("Deleted “Trash
