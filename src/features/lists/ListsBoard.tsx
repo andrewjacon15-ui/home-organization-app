@@ -1,5 +1,6 @@
 import { Select } from '../../components/Select'
 import { useState, type CSSProperties, type FormEvent } from 'react'
+import { placeFor, useItemDrag } from './useItemDrag'
 import type { Member } from '../../types'
 import type { FamilyList, ListCategory, ListItem } from './listsApi'
 import { AddIcon, ArrowDownIcon, ArrowUpIcon, CloseIcon, DoneIcon, PencilIcon } from '../../components/Icons'
@@ -10,6 +11,8 @@ export interface ListActions {
   onToggle: (list: FamilyList, item: ListItem) => void
   onDelete: (list: FamilyList, item: ListItem) => void
   onEditItem: (list: FamilyList, item: ListItem, changes: { text?: string; categoryId?: string | null }) => void
+  /** Press-and-hold drag: a new place in the order, and maybe another category or person. */
+  onMoveItem: (list: FamilyList, item: ListItem, to: { order: number; categoryId: string | null; memberId: string | null }) => void
   onClearDone: (list: FamilyList) => void
   onRename: (list: FamilyList, title: string) => void
   onToggleSections: (list: FamilyList) => void
@@ -90,10 +93,20 @@ function ListColumn({ list, items, members, doneDays, ...a }: ColumnProps) {
   const sectionIds = new Set(members.map((m) => m.id))
   const shared = list.sections ? open.filter((i) => !i.memberId || !sectionIds.has(i.memberId)) : open
   const top = shared.filter((i) => !i.categoryId || !catIds.has(i.categoryId))
-  const rowProps = { list, categories, onToggle: a.onToggle, onDelete: a.onDelete, onEditItem: a.onEditItem }
+  // Which group an open item is in: a person's section, a category, or the list's top.
+  const groupOf = (i: ListItem) => (list.sections && i.memberId && sectionIds.has(i.memberId) ? `member:${i.memberId}` : i.categoryId && catIds.has(i.categoryId) ? `cat:${i.categoryId}` : 'top')
+  const drag = useItemDrag((id, t) => {
+    const item = open.find((i) => i.id === id)
+    if (!item) return
+    const to = placeFor(open.filter((i) => i.id !== id && groupOf(i) === t.group), t)
+    const where = t.group.startsWith('member:') ? { categoryId: null, memberId: t.group.slice(7) } : { categoryId: t.group.startsWith('cat:') ? t.group.slice(4) : null, memberId: null }
+    if (groupOf(item) === t.group && Math.abs(to - item.order) < 1e-9) return
+    a.onMoveItem(list, item, { order: to, ...where })
+  })
+  const rowProps = { list, categories, onToggle: a.onToggle, onDelete: a.onDelete, onEditItem: a.onEditItem, drag }
 
   return (
-    <article className={`list-col list-col--${list.kind}`} aria-label={list.title}>
+    <article className={`list-col list-col--${list.kind}${drag.dragId ? ' list-col--dragging' : ''}`} aria-label={list.title}>
       <header className="list-col__head">
         {renaming ? (
           <form
@@ -151,6 +164,7 @@ function ListColumn({ list, items, members, doneDays, ...a }: ColumnProps) {
         </div>
       </header>
 
+      <div className="list-zone" data-drop-group="top">
       <AddItem label={`Add to ${list.title}`} onAdd={(text) => a.onAdd(list, text, null)} />
       {newCategory && (
         <NameForm
@@ -160,7 +174,8 @@ function ListColumn({ list, items, members, doneDays, ...a }: ColumnProps) {
           onCancel={() => setNewCategory(false)}
         />
       )}
-      <Items {...rowProps} items={top} />
+      <Items {...rowProps} items={top} group="top" />
+      </div>
 
       {categories.map((c, ci) => (
         <CategorySection key={c.id} category={c} first={ci === 0} last={ci === categories.length - 1} items={shared.filter((i) => i.categoryId === c.id)} rowProps={rowProps} actions={a} />
@@ -170,10 +185,10 @@ function ListColumn({ list, items, members, doneDays, ...a }: ColumnProps) {
         members.map((m) => {
           const mine = open.filter((i) => i.memberId === m.id)
           return (
-            <section key={m.id} className="list-section" aria-label={`${m.displayName.split(' ')[0]}'s items`} style={{ '--pill': m.color } as CSSProperties}>
+            <section key={m.id} className="list-section" data-drop-group={`member:${m.id}`} aria-label={`${m.displayName.split(' ')[0]}'s items`} style={{ '--pill': m.color } as CSSProperties}>
               <h3 className="list-section__title">{m.displayName.split(' ')[0]}</h3>
               <AddItem label={`Add for ${m.displayName.split(' ')[0]}`} onAdd={(text) => a.onAdd(list, text, m.id, null)} />
-              <Items {...rowProps} items={mine} />
+              <Items {...rowProps} items={mine} group={`member:${m.id}`} />
             </section>
           )
         })}
@@ -195,7 +210,7 @@ function CategorySection({ category, first, last, items, rowProps, actions: a }:
   const [adding, setAdding] = useState(false)
   const list = rowProps.list
   return (
-    <section className="list-category" aria-label={category.name}>
+    <section className="list-category" data-drop-group={`cat:${category.id}`} aria-label={category.name}>
       {editing ? (
         <div className="list-category__edit">
           <NameForm label="Category name" initial={category.name} onSave={(name) => (a.onRenameCategory(list, category.id, name), setEditing(false))} onCancel={() => setEditing(false)} />
@@ -230,7 +245,7 @@ function CategorySection({ category, first, last, items, rowProps, actions: a }:
         </h3>
       )}
       {adding && <AddItem label={`Add to ${category.name}`} placeholder={`Add to ${category.name}`} autoFocus onAdd={(text) => a.onAdd(list, text, null, category.id)} />}
-      <Items {...rowProps} items={items} />
+      <Items {...rowProps} items={items} group={`cat:${category.id}`} />
     </section>
   )
 }
@@ -277,21 +292,30 @@ interface RowProps {
   onToggle: ListActions['onToggle']
   onDelete: ListActions['onDelete']
   onEditItem: ListActions['onEditItem']
+  drag?: ReturnType<typeof useItemDrag>
 }
 
-function Items({ items, ...p }: RowProps & { items: ListItem[] }) {
-  if (items.length === 0) return null
+/**
+ * A group of items. With `group` (its whole section is the drop zone, title included, so
+ * nothing opens up or moves when an item is picked up), a line shows where a held item lands.
+ */
+function Items({ items, group, ...p }: RowProps & { items: ListItem[]; group?: string }) {
+  const target = group && p.drag?.target?.group === group ? p.drag.target : null
+  if (items.length === 0 && !target) return null
+  const line = <li key="__drop" className="list-drop" aria-hidden />
   return (
     <ul className="list-items">
-      {items.map((i) => (
-        <ItemRow key={i.id} item={i} {...p} />
-      ))}
+      {items.flatMap((i) => [...(target && target.beforeId === i.id ? [line] : []), <ItemRow key={i.id} item={i} {...p} draggable={!!group && !i.done} />])}
+      {target && !target.beforeId && line}
     </ul>
   )
 }
 
-/** Tap the circle to check off; tap the words to edit them or move the item to another category. */
-function ItemRow({ item: i, list, categories, onToggle, onDelete, onEditItem }: RowProps & { item: ListItem }) {
+/**
+ * Tap the circle to check off; tap the words to edit them or move the item to another category;
+ * press and hold anywhere on it to drag it to a new place (in its category or another one).
+ */
+function ItemRow({ item: i, list, categories, onToggle, onDelete, onEditItem, drag, draggable = false }: RowProps & { item: ListItem; draggable?: boolean }) {
   const [editing, setEditing] = useState(false)
   const [text, setText] = useState(i.text)
   const [cat, setCat] = useState(i.categoryId ?? '')
@@ -341,7 +365,7 @@ function ItemRow({ item: i, list, categories, onToggle, onDelete, onEditItem }: 
   }
 
   return (
-    <li className={`list-item${i.done ? ' list-item--done' : ''}`}>
+    <li className={`list-item${i.done ? ' list-item--done' : ''}${draggable ? ' list-item--draggable' : ''}${drag?.dragId === i.id ? ' list-item--lifted' : ''}`} {...(draggable && drag ? drag.bind(i.id) : {})}>
       <input type="checkbox" className="list-item__box" checked={i.done} onChange={() => onToggle(list, i)} aria-label={`${i.done ? 'Uncheck' : 'Check off'} ${i.text}`} />
       <button
         type="button"

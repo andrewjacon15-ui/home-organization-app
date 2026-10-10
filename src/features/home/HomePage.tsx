@@ -157,7 +157,7 @@ export function HomePage({ familyId, userId, members, onNavigate }: Props) {
         onRemoveCountdown={(c) => removeCountdown(familyId, c.id).then((r) => offer(`Removed “${c.title}”`, r), report)}
         onToggleChore={(o, done, doneBy) => setOccurrenceDone(familyId, o, done, doneBy, userId, today).catch(report)}
         onDeleteChore={(c) => deleteChore(familyId, c.id).then((r) => offer(`Deleted “${c.title}”`, r), report)}
-        onAddItem={(l, text) => addItems(familyId, l.id, userId, [text], null, { categories: l.categories }).catch(report)}
+        onAddItem={(l, text) => addItems(familyId, l.id, userId, [text], null, { list: l }).catch(report)}
         onToggleItem={(l, i) => setItemDone(familyId, l.id, i.id, !i.done, settings.listDoneDays).catch(report)}
       />
       </Suspense>

@@ -6,6 +6,7 @@ import { UNDO_MS, UndoProvider } from '../components/UndoToast'
 import { useUndo } from '../lib/undo'
 import type { Member } from '../types'
 import { ChoreForm } from './chores/ChoreForm'
+import { AISLES } from '@shared/recipes/aisles.js'
 import { needsAisles, type FamilyList } from './lists/listsApi'
 import { useSettingsSearch } from './settings/useSettingsSearch'
 import { homeStyleFor, textSizeFor } from './settings/settingsApi'
@@ -129,7 +130,9 @@ describe('per-device settings and grocery aisles', () => {
   it('sorts grocery lists into aisles unless switched off', () => {
     const grocery: FamilyList = { id: 'g', title: 'Grocery List', kind: 'grocery', sections: false, order: 0, categories: [] }
     expect(needsAisles(grocery)).toBe(true)
-    expect(needsAisles({ ...grocery, categories: [{ id: 'p', name: 'Produce' }] })).toBe(false)
+    // Missing an aisle (made before Snacks & Drinks existed): the rest get added.
+    expect(needsAisles({ ...grocery, categories: [{ id: 'p', name: 'Produce' }] })).toBe(true)
+    expect(needsAisles({ ...grocery, categories: AISLES.map((name, i) => ({ id: String(i), name })) })).toBe(false)
     expect(needsAisles({ ...grocery, autoSort: false })).toBe(false)
     expect(needsAisles({ ...grocery, kind: 'todo' })).toBe(false)
   })

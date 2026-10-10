@@ -308,7 +308,8 @@ service cloud.firestore {
       match /lists/{listId} {
         function validList() {
           let d = request.resource.data;
-          return onlyKeys(['title', 'kind', 'sections', 'order', 'createdBy', 'createdAt', 'categories', 'autoSort'])
+          return onlyKeys(['title', 'kind', 'sections', 'order', 'createdBy', 'createdAt', 'categories', 'autoSort', 'learned'])
+            && (!('learned' in d) || (d.learned is map && d.learned.size() <= 500))
             && d.title is string && d.title.size() > 0 && d.title.size() <= 80
             && (!('autoSort' in d) || d.autoSort is bool)
             && (!('categories' in d) || (d.categories is list && d.categories.size() <= 30))
