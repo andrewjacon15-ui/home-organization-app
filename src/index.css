@@ -2437,6 +2437,14 @@ letter-spacing: -0.015em;
   margin-bottom: 16px;
 }
 
+/* iPhone and iPad: what to expect from the system photo picker. */
+.photos__hint {
+  margin: -4px 0 16px;
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+  max-width: 640px;
+}
+
 .photos__progress {
   display: flex;
   align-items: center;

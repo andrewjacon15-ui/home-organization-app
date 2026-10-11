@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { DoneIcon, ICON_STROKE } from '../../components/Icons'
+import { detectPlatform, type Platform } from '../welcome/welcome'
 import { formatBytes, libraryUsage, type Photo } from './photosApi'
 
 interface Props {
@@ -11,9 +12,11 @@ interface Props {
   /** Removes photos (anyone in the household may remove any photo). */
   onDelete: (photos: Photo[]) => void
   onStart: () => void
+  /** Which kind of phone this is (injectable for tests). */
+  platform?: Platform
 }
 
-export function PhotoLibrary({ photos, progress, onUpload, onCaption, onDelete, onStart }: Props) {
+export function PhotoLibrary({ photos, progress, onUpload, onCaption, onDelete, onStart, platform = detectPlatform() }: Props) {
   const input = useRef<HTMLInputElement>(null)
   const [open, setOpen] = useState<Photo | null>(null)
   const selected = open && photos.find((p) => p.id === open.id)
@@ -80,6 +83,14 @@ export function PhotoLibrary({ photos, progress, onUpload, onCaption, onDelete, 
         </div>
         )}
       </header>
+
+      {/* iOS's photo picker gets every chosen photo ready (converting it to JPEG, fetching it from
+          iCloud) before it closes, with no sign it's working, so ✓ looks like it did nothing. */}
+      {platform === 'ios' && !progress && !picking && (
+        <p className="photos__hint">
+          After you tap ✓, the picker stays open while your iPhone or iPad gets the photos ready. With a lot of photos (or videos, or photos stored in iCloud) that can take a minute: tap once and wait.
+        </p>
+      )}
 
       {photos.length > 0 && <StorageLine photos={photos} />}
 
