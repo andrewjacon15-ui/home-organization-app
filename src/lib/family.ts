@@ -91,6 +91,19 @@ export function watchFamily(familyId: string, onChange: (family: Family | null) 
   })
 }
 
+/**
+ * Whether this device is in touch with the server: false while it only has its saved copy
+ * (no internet, or the server can't be reached). Costs no reads: only the snapshot's metadata changes.
+ */
+export function watchServerReach(familyId: string, onChange: (reached: boolean) => void) {
+  return onSnapshot(
+    doc(db, 'families', familyId),
+    { includeMetadataChanges: true },
+    (snap) => onChange(!snap.metadata.fromCache),
+    () => onChange(false),
+  )
+}
+
 /** The welcome tour is done for this person, on every device. */
 export function markWelcomed(familyId: string, userId: string) {
   return updateDoc(doc(db, 'families', familyId, 'members', userId), { welcomedAt: serverTimestamp() })

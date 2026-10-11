@@ -6,8 +6,8 @@ import { db } from '../firebase'
 export type Restore = () => Promise<void>
 
 export interface UndoValue {
-  /** Shows "message · Undo" for a few seconds; Undo runs `restore`. */
-  offer: (message: string, restore: Restore) => void
+  /** Shows "message · Undo" for a few seconds; Undo runs `restore`. `action` renames the button ("Add anyway"). */
+  offer: (message: string, restore: Restore, action?: string) => void
 }
 
 export const UndoContext = createContext<UndoValue>({ offer: () => undefined })

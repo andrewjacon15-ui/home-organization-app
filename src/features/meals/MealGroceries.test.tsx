@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { MealGroceries } from './MealGroceries'
-import { plannedMeals } from './upcomingMeals'
+import { groceryMessage, plannedMeals } from './upcomingMeals'
 
 const TODAY = '2026-10-03'
 const plans = {
@@ -45,5 +45,13 @@ describe('MealGroceries', () => {
     render(<MealGroceries today={TODAY} days={3} onDays={vi.fn()} meals={[]} onAdd={vi.fn()} onClose={vi.fn()} />)
     expect(screen.getByText(/Nothing planned in the next 3 days/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Add ingredients for 0 meals' })).toBeDisabled()
+  })
+})
+
+describe('groceryMessage', () => {
+  it('says what was added and what was left off', () => {
+    expect(groceryMessage({ added: 1, staples: 0, onList: 0 })).toBe('Added 1 item to the grocery list.')
+    expect(groceryMessage({ added: 4, staples: 1, onList: 2 })).toBe('Added 4 items to the grocery list. Skipped 1 pantry staple and 2 already on the list.')
+    expect(groceryMessage({ added: 0, staples: 0, onList: 3 })).toBe('Nothing new for the grocery list. Skipped 3 already on the list.')
   })
 })

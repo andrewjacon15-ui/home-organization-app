@@ -122,6 +122,25 @@ export async function addItems(familyId: string, listId: string, userId: string,
   await batch.commit()
 }
 
+/** How items compare for repeats: grocery items by the thing itself ("2 bags Bananas" = "banana"), others by their words. */
+export function itemMatchKey(list: Pick<FamilyList, 'kind'>, text: string): string {
+  const words = text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
+  return (list.kind === 'grocery' && learnKey(text)) || words
+}
+
+/** The item `text` would repeat in the same person's section: one still to get first, else one checked off. */
+export function findRepeat(list: FamilyList, items: ListItem[], text: string, memberId: string | null): ListItem | null {
+  const key = itemMatchKey(list, text)
+  if (!key) return null
+  const same = items.filter((i) => (i.memberId ?? null) === (memberId ?? null) && itemMatchKey(list, i.text ?? '') === key)
+  return same.find((i) => !i.done) ?? same[0] ?? null
+}
+
+/** Puts a checked-off item back on the list, keeping its place and aisle; `text` rewords it. */
+export function reviveItem(familyId: string, listId: string, itemId: string, text?: string) {
+  return updateDoc(doc(itemsCol(familyId, listId), itemId), { done: false, expireAt: deleteField(), ...(text ? { text: text.trim().slice(0, 300) } : {}), updatedAt: serverTimestamp() })
+}
+
 /** Checked-off items remove themselves after `keepDays` (a Firestore TTL policy on expireAt); 0 = keep. */
 export function setItemDone(familyId: string, listId: string, itemId: string, done: boolean, keepDays = 30) {
   const expiry = done && keepDays > 0 ? { expireAt: Timestamp.fromMillis(Date.now() + keepDays * 86_400_000) } : { expireAt: deleteField() }

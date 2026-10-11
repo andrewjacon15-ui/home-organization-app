@@ -736,6 +736,42 @@ input[type='radio']:disabled {
   gap: 20px;
 }
 
+/* Cut off from the server: what's shown is this device's saved copy. */
+.masthead__offline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 2px 12px;
+  border: 1px solid var(--warn);
+  border-radius: 999px;
+  color: var(--warn);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* A page (or the whole app) that broke: what happened and how to get going again. */
+.crash {
+  display: grid;
+  gap: 12px;
+  max-width: 560px;
+  margin: 24px auto;
+}
+.crash__title {
+  margin: 0;
+  font-size: var(--fs-title);
+  font-weight: 600;
+}
+.crash p {
+  margin: 0;
+}
+.crash__detail {
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+  overflow-wrap: anywhere;
+}
+
 .update-bar {
   display: flex;
   align-items: center;
@@ -7606,6 +7642,28 @@ thead .sidebar-grid__current {
   font: inherit;
   font-weight: 600;
   cursor: pointer;
+}
+/* A Google Calendar that stopped updating: amber, and a sentence may wrap. */
+.summary__alert--warn,
+.calendar-notice {
+  border-color: var(--warn);
+  border-radius: var(--r-lg);
+  color: var(--warn);
+  text-align: left;
+}
+.calendar-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 8px 14px;
+  border: 1px solid var(--warn);
+  background: var(--surface);
+  font-weight: 600;
+}
+.summary__alert--warn svg,
+.calendar-notice svg {
+  flex: none;
 }
 
 /* Two columns on tablets and computers: what's next and today's timeline; everything else. */

@@ -7,12 +7,12 @@ export const UNDO_MS = 7000
 
 /** The "Deleted · Undo" message along the bottom of the screen (one at a time; the newest wins). */
 export function UndoProvider({ children }: { children: ReactNode }) {
-  const [toast, setToast] = useState<{ id: number; message: string; restore: Restore } | null>(null)
+  const [toast, setToast] = useState<{ id: number; message: string; restore: Restore; action: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const seq = useRef(0)
-  const offer = useCallback((message: string, restore: Restore) => {
+  const offer = useCallback((message: string, restore: Restore, action = 'Undo') => {
     setError(null)
-    setToast({ id: ++seq.current, message, restore })
+    setToast({ id: ++seq.current, message, restore, action })
   }, [])
   const value = useMemo(() => ({ offer }), [offer])
 
@@ -29,7 +29,7 @@ export function UndoProvider({ children }: { children: ReactNode }) {
     try {
       await restore()
     } catch (e) {
-      setError(`Couldn’t undo: ${e instanceof Error ? e.message : String(e)}`)
+      setError(`Couldn’t ${toast.action === 'Undo' ? 'undo' : 'do that'}: ${e instanceof Error ? e.message : String(e)}`)
     }
   }
 
@@ -41,7 +41,7 @@ export function UndoProvider({ children }: { children: ReactNode }) {
           <span className="undo-toast__text">{error ?? toast?.message}</span>
           {toast && (
             <button type="button" className="undo-toast__undo" onClick={() => void undo()}>
-              Undo
+              {toast.action}
             </button>
           )}
           <button type="button" className="icon-button undo-toast__close" aria-label="Dismiss" onClick={() => (setToast(null), setError(null))}>
