@@ -93,6 +93,15 @@ describe('PhotoLibrary', () => {
 
   const props = { progress: null, onUpload: vi.fn(), onCaption: vi.fn(), onDelete: vi.fn(), onStart: vi.fn() }
 
+  it('tells iPhone and iPad users to tap ✓ once and wait while the picker gets photos ready', () => {
+    const { rerender } = render(<PhotoLibrary photos={[]} {...props} platform="ios" />)
+    expect(screen.getByText(/After you tap ✓, the picker stays open/)).toBeInTheDocument()
+    rerender(<PhotoLibrary photos={[]} {...props} platform="ios" progress={{ done: 0, total: 40, fraction: 0 }} />)
+    expect(screen.queryByText(/After you tap ✓/)).not.toBeInTheDocument()
+    rerender(<PhotoLibrary photos={[]} {...props} platform="android" />)
+    expect(screen.queryByText(/After you tap ✓/)).not.toBeInTheDocument()
+  })
+
   it('explains the empty state and disables the slideshow', () => {
     render(<PhotoLibrary photos={[]} {...props} />)
     expect(screen.getByText(/no photos yet/i)).toBeInTheDocument()
