@@ -11,10 +11,11 @@ import { addManualEvent, deleteManualEvent, watchCalendars, watchEvents } from '
 import { CalendarFilter } from './CalendarFilter'
 import { applyFilter, loadHidden, saveHidden, type HiddenSets } from './filter'
 import { CalendarBoard } from './CalendarBoard'
+import { calendarTrouble } from './calendarHealth'
 import { CalendarConnect } from './CalendarConnect'
 import { useCalendarConnection } from './useCalendarConnection'
 import { viewRange, type CalendarViewKind } from './views'
-import { BackIcon, NextIcon } from '../../components/Icons'
+import { AlertIcon, BackIcon, NextIcon } from '../../components/Icons'
 import { useUndo } from '../../lib/undo'
 
 interface Props {
@@ -122,6 +123,8 @@ export function CalendarPage({ familyId, userId, members }: Props) {
   // Once connected, the card lives in Settings; here it only shows when there's something to do.
   // (Wait for the member record so it doesn't flash while loading.)
   const showConnect = !!me && (!conn.status || conn.status.status === 'needs_reconnect')
+  // Anyone else's Google Calendar that stopped updating (your own shows on the card above).
+  const trouble = calendarTrouble(conn.status?.status === 'needs_reconnect' ? members.filter((m) => m.id !== userId) : members, userId, now)
 
   useEffect(() => watchCalendars(familyId, setCalendars), [familyId])
   useEffect(() => watchEvents(familyId, fromDateKey(first), fromDateKey(addDays(last, 1)), setEvents), [familyId, first, last])
@@ -143,6 +146,11 @@ export function CalendarPage({ familyId, userId, members }: Props) {
         </p>
       )}
       {showConnect && <CalendarConnect status={conn.status} busy={conn.busy} onConnect={conn.connect} onSync={conn.sync} onDisconnect={conn.disconnect} />}
+      {trouble && (
+        <p className="calendar-notice" role="status">
+          <AlertIcon size={18} aria-hidden /> {trouble}
+        </p>
+      )}
 
       <section className="calendar" aria-labelledby="calendar-heading">
         <div className="calendar__toolbar">

@@ -47,6 +47,7 @@ import {
   Trash2,
   TriangleAlert,
   UtensilsCrossed,
+  WifiOff,
   Wind,
   X,
   type LucideIcon,
@@ -119,4 +120,5 @@ export const ThermometerIcon = icon(Thermometer)
 export const TimerIcon = icon(Timer)
 export const TrashIcon = icon(Trash2)
 export const WindIcon = icon(Wind)
+export const OfflineIcon = icon(WifiOff)
 

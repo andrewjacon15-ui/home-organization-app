@@ -27,6 +27,8 @@ interface Props {
   /** What's still to get on the grocery list (null while it loads). */
   grocery: ListItem[] | null
   countdowns: ShownCountdown[]
+  /** Someone's Google Calendar stopped updating (calendarHealth.ts). */
+  calendarNotice?: string | null
   onNavigate: (target: SummaryTarget) => void
   onToggleChore: (o: Occurrence, done: boolean, doneBy: string | null) => void
 }
@@ -101,6 +103,11 @@ export function DailySummary(p: Props) {
         <button type="button" className="summary__alert" onClick={() => p.onNavigate('weather')}>
           <AlertIcon size={18} aria-hidden /> {alerts[0].event}
           {alerts.length > 1 && <span className="muted"> and {alerts.length - 1} more</span>}
+        </button>
+      )}
+      {p.calendarNotice && (
+        <button type="button" className="summary__alert summary__alert--warn" onClick={() => p.onNavigate('calendar')}>
+          <AlertIcon size={18} aria-hidden /> {p.calendarNotice}
         </button>
       )}
 

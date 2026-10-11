@@ -178,6 +178,10 @@ two on tablets and computers, fitting the screen with only the timeline scrollin
 - **Chores:** a ring per person in their color that fills as they finish.
 - **Dinner** and **Grocery list** tiles, and **Coming up** (tomorrow).
 
+Under the headline, an amber notice says when someone's Google Calendar stopped updating (their
+access expired, or no sync for 6 hours); it opens Calendar. Home stays empty until its first data
+arrives (at most 3 seconds) rather than saying "Nothing today" for a moment.
+
 Every part opens its own tab. Settings → Home screen switches a kind of device back to panels.
 
 ### Lists
@@ -191,12 +195,28 @@ Every part opens its own tab. Settings → Home screen switches a kind of device
   Pantry, Snacks & Drinks, Frozen, Household), on the device, with no outside service: what the
   household taught it by moving items, then everyday words and brands read from the end of the phrase,
   then the recipe dictionary, then typos. Other lists never file items themselves.
+- **No repeats.** Adding what's already there (grocery items by the thing itself: "2 bunches of
+  bananas" is bananas) adds nothing and says so, with **Add anyway**; adding something checked off
+  puts it back where it was, as typed, with Undo. The recipe and meal-plan grocery buttons skip
+  pantry staples and what's on the list, and say how many.
 
 ### Undo, not "are you sure?"
 
 Deleting happens at once and shows a dark floating message along the bottom ("Deleted “Trash
 out”" · Undo) for 7 seconds. Only things Undo can't bring back still ask first (photos, redeeming
 stars, removing a calendar link, the admin's household tools).
+
+### When something goes wrong
+
+- **Offline:** an amber "Offline" pill beside the clock once the device can't reach the server
+  (at once if it loses its connection, after 15 seconds otherwise). Everything still works on the
+  saved copy; changes go out when it's back.
+- **A page breaks:** the page shows a card ("Something went wrong here." · Try again · Reload the
+  app, then the error in `--ink-2`) and tries again by itself a minute later; the side bar and the
+  other pages keep working. A page whose files a new release replaced reloads into that release
+  (once per 5 minutes at most).
+- **Can't reach the household at startup:** the same card, retrying every 5–60 seconds and as soon
+  as the device is back online.
 
 ### Settings
 

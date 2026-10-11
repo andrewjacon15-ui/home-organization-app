@@ -3,7 +3,8 @@ import { PeopleFilter } from '../../components/PeopleFilter'
 import { itemOwner, personFor, readPeopleDefault } from '../../lib/peopleView'
 import type { Member } from '../../types'
 import { useSettings } from '../settings/SettingsContext'
-import { addAisles, addCategories, addItems, clearCompleted, createList, deleteCategory, deleteItem, deleteList, ensureDefaultLists, learnCategory, moveCategory, moveItem, needsAisles, setAutoSort, renameCategory, setItemDone, updateItem, updateList, watchItems, watchLists, type FamilyList, type ListItem } from './listsApi'
+import { addListItem } from './addItem'
+import { addAisles, addCategories, clearCompleted, createList, deleteCategory, deleteItem, deleteList, ensureDefaultLists, learnCategory, moveCategory, moveItem, needsAisles, setAutoSort, renameCategory, setItemDone, updateItem, updateList, watchItems, watchLists, type FamilyList, type ListItem } from './listsApi'
 import { ListsBoard } from './ListsBoard'
 import { useUndo } from '../../lib/undo'
 
@@ -56,7 +57,7 @@ export function ListsPage({ familyId, userId, members }: { familyId: string; use
         items={shownItems}
         members={shownMembers}
         doneDays={settings.listDoneDays}
-        onAdd={(l, text, memberId, categoryId) => addItems(familyId, l.id, userId, [text], memberId, { categoryId, list: l }).catch(report)}
+        onAdd={(l, text, memberId, categoryId) => addListItem({ familyId, userId, list: l, items: items[l.id] ?? [], text, memberId, categoryId, keepDays: settings.listDoneDays, offer, report })}
         onToggle={(l, i) => setItemDone(familyId, l.id, i.id, !i.done, settings.listDoneDays).catch(report)}
         onEditItem={(l, i, changes) => {
           updateItem(familyId, l.id, i.id, changes).catch(report)

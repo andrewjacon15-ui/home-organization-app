@@ -1,7 +1,7 @@
 import { CloseIcon } from '../../components/Icons'
 import { useState } from 'react'
 import { addDays, fromDateKey } from '../../lib/dates'
-import { mealKey, SLOT_LABELS, SPANS, type GroceryResult, type PlannedMeal } from './upcomingMeals'
+import { groceryMessage, mealKey, SLOT_LABELS, SPANS, type GroceryResult, type PlannedMeal } from './upcomingMeals'
 
 interface Props {
   today: string
@@ -41,8 +41,7 @@ export function MealGroceries({ today, days, onDays, meals, onAdd, onClose }: Pr
     setError(null)
     try {
       const r = await onAdd(withRecipe.filter((m) => chosen.has(mealKey(m))))
-      const skipped = [r.staples ? `${r.staples} pantry staple${r.staples === 1 ? '' : 's'}` : null, r.onList ? `${r.onList} already on the list` : null].filter(Boolean)
-      setResult(`Added ${r.added} item${r.added === 1 ? '' : 's'} to the grocery list.${skipped.length ? ` Skipped ${skipped.join(' and ')}.` : ''}`)
+      setResult(groceryMessage(r))
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {

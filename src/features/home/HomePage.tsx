@@ -6,7 +6,8 @@ import type { CalendarEvent, Chore, Member, SyncedCalendar } from '../../types'
 import { watchCalendars, watchEvents } from '../calendar/calendarApi'
 import { applyFilter, loadHidden } from '../calendar/filter'
 import { deleteChore, setOccurrenceDone, watchChores } from '../chores/choresApi'
-import { addItems, ensureDefaultLists, setItemDone, watchItems, watchLists, type FamilyList, type ListItem } from '../lists/listsApi'
+import { addListItem } from '../lists/addItem'
+import { ensureDefaultLists, setItemDone, watchItems, watchLists, type FamilyList, type ListItem } from '../lists/listsApi'
 import { useDevice } from '../../lib/DeviceContext'
 import { useSettings } from '../settings/SettingsContext'
 import { addCountdown, removeCountdown, watchCountdowns, watchGoogleSpecials, type Countdown, type GoogleSpecial } from '../countdowns/countdownsApi'
@@ -21,6 +22,11 @@ import { withOwners } from '../calendar/views'
 import { watchMealPlans } from '../meals/mealsApi'
 import type { MealPlan } from '../../types'
 import { useUndo } from '../../lib/undo'
+import { AlertIcon } from '../../components/Icons'
+import { calendarTrouble } from '../calendar/calendarHealth'
+
+/** Longest Home waits for its first data before showing what it has. */
+const LOAD_WAIT_MS = 3000
 
 // The panels view loads only on a device that uses it (the daily summary is the default).
 const HomeView = lazy(() => import('./HomeView').then((m) => ({ default: m.HomeView })))
@@ -64,12 +70,29 @@ export function HomePage({ familyId, userId, members, onNavigate }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [fitRef, fitStyle] = useFitHeight<HTMLDivElement>(true)
   const report = (e: unknown) => setError(e instanceof Error ? e.message : String(e))
+  // Home waits for its first data (or a few seconds), so it never says "Nothing today" or
+  // "Not planned yet" for the moment before that arrives (the wall display reloads often).
+  const [loaded, setLoaded] = useState({ events: false, chores: false, meals: false })
+  const mark = (k: keyof typeof loaded) => setLoaded((l) => (l[k] ? l : { ...l, [k]: true }))
+  const [waited, setWaited] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setWaited(true), LOAD_WAIT_MS)
+    return () => clearTimeout(t)
+  }, [])
 
   useEffect(() => {
-    if (showCalendar) return watchEvents(familyId, fromDateKey(start), fromDateKey(addDays(start, span)), setEvents)
+    if (showCalendar)
+      return watchEvents(familyId, fromDateKey(start), fromDateKey(addDays(start, span)), (e) => {
+        setEvents(e)
+        mark('events')
+      })
   }, [familyId, start, span, showCalendar])
   useEffect(() => {
-    if (summary) return watchMealPlans(familyId, today, addDays(today, 1), setMeals)
+    if (summary)
+      return watchMealPlans(familyId, today, addDays(today, 1), (m) => {
+        setMeals(m)
+        mark('meals')
+      })
   }, [familyId, today, summary])
   useEffect(() => {
     if (showCalendar) return watchCalendars(familyId, setCalendars)
@@ -82,7 +105,11 @@ export function HomePage({ familyId, userId, members, onNavigate }: Props) {
   }, [familyId, showBirthdays])
   const google = showBirthdays ? birthdays : []
   useEffect(() => {
-    if (showTasks) return watchChores(familyId, setChores)
+    if (showTasks)
+      return watchChores(familyId, (c) => {
+        setChores(c)
+        mark('chores')
+      })
   }, [familyId, showTasks])
   useEffect(() => {
     if (!showLists) return
@@ -106,8 +133,13 @@ export function HomePage({ familyId, userId, members, onNavigate }: Props) {
   const visible = useMemo(() => applyFilter(events, loadHidden(), calendarByKey), [events, calendarByKey])
 
   const owned = useMemo(() => withOwners(visible, calendarByKey), [visible, calendarByKey])
+  // A Google Calendar that stopped updating would leave the board quietly out of date.
+  const calendarNotice = showCalendar ? calendarTrouble(members, userId, now) : null
   const groceryId = (lists ?? []).find((l) => l.kind === 'grocery')?.id
   const groceryOpen = groceryId && items[groceryId] ? items[groceryId].filter((i) => !i.done) : lists === null || (groceryId && !items[groceryId]) ? null : []
+
+  const ready = waited || ((!showCalendar || loaded.events) && (!showTasks || loaded.chores) && (!summary || loaded.meals))
+  if (!ready) return <div ref={fitRef} style={fitStyle} className="home-fit" aria-busy="true" />
 
   if (summary) {
     return (
@@ -128,6 +160,7 @@ export function HomePage({ familyId, userId, members, onNavigate }: Props) {
           tomorrowDinner={meals[addDays(today, 1)]?.dinner ?? ''}
           grocery={groceryOpen}
           countdowns={shownCountdowns(countdowns, today, { holidays: settings.countdownHolidays, google })}
+          calendarNotice={calendarNotice}
           onNavigate={(t) => {
             if (t === 'countdowns') {
               requestSettingsSection('countdowns')
@@ -146,6 +179,11 @@ export function HomePage({ familyId, userId, members, onNavigate }: Props) {
         <p className="error" role="alert">
           {error} <button className="link" onClick={() => setError(null)}>Dismiss</button>
         </p>
+      )}
+      {calendarNotice && (
+        <button type="button" className="summary__alert summary__alert--warn" onClick={() => onNavigate('calendar')}>
+          <AlertIcon size={18} aria-hidden /> {calendarNotice}
+        </button>
       )}
       <Suspense fallback={null}>
       <HomeView
@@ -170,7 +208,7 @@ export function HomePage({ familyId, userId, members, onNavigate }: Props) {
         onRemoveCountdown={(c) => removeCountdown(familyId, c.id).then((r) => offer(`Removed “${c.title}”`, r), report)}
         onToggleChore={(o, done, doneBy) => setOccurrenceDone(familyId, o, done, doneBy, userId, today).catch(report)}
         onDeleteChore={(c) => deleteChore(familyId, c.id).then((r) => offer(`Deleted “${c.title}”`, r), report)}
-        onAddItem={(l, text) => addItems(familyId, l.id, userId, [text], null, { list: l }).catch(report)}
+        onAddItem={(l, text) => addListItem({ familyId, userId, list: l, items: items[l.id] ?? [], text, memberId: null, keepDays: settings.listDoneDays, offer, report })}
         onToggleItem={(l, i) => setItemDone(familyId, l.id, i.id, !i.done, settings.listDoneDays).catch(report)}
       />
       </Suspense>

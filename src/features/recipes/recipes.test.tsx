@@ -74,7 +74,7 @@ describe('RecipeBook', () => {
   })
 
   it('doubles or halves the amounts, converts to metric, and shops and cooks at that size', async () => {
-    const onAddToGrocery = vi.fn(async (_r: Recipe, items: string[]) => items.length)
+    const onAddToGrocery = vi.fn(async (_r: Recipe, items: string[]) => ({ added: items.length - 1, staples: 0, onList: 1 }))
     const onCook = vi.fn()
     const { user } = (() => {
       render(<TestBook recipes={[tacos]} today={TODAY} onSave={vi.fn()} onDelete={vi.fn()} onPlan={vi.fn()} onAddToGrocery={onAddToGrocery} onCook={onCook} />)
@@ -94,6 +94,7 @@ describe('RecipeBook', () => {
     expect(screen.getByRole('checkbox', { name: '225 g chicken' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Add ingredients to grocery list' }))
     expect(onAddToGrocery).toHaveBeenCalledWith(tacos, ['225 g chicken', '4 tortillas', '1/2 lime'])
+    expect(await screen.findByText('Added 2 items to the grocery list. Skipped 1 already on the list.')).toBeInTheDocument()
     await user.click(screen.getByRole('checkbox', { name: 'Metric' }))
     await user.click(screen.getByRole('button', { name: 'Step by step' }))
     expect(onCook).toHaveBeenCalledWith(tacos, { scale: 0.5, oneStep: true })
