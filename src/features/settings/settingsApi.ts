@@ -56,6 +56,8 @@ export interface DisplaySettings {
   homeCalendarDays: number
   /** US holidays in the next two months show among the Home countdowns. */
   countdownHolidays: boolean
+  /** Birthdays and anniversaries from everyone's Google Calendar show among the countdowns. */
+  countdownGoogle: boolean
   /** Checked-off list items delete themselves after this many days (0 = keep until cleared). */
   listDoneDays: number
   /** Text size for one kind of device, instead of textSize (unset = textSize). */
@@ -110,6 +112,7 @@ export const DEFAULT_SETTINGS: DisplaySettings = {
   homePanelsVersion: 0,
   homeCalendarDays: 3,
   countdownHolidays: true,
+  countdownGoogle: true,
   listDoneDays: 30,
   textSizeBy: {},
   startTab: {},

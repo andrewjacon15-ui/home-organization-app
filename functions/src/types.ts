@@ -7,6 +7,8 @@ export interface GoogleEvent {
   htmlLink?: string | null
   /** 'default' | 'outOfOffice' | 'focusTime' | 'workingLocation' | 'birthday' | … */
   eventType?: string | null
+  /** Birthday events only: 'birthday' | 'anniversary' | 'self' | 'custom' | 'other'. */
+  birthdayProperties?: { type?: string | null } | null
   start?: { date?: string | null; dateTime?: string | null } | null
   end?: { date?: string | null; dateTime?: string | null } | null
 }
@@ -28,6 +30,8 @@ export interface EventDoc {
   endDate?: string
   location?: string
   htmlLink?: string
+  /** A birthday or anniversary (from Google Contacts), which Home's countdowns pick up. */
+  special?: 'birthday' | 'anniversary'
 }
 
 export type CalendarStatus =

@@ -9,7 +9,8 @@ import { deleteChore, setOccurrenceDone, watchChores } from '../chores/choresApi
 import { addItems, ensureDefaultLists, setItemDone, watchItems, watchLists, type FamilyList, type ListItem } from '../lists/listsApi'
 import { useDevice } from '../../lib/DeviceContext'
 import { useSettings } from '../settings/SettingsContext'
-import { addCountdown, removeCountdown, watchCountdowns, type Countdown } from '../countdowns/countdownsApi'
+import { addCountdown, removeCountdown, watchCountdowns, watchGoogleSpecials, type Countdown, type GoogleSpecial } from '../countdowns/countdownsApi'
+import { requestSettingsSection } from '../settings/openSection'
 import { homeCalendarDays, homePanelsFor } from './homePanels'
 import type { HomeTarget } from './HomeView'
 import { DailySummary } from './DailySummary'
@@ -45,6 +46,8 @@ export function HomePage({ familyId, userId, members, onNavigate }: Props) {
   const showLists = summary || panels.includes('lists')
   const showCountdowns = summary || panels.includes('countdowns')
   const [countdowns, setCountdowns] = useState<Countdown[]>([])
+  const [birthdays, setBirthdays] = useState<GoogleSpecial[]>([])
+  const showBirthdays = showCountdowns && settings.countdownGoogle
   const today = useToday()
   const now = useNow()
   // A week follows the calendar's week setting; 1 or 3 days always start today.
@@ -74,6 +77,10 @@ export function HomePage({ familyId, userId, members, onNavigate }: Props) {
   useEffect(() => {
     if (showCountdowns) return watchCountdowns(familyId, setCountdowns)
   }, [familyId, showCountdowns])
+  useEffect(() => {
+    if (showBirthdays) return watchGoogleSpecials(familyId, setBirthdays)
+  }, [familyId, showBirthdays])
+  const google = showBirthdays ? birthdays : []
   useEffect(() => {
     if (showTasks) return watchChores(familyId, setChores)
   }, [familyId, showTasks])
@@ -120,8 +127,13 @@ export function HomePage({ familyId, userId, members, onNavigate }: Props) {
           dinner={meals[today]?.dinner ?? ''}
           tomorrowDinner={meals[addDays(today, 1)]?.dinner ?? ''}
           grocery={groceryOpen}
-          countdowns={shownCountdowns(countdowns, today, { holidays: settings.countdownHolidays })}
-          onNavigate={onNavigate}
+          countdowns={shownCountdowns(countdowns, today, { holidays: settings.countdownHolidays, google })}
+          onNavigate={(t) => {
+            if (t === 'countdowns') {
+              requestSettingsSection('countdowns')
+              onNavigate('settings')
+            } else onNavigate(t)
+          }}
           onToggleChore={(o, done, doneBy) => setOccurrenceDone(familyId, o, done, doneBy, userId, today).catch(report)}
         />
       </div>
@@ -154,6 +166,7 @@ export function HomePage({ familyId, userId, members, onNavigate }: Props) {
         countdowns={countdowns}
         onAddCountdown={(title, date, kind) => addCountdown(familyId, userId, title, date, kind).catch(report)}
         countdownHolidays={settings.countdownHolidays}
+        countdownGoogle={google}
         onRemoveCountdown={(c) => removeCountdown(familyId, c.id).then((r) => offer(`Removed “${c.title}”`, r), report)}
         onToggleChore={(o, done, doneBy) => setOccurrenceDone(familyId, o, done, doneBy, userId, today).catch(report)}
         onDeleteChore={(c) => deleteChore(familyId, c.id).then((r) => offer(`Deleted “${c.title}”`, r), report)}

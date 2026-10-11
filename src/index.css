@@ -3629,7 +3629,7 @@ letter-spacing: -0.015em;
   font-size: var(--fs-body);
 }
 :root[data-device='phone'] .settings-section {
-  scroll-margin-top: 64px;
+  scroll-margin-top: 128px; /* below the sticky search and section row */
 }
 :root[data-device='phone'] .setting-row {
   gap: 10px;
@@ -8172,4 +8172,104 @@ button.summary-row__body {
   .list-item--lifted {
     transition: none;
   }
+}
+
+/* Daily summary: the next countdowns in a row under the greeting (it scrolls sideways when
+   there are more), and a + to add or change them in Settings. */
+.summary-countdowns {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  min-width: 0;
+}
+.summary-countdowns__list {
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.summary-countdowns__list::-webkit-scrollbar {
+  display: none;
+}
+.summary-countdowns .countdown {
+  padding-right: 12px;
+  background: var(--surface);
+}
+.summary-countdowns .countdown--today {
+  background: var(--accent-soft);
+}
+.summary-countdowns__edit {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: var(--tap);
+  min-height: var(--tap);
+  padding: 0 12px;
+  border: 1px dashed var(--rule-strong);
+  border-radius: var(--r);
+  background: transparent;
+  color: var(--accent-text);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+.summary-countdowns__list:empty {
+  display: none;
+}
+
+/* Settings → Countdowns: every saved countdown, with its day count. */
+.countdown-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.countdown-list__item {
+  display: grid;
+  grid-template-columns: 3.5em minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 6px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  background: var(--paper);
+}
+.countdown-list__days {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+}
+.countdown-list__count {
+  font-size: var(--fs-title);
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-text);
+}
+.countdown-list__unit,
+.countdown-list__meta {
+  font-size: var(--fs-label);
+  line-height: 1.2;
+  color: var(--ink-2);
+}
+.countdown-list__text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.countdown-list__title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.countdown-list__remove {
+  width: var(--tap);
+  height: var(--tap);
+  color: var(--ink-3);
 }
