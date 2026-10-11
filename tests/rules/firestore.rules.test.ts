@@ -781,6 +781,8 @@ describe('photo records and screensaver settings', () => {
     const display = doc(dbFor(BOB), `families/${FAM_A}/settings/display`)
     await assertSucceeds(setDoc(display, { countdownHolidays: false }, { merge: true }))
     await assertFails(setDoc(display, { countdownHolidays: 'yes' }, { merge: true }))
+    await assertSucceeds(setDoc(display, { countdownGoogle: false }, { merge: true }))
+    await assertFails(setDoc(display, { countdownGoogle: 'no' }, { merge: true }))
   })
 })
 

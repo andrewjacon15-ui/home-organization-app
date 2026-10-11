@@ -3,7 +3,7 @@ import { ArrowDownIcon, ArrowUpIcon } from '../../components/Icons'
 import { DEVICE_LABELS, type Device } from '../../lib/device'
 import { useDevice } from '../../lib/DeviceContext'
 import { HOME_CALENDAR_DAYS, HOME_PANELS, HOME_PANELS_VERSION, homeCalendarDays, homePanelsFor, type HomePanel } from '../home/homePanels'
-import { SettingsSection, ToggleRow } from './SettingRows'
+import { SettingsSection } from './SettingRows'
 import { useSettings } from './SettingsContext'
 import { homeStyleFor, type DisplaySettings } from './settingsApi'
 
@@ -133,12 +133,6 @@ export function HomeScreenSettings() {
       />
       )}
       {homeStyleFor(settings, device) === 'panels' && <HomeCalendarDaysRow />}
-      <ToggleRow
-        label="US holidays in Countdowns"
-        hint="Thanksgiving, Christmas, Mother’s Day and the rest, for the next two months. Add birthdays and anniversaries from the Countdowns panel; they repeat every year."
-        checked={settings.countdownHolidays}
-        onChange={(v) => void update({ countdownHolidays: v })}
-      />
     </SettingsSection>
   )
 }

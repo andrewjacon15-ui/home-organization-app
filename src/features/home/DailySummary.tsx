@@ -1,17 +1,17 @@
 import { useMemo, useState, type CSSProperties } from 'react'
-import { AlertIcon, CartIcon, DoneIcon, GrabsIcon, MapPinIcon, MealsIcon, NextIcon } from '../../components/Icons'
+import { AddIcon, AlertIcon, CartIcon, DoneIcon, GrabsIcon, MapPinIcon, MealsIcon, NextIcon } from '../../components/Icons'
 import { addDays, fromDateKey } from '../../lib/dates'
 import type { Member, SyncedCalendar } from '../../types'
 import { EventDetails } from '../calendar/EventDetails'
 import type { OwnedEvent } from '../calendar/views'
 import type { Occurrence } from '../chores/schedule'
-import type { ShownCountdown } from '../countdowns/countdownsApi'
+import { untilLabel, type ShownCountdown } from '../countdowns/countdownsApi'
 import type { ListItem } from '../lists/listsApi'
 import { WeatherGlyph } from '../weather/WeatherBadges'
 import { useWeatherInfo } from '../weather/WeatherContext'
 import { allDayOn, daySentence, greeting, nextUp, relative, timeline, weatherLine } from './summary'
 
-export type SummaryTarget = 'calendar' | 'chores' | 'lists' | 'weather' | 'meals'
+export type SummaryTarget = 'calendar' | 'chores' | 'lists' | 'weather' | 'meals' | 'countdowns'
 
 interface Props {
   today: string
@@ -59,7 +59,7 @@ export function DailySummary(p: Props) {
   const tomorrowEvents = p.events.filter((e) => (e.allDay ? (e.startDate ?? '') <= tomorrow && (e.endDate ?? '') > tomorrow : fromDateKey(tomorrow) <= e.start && e.start < fromDateKey(addDays(tomorrow, 1))))
   const tomorrowHigh = forecast?.daily.find((d) => d.date === tomorrow)?.high
   const firstTomorrow = tomorrowEvents.filter((e) => !e.allDay).sort((a, b) => a.start.getTime() - b.start.getTime())[0]
-  const soon = p.countdowns.filter((c) => c.date >= p.today).slice(0, 2)
+  const soon = p.countdowns.filter((c) => c.date >= p.today).slice(0, 8)
 
   const avatars = (ids: string[]) => (
     <span className="summary-avatars" aria-hidden>
@@ -103,6 +103,33 @@ export function DailySummary(p: Props) {
           {alerts.length > 1 && <span className="muted"> and {alerts.length - 1} more</span>}
         </button>
       )}
+
+      <section className="summary-countdowns" aria-label="Countdowns">
+        <ol className="summary-countdowns__list">
+          {soon.map((c) => {
+            const n = daysUntil(p.today, c.date)
+            const { count, unit } = untilLabel(n)
+            const day = fromDateKey(c.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+            const when = c.detail ? `${day} · ${c.detail}` : day
+            return (
+              <li key={c.id} className={`countdown countdown--${c.kind}${n === 0 ? ' countdown--today' : ''}`} aria-label={`${c.title}: ${unit ? `${count} ${unit}` : count}, ${when}`}>
+                <span className="countdown__days" aria-hidden>
+                  <span className="countdown__count">{count}</span>
+                  {unit && <span className="countdown__unit">{unit}</span>}
+                </span>
+                <span className="countdown__text" aria-hidden>
+                  <span className="countdown__title">{c.title}</span>
+                  <span className="countdown__date">{when}</span>
+                </span>
+              </li>
+            )
+          })}
+        </ol>
+        <button type="button" className="summary-countdowns__edit" onClick={() => p.onNavigate('countdowns')} aria-label={soon.length ? 'Edit countdowns' : 'Add a countdown'}>
+          <AddIcon size={18} aria-hidden />
+          {soon.length === 0 && <span>Add a countdown</span>}
+        </button>
+      </section>
 
       <div className="summary__grid">
         <div className="summary__main">
@@ -251,18 +278,6 @@ export function DailySummary(p: Props) {
                   {tomorrowHigh !== undefined && ` · high ${tomorrowHigh}°`}
                 </span>
               </li>
-              {soon.map((c) => {
-                const n = daysUntil(p.today, c.date)
-                return (
-                  <li key={c.id}>
-                    <span className="summary-ahead__when">{n === 0 ? 'Today' : n === 1 ? 'Tomorrow' : `${n} days`}</span>
-                    <span>
-                      {c.title}
-                      {c.detail && <span className="muted"> · {c.detail}</span>}
-                    </span>
-                  </li>
-                )
-              })}
             </ul>
           </section>
         </div>

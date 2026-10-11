@@ -166,6 +166,9 @@ or white text for anything filled with a person or accent color.
 Home tells the day rather than repeating the other tabs. Top to bottom (one column on phones;
 two on tablets and computers, fitting the screen with only the timeline scrolling):
 
+- **Countdowns** in a row under the headline: the same cards as the Countdowns panel (big day
+  count in `--accent-text`, title and date), scrolling sideways when there are more, and a dashed
+  **+** that opens Settings → Countdowns. Google Calendar birthdays join them (Settings switch).
 - A greeting in `--ink-2` and **one sentence for the day** at `--fs-display` ("3 events, 4 chores
   to do and tacos for dinner."), with the weather as a pill: now, high/low, and when rain is likely.
 - **Up next** on an `--accent-soft` card: title at `--fs-title`, "in 25 min" in accent, place and
@@ -173,7 +176,7 @@ two on tablets and computers, fitting the screen with only the timeline scrollin
 - **Today:** one timeline of timed events and timed chores (dashed edge, with a tick to check off),
   all-day events as chips above it, past rows faded, and an accent "now" line.
 - **Chores:** a ring per person in their color that fills as they finish.
-- **Dinner** and **Grocery list** tiles, and **Coming up** (tomorrow and the nearest countdowns).
+- **Dinner** and **Grocery list** tiles, and **Coming up** (tomorrow).
 
 Every part opens its own tab. Settings → Home screen switches a kind of device back to panels.
 

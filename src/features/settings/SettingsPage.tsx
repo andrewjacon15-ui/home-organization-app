@@ -6,12 +6,14 @@ import { PinPad } from '../lock/PinPad'
 import { AdminPage } from '../admin/HouseholdsAdmin'
 import { ADMIN_SECTIONS, adminApi, type AdminApi } from '../admin/householdInvites'
 import { useIsAdmin } from '../admin/useIsAdmin'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSettingsSearch } from './useSettingsSearch'
 import { CloseIcon, SearchIcon } from '../../components/Icons'
 import { AboutSettings } from './AboutSettings'
 import { AppearanceSettings } from './AppearanceSettings'
 import { CookbookSettings } from '../cookbooks/CookbookSettings'
+import { CountdownSettings } from './CountdownSettings'
+import { takeSettingsSection } from './openSection'
 import { requestRecipesFilter } from '../recipes/recipesFilter'
 import { CalendarLinks } from './CalendarLinks'
 import { CalendarSettings } from './CalendarSettings'
@@ -43,6 +45,7 @@ const SECTIONS = [
   { id: 'appearance', label: 'Appearance' },
   { id: 'device', label: 'Device & side bar' },
   { id: 'home', label: 'Home screen' },
+  { id: 'countdowns', label: 'Countdowns' },
   { id: 'people', label: 'Lists & chores' },
   { id: 'general', label: 'Weather' },
   { id: 'display', label: 'Display' },
@@ -70,6 +73,12 @@ export function SettingsPage({ family, members, userId, onOpenRecipes, onShowTou
   const indexRef = useRef<HTMLOListElement>(null)
 
   useSettingsSearch(pageRef, indexRef, query, admin)
+
+  // Opened from somewhere else at one section (Home's Countdowns → Edit).
+  useEffect(() => {
+    const id = takeSettingsSection()
+    if (id) document.getElementById(id)?.scrollIntoView({ block: 'start' })
+  }, [])
 
   if (locked) {
     return (
@@ -146,6 +155,7 @@ export function SettingsPage({ family, members, userId, onOpenRecipes, onShowTou
         <AppearanceSettings />
         <DeviceSettings />
         <HomeScreenSettings />
+        <CountdownSettings familyId={family.id} userId={userId} />
         <PeopleViewSettings members={members} userId={userId} />
         <GeneralSettings />
         <GoogleCalendarSettings familyId={family.id} me={members.find((m) => m.id === userId)} members={members} />

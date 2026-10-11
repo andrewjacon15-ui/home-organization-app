@@ -470,7 +470,7 @@ service cloud.firestore {
               'showPhotosTab', 'theme', 'accentColor', 'colorEventsBy',
               'sleepEnabled', 'sleepFrom', 'sleepTo',
               'screensaverEnabled', 'screensaverAfterMinutes', 'screensaverSeconds', 'screensaverShuffle',
-              'hiddenTabs', 'homePanels', 'homePanelsVersion', 'homeCalendarDays', 'countdownHolidays', 'listDoneDays',
+              'hiddenTabs', 'homePanels', 'homePanelsVersion', 'homeCalendarDays', 'countdownHolidays', 'countdownGoogle', 'listDoneDays',
               'textSizeBy', 'startTab', 'homeStyle', 'quietEnabled', 'quietFrom', 'quietTo'])
             && (!('calendarName' in d) || (d.calendarName is string && d.calendarName.size() <= 80))
             && optIntIn(d, 'weekStartsOn', 0, 6)
@@ -498,7 +498,7 @@ service cloud.firestore {
             && (!('homePanels' in d) || validHiddenTabs(d.homePanels))
             && optIntIn(d, 'homePanelsVersion', 0, 100)
             && optOneOf(d, 'homeCalendarDays', [1, 3, 7])
-            && optBool(d, 'countdownHolidays')
+            && optBool(d, 'countdownHolidays') && optBool(d, 'countdownGoogle')
             && optIntIn(d, 'listDoneDays', 0, 365)
             && (!('textSizeBy' in d) || perDevice(d.textSizeBy, ['small', 'medium', 'large']))
             && (!('homeStyle' in d) || perDevice(d.homeStyle, ['summary', 'panels']))
