@@ -79,6 +79,10 @@ Limits that aren't money:
   is open, never in the background on phones.
 - Grocery lists, pantry staples and meal templates load only while the sheet that uses them
   is open.
+- Home's daily summary reads what the panels did (the week's events, chores, countdowns) plus
+  today's and tomorrow's meal plan, and only the grocery list's items, not every list.
+- Reminder emails read the household's quiet hours only when a reminder is about to go out.
+- The Admin tab measures storage (one file listing per household) only when it's opened or refreshed.
 
 ## Last checked (2026-10-03)
 

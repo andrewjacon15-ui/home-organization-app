@@ -12,22 +12,22 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@googleapis/calendar": "^20.0.1",
-    "@napi-rs/canvas": "^1.0.9",
+    "@googleapis/calendar": "^20.1.0",
+    "@napi-rs/canvas": "^1.0.10",
     "cheerio": "^1.2.0",
     "firebase-admin": "^14.5.0",
     "firebase-functions": "^7.4.0",
     "google-auth-library": "^11.1.0",
     "ical.js": "^2.2.1",
     "jszip": "^3.10.2",
-    "nodemailer": "^10.0.12",
-    "pdfjs-dist": "^6.3.289",
+    "nodemailer": "^10.0.15",
+    "pdfjs-dist": "^6.4.299",
     "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
-    "@types/node": "^26.6.3",
+    "@types/node": "^26.6.4",
     "@types/nodemailer": "^8.0.2",
     "typescript": "^7.0.2",
-    "vitest": "^5.0.2"
+    "vitest": "^5.0.3"
   }
 }

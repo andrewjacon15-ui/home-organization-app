@@ -1,7 +1,8 @@
 import { addDays, daysBetween, fromDateKey, startOfWeek } from '../../lib/dates'
+import { onTurn } from '@shared/chores/rotation.js'
 import type { Chore, ChoreRepeat } from '../../types'
 
-/** One chore on one day. For repeating chores each date is its own occurrence. */
+/** One chore on one day. For repeating chores each date is its own occurrence; a rotating chore's assigneeId is whoever's turn that date is. */
 export interface Occurrence {
   chore: Chore
   /** The date this occurrence was due (may be before the day being shown, if it's late). */
@@ -49,7 +50,8 @@ export function isDoneOn(chore: Chore, key: string): boolean {
   return chore.repeat ? !!chore.completions && key in chore.completions : chore.done
 }
 
-function occ(chore: Chore, date: string): Occurrence {
+function occ(base: Chore, date: string): Occurrence {
+  const chore = onTurn(base, date)
   const done = isDoneOn(chore, date)
   const doneBy = chore.repeat ? (chore.completions?.[date] || null) : (chore.doneBy ?? null)
   return { chore, date, done, doneBy }
@@ -138,6 +140,12 @@ export function repeatLabel(r: ChoreRepeat | null | undefined): string | null {
   if (n === 1 && days.length === 7) return 'Every day'
   const on = days.length ? ` on ${days.map((d) => DAY_NAMES[d]).join(', ')}` : ''
   return (n === 1 ? 'Every week' : `Every ${n} weeks`) + on
+}
+
+/** "Takes turns: Sam, Lydia, Max" for a rotating chore (first names), or null. */
+export function rotationLabel(chore: Chore, names: Map<string, string>): string | null {
+  if (!chore.repeat || !chore.rotation || chore.rotation.length < 2) return null
+  return `Takes turns: ${chore.rotation.map((id) => (names.get(id) ?? 'someone').split(' ')[0]).join(', ')}`
 }
 
 /** Keeps the completions map small: only the last ~90 days. */

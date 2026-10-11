@@ -1,4 +1,5 @@
-import { addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp } from 'firebase/firestore'
+import { addDoc, collection, doc, onSnapshot, orderBy, query, serverTimestamp } from 'firebase/firestore'
+import { removeDocs } from '../../lib/undo'
 import { db } from '../../firebase'
 import { addDays, fromDateKey } from '../../lib/dates'
 import type { MealPlan } from '../../types'
@@ -73,4 +74,4 @@ export function saveTemplate(familyId: string, userId: string, name: string, day
   return addDoc(col(familyId), { name: name.trim().slice(0, 60), days: days.map(clean), createdBy: userId, createdAt: serverTimestamp() })
 }
 
-export const deleteTemplate = (familyId: string, id: string) => deleteDoc(doc(col(familyId), id))
+export const deleteTemplate = (familyId: string, id: string) => removeDocs([doc(col(familyId), id)])

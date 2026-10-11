@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { ONLINE_SEARCH } from '@shared/features.js'
 import { DEFAULT_KITCHEN } from '@shared/recipes/kitchen.js'
 import { useToday } from '../../lib/hooks'
-import { addItems, groceryListId, watchLists, type FamilyList } from '../lists/listsApi'
+import { groceryLines } from '@shared/recipes/groceries.js'
+import { addItems, groceryListId, openItemTexts, watchLists, type FamilyList } from '../lists/listsApi'
 import { importRecipe, rebuildCatalog, saveTags, setFavorite, watchCatalog, type CatalogEntry } from './catalog'
 import { CookingMode } from './CookingMode'
 import { KitchenSearch, WebSearch } from './Finder'
@@ -11,6 +12,7 @@ import { deleteRecipe, getRecipe, markReviewed, planRecipe, saveRecipe, watchRec
 import { RecipeBook } from './RecipeBook'
 import { RecipeHome, RecipeTrail, type RecipeView } from './RecipeHome'
 import { takeRecipesFilter } from './recipesFilter'
+import { useUndo } from '../../lib/undo'
 
 /**
  * Recipes: three ways in (our recipes, what's in my kitchen, search the web), each one
@@ -18,6 +20,7 @@ import { takeRecipesFilter } from './recipesFilter'
  * cooking screen.
  */
 export function RecipesPage({ familyId, userId }: { familyId: string; userId: string }) {
+  const { offer } = useUndo()
   const [entries, setEntries] = useState<CatalogEntry[] | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
   const [current, setCurrent] = useState<Recipe | null>(null)
@@ -90,7 +93,7 @@ export function RecipesPage({ familyId, userId }: { familyId: string; userId: st
           onSelect={setSelected}
           today={today}
           onSave={(draft, id) => saveRecipe(familyId, userId, draft, id).catch((e) => void report(e))}
-          onDelete={(r) => deleteRecipe(familyId, r.id).catch(report)}
+          onDelete={(r) => deleteRecipe(familyId, r.id).then((undo) => offer(`Deleted “${r.title}”`, undo), report)}
           onMarkReviewed={(r) => markReviewed(familyId, r.id).catch(report)}
           onFavorite={(id, fav) => setFavorite(familyId, id, fav).catch(report)}
           onSaveTags={(r, tags) => saveTags(familyId, r.id, tags).catch(report)}
@@ -100,12 +103,14 @@ export function RecipesPage({ familyId, userId }: { familyId: string; userId: st
           onAddToGrocery={async (_r, items) => {
             try {
               const listId = await groceryListId(familyId, userId, lists)
+              // Like shopping for the meal plan: pantry staples and what's already on the list stay off.
+              const plan = groceryLines(items, kitchen.staples, await openItemTexts(familyId, listId))
               // Grocery lists with store aisles file each ingredient under its aisle.
-              await addItems(familyId, listId, userId, items, null, { categories: lists.find((l) => l.id === listId)?.categories })
-              return items.length
+              await addItems(familyId, listId, userId, plan.lines, null, { list: lists.find((l) => l.id === listId) })
+              return { added: plan.lines.length, staples: plan.staples.length, onList: plan.onList.length }
             } catch (e) {
               report(e)
-              return 0
+              return { added: 0, staples: 0, onList: 0 }
             }
           }}
         />

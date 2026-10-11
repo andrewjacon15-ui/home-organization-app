@@ -17,7 +17,7 @@ import * as reminders from './reminders.js'
 import { firestoreReminderStore, gmailMailer } from './reminderStore.js'
 import * as recipeIndex from './recipeIndex.js'
 import { INDEX_VERSION } from './shared/recipes/catalogIndex.js'
-import { firestoreAdminStore, firestoreFeedStore, firestoreStore } from './store.js'
+import { firestoreAdminStore, firestoreFeedStore, firestoreStore, type AdminFiles } from './store.js'
 import { nodeHttpGet } from './web/fetcher.js'
 import * as webRecipes from './webRecipes.js'
 import { ONLINE_SEARCH } from './shared/features.js'
@@ -91,17 +91,37 @@ export const addCalendarFeed = feedCallable((req) => feeds.addFeed(feedDeps(), r
 export const refreshCalendarFeed = feedCallable((req) => feeds.refreshFeed(feedDeps(), req.auth?.uid, req.data ?? {}))
 export const removeCalendarFeed = feedCallable((req) => feeds.removeFeed(feedDeps(), req.auth?.uid, req.data ?? {}))
 
-/** The administrator's list of households (names and sizes only). */
-export const adminHouseholds = onCall({ invoker: 'public', timeoutSeconds: 60 }, async (req) => {
-  try {
-    const token = req.auth?.token
-    return await admin.listHouseholds(firestoreAdminStore(getFirestore()), { uid: req.auth?.uid, email: token?.email, emailVerified: token?.email_verified })
-  } catch (err) {
-    if (err instanceof calendar.CalendarError) throw new HttpsError(err.code, err.message)
-    logger.error('adminHouseholds failed', { error: String(err) })
-    throw new HttpsError('internal', 'Couldn’t load the households.')
+/** Household files in Cloud Storage, for the admin overview (measured, and removed with a deleted household). */
+const adminFiles = (): AdminFiles => {
+  const bucket = getStorage().bucket()
+  return {
+    async list(prefix) {
+      const [list] = await bucket.getFiles({ prefix })
+      return list.map((f) => ({ name: f.name, size: Number(f.metadata.size ?? 0) }))
+    },
+    removeAll: (prefix) => bucket.deleteFiles({ prefix }),
   }
-})
+}
+
+/** The administrator's tools: every household (names, people and sizes only), rename, delete. */
+function adminCallable<T>(name: string, handler: (store: admin.AdminStore, caller: admin.Caller, data: unknown) => Promise<T>) {
+  return onCall({ invoker: 'public', timeoutSeconds: 120 }, async (req) => {
+    try {
+      const token = req.auth?.token
+      return await handler(firestoreAdminStore(getFirestore(), adminFiles()), { uid: req.auth?.uid, email: token?.email, emailVerified: token?.email_verified }, req.data)
+    } catch (err) {
+      if (err instanceof calendar.CalendarError) throw new HttpsError(err.code, err.message)
+      logger.error(`${name} failed`, { error: String(err) })
+      throw new HttpsError('internal', 'That didn’t work. Try again in a minute.')
+    }
+  })
+}
+
+export const adminHouseholds = adminCallable('adminHouseholds', (store, caller) => admin.listHouseholds(store, caller, new Date(), onlineSearch.MONTHLY_CAP))
+export const adminSetCreator = adminCallable('adminSetCreator', admin.setCreator)
+export const adminRemoveMember = adminCallable('adminRemoveMember', admin.removeMember)
+export const adminRenameHousehold = adminCallable('adminRenameHousehold', admin.renameHousehold)
+export const adminDeleteHousehold = adminCallable('adminDeleteHousehold', admin.deleteHousehold)
 
 /** Gmail account the reminder emails come from, and an app password for it (both in Secret Manager). */
 const gmailAddress = defineSecret('GMAIL_ADDRESS')

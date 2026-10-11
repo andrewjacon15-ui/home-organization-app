@@ -38,6 +38,8 @@ export interface Chore {
   completions?: Record<string, string>
   /** One-off chores: who did it (for Up for Grabs). */
   doneBy?: string | null
+  /** Repeating chores: people who take turns, in order (assigneeId is the first). */
+  rotation?: string[] | null
   done: boolean
   points: number
 }

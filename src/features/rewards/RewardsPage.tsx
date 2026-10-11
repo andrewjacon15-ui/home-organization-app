@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react'
 import type { Member } from '../../types'
 import { addReward, balances, deleteReward, redeemReward, watchRewards, watchStars, type Reward, type StarEntry } from './rewardsApi'
 import { RewardsBoard } from './RewardsBoard'
+import { useUndo } from '../../lib/undo'
 
 export function RewardsPage({ familyId, userId, members }: { familyId: string; userId: string; members: Member[] }) {
+  const { offer } = useUndo()
   const [rewards, setRewards] = useState<Reward[]>([])
   const [entries, setEntries] = useState<StarEntry[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -26,7 +28,7 @@ export function RewardsPage({ familyId, userId, members }: { familyId: string; u
         balances={balances(entries)}
         onAdd={(r) => addReward(familyId, userId, r).catch(report)}
         onRedeem={(r, memberId) => redeemReward(familyId, r, memberId, userId).catch(report)}
-        onDelete={(r) => deleteReward(familyId, r.id).catch(report)}
+        onDelete={(r) => deleteReward(familyId, r.id).then((undo) => offer(`Deleted “${r.title}”`, undo), report)}
       />
     </>
   )

@@ -56,8 +56,20 @@ export interface DisplaySettings {
   homeCalendarDays: number
   /** US holidays in the next two months show among the Home countdowns. */
   countdownHolidays: boolean
+  /** Birthdays and anniversaries from everyone's Google Calendar show among the countdowns. */
+  countdownGoogle: boolean
   /** Checked-off list items delete themselves after this many days (0 = keep until cleared). */
   listDoneDays: number
+  /** Text size for one kind of device, instead of textSize (unset = textSize). */
+  textSizeBy: Partial<Record<Device, 'small' | 'medium' | 'large'>>
+  /** The tab each kind of device opens to (unset = the last one used there). */
+  startTab: Partial<Record<Device, string>>
+  /** Home shows the daily summary, or the panels (Settings → Home screen), per kind of device. */
+  homeStyle: Partial<Record<Device, 'summary' | 'panels'>>
+  /** Quiet hours: no reminder sounds, pop-ups or reminder emails (kitchen timers still ring). */
+  quietEnabled: boolean
+  quietFrom: string
+  quietTo: string
 }
 
 /** Mirrors the Skylight defaults from the user's tablet. */
@@ -100,8 +112,21 @@ export const DEFAULT_SETTINGS: DisplaySettings = {
   homePanelsVersion: 0,
   homeCalendarDays: 3,
   countdownHolidays: true,
+  countdownGoogle: true,
   listDoneDays: 30,
+  textSizeBy: {},
+  startTab: {},
+  homeStyle: {},
+  quietEnabled: false,
+  quietFrom: '21:00',
+  quietTo: '07:00',
 }
+
+/** The text size on this kind of device. */
+export const textSizeFor = (s: Pick<DisplaySettings, 'textSize' | 'textSizeBy'>, device: Device) => s.textSizeBy?.[device] ?? s.textSize
+
+/** What Home shows on this kind of device (the daily summary unless switched to panels). */
+export const homeStyleFor = (s: Pick<DisplaySettings, 'homeStyle'>, device: Device) => s.homeStyle?.[device] ?? 'summary'
 
 const displayRef = (familyId: string) => doc(db, 'families', familyId, 'settings', 'display')
 

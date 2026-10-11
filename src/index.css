@@ -736,6 +736,42 @@ input[type='radio']:disabled {
   gap: 20px;
 }
 
+/* Cut off from the server: what's shown is this device's saved copy. */
+.masthead__offline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 2px 12px;
+  border: 1px solid var(--warn);
+  border-radius: 999px;
+  color: var(--warn);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* A page (or the whole app) that broke: what happened and how to get going again. */
+.crash {
+  display: grid;
+  gap: 12px;
+  max-width: 560px;
+  margin: 24px auto;
+}
+.crash__title {
+  margin: 0;
+  font-size: var(--fs-title);
+  font-weight: 600;
+}
+.crash p {
+  margin: 0;
+}
+.crash__detail {
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+  overflow-wrap: anywhere;
+}
+
 .update-bar {
   display: flex;
   align-items: center;
@@ -3629,7 +3665,7 @@ letter-spacing: -0.015em;
   font-size: var(--fs-body);
 }
 :root[data-device='phone'] .settings-section {
-  scroll-margin-top: 64px;
+  scroll-margin-top: 128px; /* below the sticky search and section row */
 }
 :root[data-device='phone'] .setting-row {
   gap: 10px;
@@ -4717,7 +4753,7 @@ thead .sidebar-grid__current {
 
 .listening__label {
   color: var(--accent-text);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 @keyframes voice-bar {
@@ -5765,7 +5801,7 @@ thead .sidebar-grid__current {
   background: var(--accent);
   color: var(--accent-ink);
   font-size: var(--fs-small);
-  font-weight: 700;
+  font-weight: 600;
   line-height: 22px;
   text-align: center;
 }
@@ -6664,6 +6700,159 @@ thead .sidebar-grid__current {
   flex: none;
 }
 
+/* Settings: Household | Admin switch (the admin only). */
+.settings-tabs {
+  display: flex;
+  margin: 0 0 12px;
+}
+.settings-tabs .segmented__item {
+  flex: 1;
+}
+:root[data-device='phone'] .settings-tabs {
+  margin: 0 0 4px;
+}
+
+/* Settings → Admin: usage across every household. */
+.usage-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+.usage-stats div {
+  padding: 12px 14px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  background: var(--surface);
+}
+.usage-stats dt {
+  font-size: var(--fs-small);
+  color: var(--ink-2);
+}
+.usage-stats dd {
+  margin: 2px 0 0;
+  font-size: var(--fs-title);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.usage-meter {
+  display: grid;
+  gap: 6px;
+}
+.usage-meter p {
+  margin: 0;
+}
+.usage-meter__track {
+  display: flex;
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--rule);
+}
+.usage-meter__track span {
+  min-width: 0;
+  height: 100%;
+}
+.usage-meter__photos {
+  background: var(--accent);
+}
+.usage-meter__books {
+  background: var(--warn);
+}
+.usage-meter__key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: var(--fs-small);
+  color: var(--ink-2);
+}
+.usage-key::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 6px;
+  border-radius: 3px;
+  vertical-align: -1px;
+}
+.usage-key--photos::before {
+  background: var(--accent);
+}
+.usage-key--books::before {
+  background: var(--warn);
+}
+
+/* Settings → Admin: one card per household. */
+.household-cards {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.household-card {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+.household-card p {
+  margin: 0;
+}
+.household-card__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.household-card__name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--fs-lead);
+}
+.household-card__meta {
+  font-size: var(--fs-small);
+  overflow-wrap: anywhere;
+}
+.household-card__stats {
+  font-size: var(--fs-small);
+}
+.household-card__bar {
+  height: 6px;
+}
+.household-card__people summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: var(--fs-small);
+}
+.household-card__people ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  font-size: var(--fs-small);
+  overflow-wrap: anywhere;
+}
+.household-card__actions,
+.household-card__form,
+.household-card__delete .row {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.household-card__form input,
+.household-card__delete input {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+.household-card__delete {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--r);
+  border: 1px solid var(--danger);
+}
+
 /* Settings → Households (admin) */
 .invite-link {
   display: flex;
@@ -7256,4 +7445,889 @@ thead .sidebar-grid__current {
 }
 .meal__recipe::before {
   inset: -12px -8px;
+}
+
+/* Chores: "Take turns" — people picked in turn order, each with their number. */
+.chore-form2__turns {
+  flex: 1 1 100%;
+  display: grid;
+  gap: 8px;
+}
+.chore-form2__turns-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+.chore-form2__people {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.turn-chip {
+  gap: 8px;
+}
+.turn-chip__num {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid var(--rule-strong);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.turn-chip--on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.turn-chip--on .turn-chip__num {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* Settings: search box above the section index. */
+.settings-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin: 0 0 12px;
+  color: var(--ink-2);
+}
+.settings-search > svg {
+  position: absolute;
+  left: 12px;
+  pointer-events: none;
+}
+.settings-search input {
+  width: 100%;
+  min-width: 0;
+  padding-left: 38px;
+  padding-right: 44px;
+}
+.settings-search__clear {
+  position: absolute;
+  right: 2px;
+}
+.settings-section[hidden],
+.settings-index li[hidden] {
+  display: none;
+}
+:root[data-device='phone'] .settings-search {
+  margin: 4px 0 2px;
+}
+
+/* Undo: after a delete, a floating message along the bottom with an Undo button. */
+.undo-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(560px, calc(100vw - 32px));
+  padding: 6px 6px 6px 16px;
+  transform: translateX(-50%);
+  border-radius: var(--r-lg);
+  background: var(--ink);
+  color: var(--paper);
+  box-shadow: var(--shadow-lg);
+  animation: undo-in 160ms ease-out;
+}
+:root[data-device='phone'] .undo-toast {
+  bottom: calc(76px + env(safe-area-inset-bottom));
+}
+.undo-toast__text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.undo-toast__undo {
+  flex: none;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--r);
+  background: transparent;
+  color: var(--paper);
+  font: inherit;
+  font-weight: 600;
+  box-shadow: inset 0 0 0 1px var(--ink-3);
+  cursor: pointer;
+}
+.undo-toast__close {
+  flex: none;
+  color: var(--paper);
+}
+@keyframes undo-in {
+  from {
+    transform: translate(-50%, 8px);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .undo-toast {
+    animation: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Home: the daily summary (features/home/DailySummary.tsx)
+   -------------------------------------------------------------------------- */
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+}
+.summary__hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px 24px;
+}
+.summary__intro {
+  min-width: 0;
+}
+.summary__greeting {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--fs-lead);
+  font-weight: 500;
+}
+.summary__headline {
+  margin: 2px 0 0;
+  font-size: var(--fs-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.summary__weather {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--tap);
+  padding: 4px 16px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.summary__weather .weather-icon {
+  color: var(--accent-text);
+  flex: none;
+}
+.summary__alert {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 4px 14px;
+  border: 1px solid var(--danger);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--danger);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+/* A Google Calendar that stopped updating: amber, and a sentence may wrap. */
+.summary__alert--warn,
+.calendar-notice {
+  border-color: var(--warn);
+  border-radius: var(--r-lg);
+  color: var(--warn);
+  text-align: left;
+}
+.calendar-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 8px 14px;
+  border: 1px solid var(--warn);
+  background: var(--surface);
+  font-weight: 600;
+}
+.summary__alert--warn svg,
+.calendar-notice svg {
+  flex: none;
+}
+
+/* Two columns on tablets and computers: what's next and today's timeline; everything else. */
+.summary__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+}
+.summary__main,
+.summary__side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  min-width: 0;
+}
+.summary__side {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.summary__pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+.summary-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.summary-card__head .link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--fs-small);
+}
+.summary-card__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+
+/* Up next: the one thing to know right now. */
+.summary-next {
+  flex: none;
+  background: var(--accent-soft);
+  border-color: transparent;
+}
+.summary-next__body {
+  display: grid;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.summary-next__title {
+  font-size: var(--fs-title);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  overflow-wrap: anywhere;
+}
+.summary-next__when {
+  color: var(--accent-text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.summary-next__where,
+.summary-next__who {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+  overflow-wrap: anywhere;
+}
+.summary-next__bar {
+  display: block;
+  height: 4px;
+  margin-top: 4px;
+  border-radius: 999px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.summary-next__bar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.summary-next__empty {
+  margin: 0;
+  color: var(--ink-2);
+}
+.summary-avatars {
+  display: inline-flex;
+}
+.summary-avatars .initial + .initial {
+  margin-left: -4px;
+}
+
+/* Today: one timeline of events and timed chores; scrolls inside its card. */
+.summary-day {
+  flex: 1;
+  min-height: 0;
+}
+.summary-day__empty {
+  margin: 0;
+}
+.summary-allday {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.summary-allday__item {
+  position: relative;
+  min-height: 32px;
+  padding: 4px 10px 4px 13px;
+  border: 0;
+  border-radius: var(--r);
+  background: var(--paper-2);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  cursor: pointer;
+  overflow: hidden;
+}
+.summary-allday__item::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--pill);
+}
+.summary-timeline {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.summary-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--tap);
+  padding: 4px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.summary-row:last-child {
+  border-bottom: 0;
+}
+.summary-row__time {
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+.summary-row__body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 2px 0 2px 12px;
+  border: 0;
+  border-left: 3px solid var(--pill);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+}
+button.summary-row__body {
+  cursor: pointer;
+}
+.summary-row--chore .summary-row__body {
+  border-left-style: dashed;
+}
+.summary-row__title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.summary-row__meta {
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+}
+.summary-row--past {
+  opacity: 0.5;
+}
+/* Now: an accent line above the first thing still to come. */
+.summary-row--after-now::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent);
+}
+.summary-row--after-now::after {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: 78px;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+.summary-row .check-circle {
+  width: 32px;
+  height: 32px;
+}
+
+/* Chores: a ring per person that fills as they finish. */
+.summary-people {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.summary-person {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.summary-ring {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+}
+.summary-ring > svg {
+  position: absolute;
+  inset: 0;
+  transform: rotate(-90deg);
+}
+.summary-ring > svg circle {
+  fill: none;
+  stroke-width: 3;
+}
+.summary-ring__track {
+  stroke: var(--rule);
+}
+.summary-ring__fill {
+  stroke: var(--pill);
+  stroke-linecap: round;
+  transition: stroke-dasharray 180ms ease-out;
+}
+.summary-ring__mark {
+  display: grid;
+  place-items: center;
+  line-height: 1;
+  font-weight: 600;
+  color: var(--pill);
+}
+.summary-person__text {
+  display: grid;
+  min-width: 0;
+}
+.summary-person__name {
+  font-weight: 600;
+}
+.summary-person__meta {
+  overflow: hidden;
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Dinner and the grocery list: one tap to their tabs. */
+.summary-tile {
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.summary-tile__value {
+  font-size: var(--fs-lead);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.summary-tile__meta {
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+  overflow-wrap: anywhere;
+}
+@media (hover: hover) {
+  .summary-tile:hover,
+  .summary__weather:hover {
+    border-color: var(--rule-strong);
+  }
+}
+
+.summary-ahead {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.summary-ahead li {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 12px;
+  overflow-wrap: anywhere;
+}
+.summary-ahead__when {
+  color: var(--accent-text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Phones: one column, top to bottom; the panel scrolls rather than each card. */
+:root[data-device='phone'] .summary__grid,
+:root[data-device='phone'] .summary__pair {
+  grid-template-columns: minmax(0, 1fr);
+}
+:root[data-device='phone'] .summary__side,
+:root[data-device='phone'] .summary-timeline {
+  overflow: visible;
+}
+:root[data-device='phone'] .summary__headline {
+  font-size: var(--fs-title);
+}
+:root[data-device='phone'] .summary-row {
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  gap: 10px;
+}
+:root[data-device='phone'] .summary-row--after-now::after {
+  left: 69px;
+}
+
+/* Settings → Admin: find and sort households; people with a Remove. */
+.admin-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.admin-tools input {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+.admin-tools__search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1 1 220px;
+  min-width: 0;
+  color: var(--ink-2);
+}
+.admin-tools__search svg {
+  position: absolute;
+  left: 12px;
+  pointer-events: none;
+}
+.admin-tools__search input {
+  width: 100%;
+  padding-left: 38px;
+}
+.household-person {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  padding: 4px 0;
+}
+.household-person__who {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.household-person__confirm {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Admin usage: room between the counts and each meter. */
+.usage-meter {
+  margin-top: 8px;
+}
+
+/* Phones: search and the Household | Admin switch share one row above the section index. */
+:root[data-device='phone'] .settings-index:has(.settings-tabs) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: 'search tabs' 'index index';
+  column-gap: 8px;
+  align-items: center;
+}
+:root[data-device='phone'] .settings-index:has(.settings-tabs) .settings-search {
+  grid-area: search;
+  margin: 4px 0 2px;
+}
+:root[data-device='phone'] .settings-index:has(.settings-tabs) .settings-tabs {
+  grid-area: tabs;
+  margin: 4px 0 2px;
+}
+:root[data-device='phone'] .settings-index:has(.settings-tabs) .settings-tabs .segmented__item {
+  padding: 0 12px;
+}
+:root[data-device='phone'] .settings-index:has(.settings-tabs) ol {
+  grid-area: index;
+}
+
+/* Weather: the page is never wider than the screen; on a narrower tablet or window (under
+   1000px), the week drops its wind/UV and rain amounts, like phones do. */
+.weather {
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (max-width: 1000px) {
+  :root:not([data-device='phone']) .weather-row {
+    grid-template-columns: 72px minmax(0, 1.2fr) 64px minmax(140px, 1.6fr);
+    gap: 12px;
+  }
+  :root:not([data-device='phone']) .weather-row__amount,
+  :root:not([data-device='phone']) .weather-row__extra {
+    display: none;
+  }
+}
+
+/* Daily summary on a narrow tablet or window (an upright tablet in a browser): one column
+   that scrolls inside Home, like phones, rather than two cramped ones. */
+@media (max-width: 900px) {
+  :root:not([data-device='phone']) .summary {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  :root:not([data-device='phone']) .summary__grid {
+    grid-template-columns: minmax(0, 1fr);
+    flex: none;
+  }
+  :root:not([data-device='phone']) .summary__main,
+  :root:not([data-device='phone']) .summary__side,
+  :root:not([data-device='phone']) .summary-day,
+  :root:not([data-device='phone']) .summary-timeline {
+    flex: none;
+    overflow: visible;
+  }
+}
+
+/* Schedule list: in the narrow date column, a rainy day's chance goes under the high
+   ("73°" over "86%") instead of running out of the column. */
+.schedule-day__header .day-weather {
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-left: 0;
+  white-space: normal;
+  text-align: center;
+}
+.schedule-day__header .day-weather__rain {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+/* Month cells on a narrow screen: events shrink to the cell (their text ellipsizes) instead
+   of pushing the grid wider; the delete button stays its size. */
+.month-cell .events,
+.month-cell .events > li,
+.month-cell .event {
+  min-width: 0;
+}
+.month-cell .event > :not(.event__delete) {
+  min-width: 0;
+}
+.month-cell .event__delete {
+  flex: none;
+}
+.month-cell .event__open {
+  overflow: hidden;
+}
+.month-cell .event__title {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Narrow month cells keep the room for the title; Delete is in the event's details sheet. */
+@media (max-width: 900px) {
+  .month-cell .event__delete,
+  .month-cell .day-weather__rain {
+    display: none;
+  }
+}
+
+/* Lists: press and hold an item to drag it (in its category or to another). */
+.list-item--draggable {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.list-item--lifted {
+  position: relative;
+  z-index: 30;
+  pointer-events: none;
+  border-radius: var(--r);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  outline: 2px solid var(--accent);
+  transition: box-shadow 120ms ease-out;
+}
+:root.list-dragging,
+:root.list-dragging * {
+  cursor: grabbing;
+  -webkit-user-select: none;
+  user-select: none;
+}
+/* Where it would land: a line that takes no room, so nothing jumps while dragging. */
+.list-drop {
+  position: relative;
+  height: 0;
+  list-style: none;
+}
+.list-drop::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -2px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+/* The section a held item is over: a soft wash, so it's clear where it's going. */
+.list-col--dragging [data-drop-group]:has(.list-drop) {
+  border-radius: var(--r);
+  background: var(--accent-soft);
+}
+@media (prefers-reduced-motion: reduce) {
+  .list-item--lifted {
+    transition: none;
+  }
+}
+
+/* Daily summary: the next countdowns in a row under the greeting (it scrolls sideways when
+   there are more), and a + to add or change them in Settings. */
+.summary-countdowns {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  min-width: 0;
+}
+.summary-countdowns__list {
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.summary-countdowns__list::-webkit-scrollbar {
+  display: none;
+}
+.summary-countdowns .countdown {
+  padding-right: 12px;
+  background: var(--surface);
+}
+.summary-countdowns .countdown--today {
+  background: var(--accent-soft);
+}
+.summary-countdowns__edit {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: var(--tap);
+  min-height: var(--tap);
+  padding: 0 12px;
+  border: 1px dashed var(--rule-strong);
+  border-radius: var(--r);
+  background: transparent;
+  color: var(--accent-text);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+.summary-countdowns__list:empty {
+  display: none;
+}
+
+/* Settings → Countdowns: every saved countdown, with its day count. */
+.countdown-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.countdown-list__item {
+  display: grid;
+  grid-template-columns: 3.5em minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 6px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  background: var(--paper);
+}
+.countdown-list__days {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+}
+.countdown-list__count {
+  font-size: var(--fs-title);
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-text);
+}
+.countdown-list__unit,
+.countdown-list__meta {
+  font-size: var(--fs-label);
+  line-height: 1.2;
+  color: var(--ink-2);
+}
+.countdown-list__text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.countdown-list__title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.countdown-list__remove {
+  width: var(--tap);
+  height: var(--tap);
+  color: var(--ink-3);
 }

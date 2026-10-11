@@ -113,13 +113,59 @@ export interface HouseholdSummary {
   ownerEmail: string | null
   createdAt: string | null
   members: number
+  people: { id: string; name: string; email: string | null; owner: boolean }[]
   events: number
   recipes: number
   photos: number
+  /** Measured from the files in storage. */
   photoBytes: number
   cookbookBytes: number
+  otherBytes: number
 }
 
-/** Every household's name and size (counts only, never contents). Admin only. */
+/** App-wide numbers: online searches this month, and who may start a household. */
+export interface AppUsage {
+  searches: number
+  searchCap: number
+  creators: string[]
+}
+
+/** Every household's name, people and size (never contents), and the app's usage. Admin only. */
 export const fetchHouseholds = () =>
-  httpsCallable<object, { households: HouseholdSummary[] }>(functions, 'adminHouseholds')({}).then((r) => r.data.households)
+  httpsCallable<object, { households: HouseholdSummary[]; app?: AppUsage }>(functions, 'adminHouseholds')({}).then((r) => ({
+    // Older function versions don't send people, otherBytes or app.
+    households: r.data.households.map((h) => ({ ...h, people: h.people ?? [], otherBytes: h.otherBytes ?? 0 })),
+    app: r.data.app ?? null,
+  }))
+
+export const setCreator = (email: string, allow: boolean) =>
+  httpsCallable<{ email: string; allow: boolean }, { creators: string[] }>(functions, 'adminSetCreator')({ email, allow }).then((r) => r.data.creators)
+
+export const removeMember = (familyId: string, uid: string) => httpsCallable(functions, 'adminRemoveMember')({ familyId, uid }).then(() => undefined)
+
+export const renameHousehold = (familyId: string, name: string) => httpsCallable(functions, 'adminRenameHousehold')({ familyId, name }).then(() => undefined)
+
+/** Deletes another household and everything in it; `confirm` is its name, typed by the admin. */
+export const deleteHousehold = (familyId: string, confirm: string) => httpsCallable(functions, 'adminDeleteHousehold')({ familyId, confirm }).then(() => undefined)
+
+/** Settings → Admin: its sections, for the settings index. */
+export const ADMIN_SECTIONS = [
+  { id: 'admin-usage', label: 'Usage' },
+  { id: 'admin-households', label: 'Households' },
+  { id: 'admin-invites', label: 'Invite links' },
+  { id: 'admin-access', label: 'Starting households' },
+]
+
+export interface AdminApi {
+  isAdmin: typeof amIAdmin
+  watch: typeof watchInvites
+  create: typeof createInvite
+  revoke: typeof revokeInvite
+  households: typeof fetchHouseholds
+  rename: typeof renameHousehold
+  remove: typeof deleteHousehold
+  setCreator: typeof setCreator
+  removeMember: typeof removeMember
+}
+
+export const adminApi: AdminApi = { isAdmin: amIAdmin, watch: watchInvites, create: createInvite, revoke: revokeInvite, households: fetchHouseholds, rename: renameHousehold, remove: deleteHousehold, setCreator, removeMember }

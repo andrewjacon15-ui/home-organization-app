@@ -17,6 +17,13 @@ export interface GroceryResult {
   onList: number
 }
 
+/** "Added 9 items to the grocery list. Skipped 2 pantry staples and 1 already on the list." */
+export function groceryMessage(r: GroceryResult): string {
+  const skipped = [r.staples ? `${r.staples} pantry staple${r.staples === 1 ? '' : 's'}` : null, r.onList ? `${r.onList} already on the list` : null].filter(Boolean)
+  const added = r.added === 0 && skipped.length ? 'Nothing new for the grocery list.' : `Added ${r.added} item${r.added === 1 ? '' : 's'} to the grocery list.`
+  return `${added}${skipped.length ? ` Skipped ${skipped.join(' and ')}.` : ''}`
+}
+
 export const SPANS = [3, 7, 14] as const
 const SLOT_ORDER: PlannedSlot[] = ['breakfast', 'lunch', 'dinner']
 export const SLOT_LABELS: Record<PlannedSlot, string> = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner' }

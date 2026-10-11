@@ -8,6 +8,14 @@ import type { DisplaySettings } from './settingsApi'
 
 const DEVICES: Device[] = ['phone', 'tablet', 'desktop']
 
+/** A per-device setting with this device's value changed (undefined removes it). */
+function withDevice<T>(map: Partial<Record<Device, T>>, device: Device, value: T | undefined): Partial<Record<Device, T>> {
+  const next = { ...map }
+  if (value === undefined) delete next[device]
+  else next[device] = value
+  return next
+}
+
 type Hidden = DisplaySettings['hiddenTabs']
 
 /** Which sections show in the side bar, per kind of device. A checked box means shown. */
@@ -82,6 +90,24 @@ export function DeviceSettings() {
         Phones get a bottom bar and lists; tablets get the wall display that fits the screen, with sleep mode and the photo screensaver; computers get the full layout for a mouse.
         This choice is saved on this device only.
       </p>
+      <SelectRow
+        label={`Text size on ${DEVICE_LABELS[device].toLowerCase()}s`}
+        value={settings.textSizeBy[device] ?? ''}
+        options={[
+          { value: '', label: `Same as Display (${settings.textSize})` },
+          { value: 'small', label: 'Small' },
+          { value: 'medium', label: 'Medium' },
+          { value: 'large', label: 'Large' },
+        ]}
+        onChange={(v) => void update({ textSizeBy: withDevice(settings.textSizeBy, device, v || undefined) as DisplaySettings['textSizeBy'] })}
+      />
+      <SelectRow
+        label={`${DEVICE_LABELS[device]}s open to`}
+        value={settings.startTab[device] ?? ''}
+        options={[{ value: '', label: 'The last tab used' }, ...TABS.filter((t) => !settings.hiddenTabs[device]?.includes(t.id)).map((t) => ({ value: t.id, label: t.label }))]}
+        onChange={(v) => void update({ startTab: withDevice(settings.startTab, device, v || undefined) as DisplaySettings['startTab'] })}
+      />
+      <p className="settings-note">These two apply to every {DEVICE_LABELS[device].toLowerCase()} in the household. The wall tablet opens to its tab again each time it reloads.</p>
       <div className="setting-row setting-row--stacked">
         <span className="setting-row__label">
           Side bar

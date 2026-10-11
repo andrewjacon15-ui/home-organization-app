@@ -1,4 +1,5 @@
-import { addDoc, collection, deleteDoc, doc, onSnapshot, serverTimestamp, Timestamp, writeBatch } from 'firebase/firestore'
+import { addDoc, collection, doc, onSnapshot, serverTimestamp, Timestamp, writeBatch } from 'firebase/firestore'
+import { removeDocs } from '../../lib/undo'
 import { db } from '../../firebase'
 import type { Chore } from '../../types'
 
@@ -74,7 +75,7 @@ export function addReward(familyId: string, userId: string, reward: NewReward) {
 }
 
 export function deleteReward(familyId: string, rewardId: string) {
-  return deleteDoc(doc(rewardsCol(familyId), rewardId))
+  return removeDocs([doc(rewardsCol(familyId), rewardId)])
 }
 
 /** Spends the member's stars and marks the reward claimed, atomically. */

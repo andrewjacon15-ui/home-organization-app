@@ -1,4 +1,5 @@
-import { addDoc, collection, deleteDoc, doc, onSnapshot, query, serverTimestamp, Timestamp, updateDoc, where } from 'firebase/firestore'
+import { removeDocs } from '../../lib/undo'
+import { addDoc, collection, doc, onSnapshot, query, serverTimestamp, Timestamp, updateDoc, where } from 'firebase/firestore'
 import { httpsCallable } from 'firebase/functions'
 import { db, functions } from '../../firebase'
 import type { CalendarEvent, NewManualEvent, SyncedCalendar } from '../../types'
@@ -47,7 +48,7 @@ export function addManualEvent(familyId: string, userId: string, event: NewManua
 }
 
 export function deleteManualEvent(familyId: string, eventId: string) {
-  return deleteDoc(doc(eventsCol(familyId), eventId))
+  return removeDocs([doc(eventsCol(familyId), eventId)])
 }
 
 export const connectCalendar = (familyId: string, code: string) =>

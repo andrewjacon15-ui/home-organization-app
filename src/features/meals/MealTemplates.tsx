@@ -101,7 +101,7 @@ export function MealTemplates({ weekLabel, weekEmpty, templates, onSave, onApply
                       className="icon-button"
                       aria-label={`Delete template ${t.name}`}
                       onClick={() => {
-                        if (confirm(`Delete the template “${t.name}”? Weeks already planned from it stay as they are.`)) onDelete(t)
+                        onDelete(t)
                       }}
                     >
                       <TrashIcon size={18} />

@@ -10,12 +10,12 @@ import type { FamilyList, ListItem } from '../lists/listsApi'
 import { useSettings } from '../settings/SettingsContext'
 import { DayWeather, WeatherStrip } from '../weather/WeatherBadges'
 import { CountdownPanel } from '../countdowns/Countdowns'
-import type { Countdown, CountdownKind } from '../countdowns/countdownsApi'
+import type { Countdown, CountdownKind, GoogleSpecial } from '../countdowns/countdownsApi'
 import { DoneIcon, GrabsIcon, NextIcon } from '../../components/Icons'
 import { useOverflowCue } from '../../lib/useOverflowCue'
 import { DEFAULT_HOME, HOME_CALENDAR_DAYS, PANEL_WEIGHT, type HomeCalendarDays, type HomePanel } from './homePanels'
 
-export type HomeTarget = 'calendar' | 'chores' | 'lists' | 'weather'
+export type HomeTarget = 'calendar' | 'chores' | 'lists' | 'weather' | 'meals' | 'settings'
 
 interface Props {
   today: string
@@ -43,6 +43,8 @@ interface Props {
   onAddCountdown?: (title: string, date: string, kind: CountdownKind) => void
   /** US holidays among the countdowns. */
   countdownHolidays?: boolean
+  /** Birthdays from Google Calendar among the countdowns. */
+  countdownGoogle?: GoogleSpecial[]
   onRemoveCountdown?: (c: Countdown) => void
 }
 
@@ -71,7 +73,7 @@ export function HomeView(p: Props) {
   const cols = p.calendarDays === 7 ? 'repeat(8, minmax(0, 1fr))' : p.calendarDays === 3 ? 'repeat(3, minmax(0, 1fr)) minmax(0, 0.8fr)' : 'minmax(0, 2.4fr) minmax(0, 1fr)'
 
   const people = [...p.members.map((m) => ({ id: m.id, member: m as Member | null })), { id: GRABS, member: null }]
-  const choresFor = (id: string) => p.chores.filter((c) => (id === GRABS ? !c.assigneeId || !memberById.has(c.assigneeId) : c.assigneeId === id))
+  const choresFor = (id: string) => (c: Chore) => (id === GRABS ? !c.assigneeId || !memberById.has(c.assigneeId) : c.assigneeId === id)
 
   const panels = p.panels ?? DEFAULT_HOME
   const shown: Record<HomePanel, () => ReactNode> = {
@@ -130,7 +132,7 @@ export function HomeView(p: Props) {
           <PanelHead title="Today's tasks" onOpen={() => p.onNavigate('chores')} />
           <div className="home-tasks">
             {people.map(({ id, member }) => {
-              const occ = occurrencesOn(choresFor(id), p.today, p.today)
+              const occ = occurrencesOn(p.chores, p.today, p.today).filter((o) => choresFor(id)(o.chore))
               if (!member && occ.length === 0) return null
               const done = occ.filter((o) => o.done).length
               const name = member ? member.displayName.split(' ')[0] : 'Up for Grabs'
@@ -161,7 +163,7 @@ export function HomeView(p: Props) {
         </section>
     ),
     countdowns: () => (
-      <CountdownPanel countdowns={p.countdowns ?? []} today={p.today} holidays={p.countdownHolidays ?? true} onAdd={(t, d, k) => p.onAddCountdown?.(t, d, k)} onRemove={(c) => p.onRemoveCountdown?.(c)} />
+      <CountdownPanel countdowns={p.countdowns ?? []} today={p.today} holidays={p.countdownHolidays ?? true} google={p.countdownGoogle} onAdd={(t, d, k) => p.onAddCountdown?.(t, d, k)} onRemove={(c) => p.onRemoveCountdown?.(c)} />
     ),
     weather: () => (
       <section className="home-panel home-panel--weather" aria-label="Weather">

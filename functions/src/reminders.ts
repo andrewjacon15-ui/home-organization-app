@@ -5,6 +5,8 @@
  * it's sent, so retries and overlapping runs never send the same email twice.
  */
 
+import { onTurn } from './shared/chores/rotation.js'
+
 export const APP_URL = 'https://home-organization-app-dkcbl.web.app'
 /** How late a reminder may still go out (scheduler delays, a failed run). */
 export const GRACE_MS = 15 * 60_000
@@ -48,6 +50,8 @@ export interface ReminderChore {
   repeat?: { freq: 'daily' | 'weekly' | 'monthly'; interval: number; days?: number[] } | null
   completions?: Record<string, string>
   done: boolean
+  /** Rotating chores: people who take turns, in order. */
+  rotation?: string[] | null
 }
 
 export interface Meals {
@@ -67,6 +71,8 @@ export interface ReminderStore {
   listEvents(familyId: string, from: Date, to: Date): Promise<ReminderEvent[]>
   listChores(familyId: string): Promise<ReminderChore[]>
   getMeals(familyId: string, dateKey: string): Promise<Meals | null>
+  /** The household's quiet hours ("HH:MM" local), or null when they're off. */
+  quietHours(familyId: string): Promise<{ from: string; to: string } | null>
   /** Records that an email is going out. False if it was already claimed. */
   claim(familyId: string, key: string, expireAt: Date): Promise<boolean>
 }
@@ -247,7 +253,7 @@ export function eventsOnDay(events: ReminderEvent[], day: string, tz: string, pe
 
 /** Chores for `personId` (theirs or up for grabs) due on `day`, plus their overdue one-offs. */
 export function choresForDay(chores: ReminderChore[], day: string, personId: string): { chore: ReminderChore; overdue: boolean }[] {
-  const mine = chores.filter((c) => c.assigneeId === personId || c.assigneeId === null)
+  const mine = chores.map((c) => onTurn(c, day)).filter((c) => c.assigneeId === personId || c.assigneeId === null)
   const today = mine.filter((c) => choreOccursOn(c, day) && !choreDoneOn(c, day)).map((chore) => ({ chore, overdue: false }))
   const overdue = mine.filter((c) => !c.repeat && c.dueDate && c.dueDate < day && !c.done).map((chore) => ({ chore, overdue: true }))
   return [...overdue, ...today]
@@ -331,6 +337,13 @@ export interface RunResult {
   failures: number
 }
 
+/** Whether `now` falls in quiet hours (from–to, local time in `tz`; may run past midnight). */
+export function inQuietHours(now: Date, tz: string, from: string, to: string): boolean {
+  const hm = new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(now)
+  if (from === to) return false
+  return from < to ? hm >= from && hm < to : hm >= from || hm < to
+}
+
 export async function sendDueEmails(deps: { store: ReminderStore; mailer: Mailer; log?: (msg: string, extra?: object) => void }, now = new Date()): Promise<RunResult> {
   const { store, mailer, log = () => undefined } = deps
   const result: RunResult = { eventEmails: 0, digests: 0, failures: 0 }
@@ -365,7 +378,9 @@ export async function sendDueEmails(deps: { store: ReminderStore; mailer: Mailer
     if (!found.size && !digests.length) continue
     const calendarOwners = await store.listCalendarOwners(family.id)
 
-    for (const r of dueEventReminders([...found.values()], people, prefs, calendarOwners, family.timezone, now)) {
+    const quiet = found.size ? await store.quietHours(family.id) : null
+    const hushed = !!quiet && inQuietHours(now, family.timezone ?? DEFAULT_TZ, quiet.from, quiet.to)
+    for (const r of hushed ? [] : dueEventReminders([...found.values()], people, prefs, calendarOwners, family.timezone, now)) {
       if (await send(family.id, r.key, eventReminderEmail(r))) result.eventEmails++
     }
 
@@ -382,3 +397,4 @@ export async function sendDueEmails(deps: { store: ReminderStore; mailer: Mailer
   }
   return result
 }
+

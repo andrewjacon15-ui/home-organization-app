@@ -12,6 +12,20 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <script>
+      // Last time's theme, text size and highlight color (saved by App.tsx), so the page doesn't
+      // open in the default look and switch a moment later.
+      try {
+        var look = JSON.parse(localStorage.getItem('look') || 'null')
+        if (look) {
+          var root = document.documentElement
+          if (look.theme) root.dataset.theme = look.theme
+          if (look.textSize) root.dataset.textSize = look.textSize
+          if (look.density) root.dataset.density = look.density
+          for (var k in look.vars || {}) root.style.setProperty(k, look.vars[k])
+        }
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { CountdownPanel } from './Countdowns'
-import { daysUntil, nextYearly, ordinal, shownCountdowns, untilLabel, upcoming, yearlyTitle } from './countdownsApi'
+import { daysUntil, nextYearly, ordinal, shownCountdowns, untilLabel, upcoming, yearlyTitle, type GoogleSpecial } from './countdownsApi'
 import { easter, upcomingHolidays, usHolidays } from './holidays'
 
 const TODAY = '2026-10-03'
@@ -143,5 +143,33 @@ describe('birthdays and anniversaries', () => {
     await user.type(screen.getByLabelText(/^Birthday/), '1950-01-15')
     await user.click(screen.getByRole('button', { name: 'Add' }))
     expect(onAdd).toHaveBeenCalledWith('Grandpa', '1950-01-15', 'birthday')
+  })
+})
+
+describe('birthdays from Google Calendar', () => {
+  const google: GoogleSpecial[] = [
+    { id: 'g1', title: 'Mom’s birthday', date: '2026-11-02', kind: 'birthday' },
+    // Two people's calendars, the same contact.
+    { id: 'g2', title: 'Jake Smith’s birthday', date: '2026-10-20', kind: 'birthday' },
+    { id: 'g3', title: "Jake Smith's Birthday", date: '2026-10-20', kind: 'birthday' },
+    { id: 'g4', title: 'Grandma & Grandpa’s anniversary', date: '2026-12-01', kind: 'anniversary' },
+    { id: 'g5', title: 'Last week’s birthday', date: '2026-09-28', kind: 'birthday' },
+  ]
+
+  it('join the countdowns once each, and one saved here (with its year) wins', () => {
+    const saved = [{ id: 'm', title: 'Mom', date: '1966-11-02', kind: 'birthday' as const }]
+    const shown = shownCountdowns(saved, TODAY, { holidays: false, google })
+    expect(shown.map((c) => [c.title, c.date, c.detail, !!c.google])).toEqual([
+      ['Jake Smith’s birthday', '2026-10-20', null, true],
+      ['Mom’s birthday', '2026-11-02', 'turns 60', false],
+      ['Grandma & Grandpa’s anniversary', '2026-12-01', null, true],
+    ])
+    // They come from Google, so they're removed there (or switched off), not here.
+    expect(shown.filter((c) => c.google).every((c) => c.source === null)).toBe(true)
+  })
+
+  it('show in the Home panel', () => {
+    render(<CountdownPanel countdowns={[]} today={TODAY} holidays={false} google={google} onAdd={vi.fn()} onRemove={vi.fn()} />)
+    expect(screen.getByRole('listitem', { name: /Jake Smith’s birthday: 17 days/ })).toBeInTheDocument()
   })
 })

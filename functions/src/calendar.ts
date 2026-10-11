@@ -162,7 +162,7 @@ function sameJson(a: unknown, b: unknown): boolean {
   return b !== undefined && JSON.stringify(a) === JSON.stringify(b)
 }
 
-const EVENT_FIELDS = ['source', 'sourceUserId', 'googleEventId', 'calendarKey', 'title', 'allDay', 'startDate', 'endDate', 'location', 'htmlLink'] as const
+const EVENT_FIELDS = ['source', 'sourceUserId', 'googleEventId', 'calendarKey', 'title', 'allDay', 'startDate', 'endDate', 'location', 'htmlLink', 'special'] as const
 
 /** Same event as stored (times compared as instants; missing optional fields count as equal). */
 export function sameEvent(stored: EventDoc | undefined, next: EventDoc): boolean {

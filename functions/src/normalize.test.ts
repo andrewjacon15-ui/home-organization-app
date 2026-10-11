@@ -64,4 +64,12 @@ describe('keys', () => {
     expect(normalizeEvent({ id: 'w', eventType: 'workingLocation', start: { date: '2026-10-01' } }, 'u', 'cal1')).toBeNull()
     expect(normalizeEvent({ id: 'o', eventType: 'outOfOffice', start: { date: '2026-10-01' } }, 'u', 'cal1')).not.toBeNull()
   })
+
+  it('marks birthdays and anniversaries from Contacts, for the countdowns', () => {
+    const at = { start: { date: '2026-10-21' }, end: { date: '2026-10-22' } }
+    expect(normalizeEvent({ id: 'b', eventType: 'birthday', summary: 'Mom’s birthday', birthdayProperties: { type: 'birthday' }, ...at }, 'u', 'c')?.special).toBe('birthday')
+    expect(normalizeEvent({ id: 's', eventType: 'birthday', summary: 'Happy birthday!', birthdayProperties: { type: 'self' }, ...at }, 'u', 'c')?.special).toBe('birthday')
+    expect(normalizeEvent({ id: 'a', eventType: 'birthday', birthdayProperties: { type: 'anniversary' }, ...at }, 'u', 'c')?.special).toBe('anniversary')
+    expect(normalizeEvent({ id: 'd', summary: 'Dentist', ...at }, 'u', 'c')).not.toHaveProperty('special')
+  })
 })

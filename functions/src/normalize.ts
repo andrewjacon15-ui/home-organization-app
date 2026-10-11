@@ -20,6 +20,12 @@ export function eventDocId(calKey: string, googleEventId: string): string {
 /** "Home" / "Office" working-location markers are noise on a family calendar. */
 const SKIPPED_TYPES = new Set(['workingLocation'])
 
+/** Birthdays (and anniversaries) Google adds from Contacts, or from the old Birthdays calendar. */
+function specialKind(event: GoogleEvent): EventDoc['special'] | undefined {
+  if (event.eventType !== 'birthday') return undefined
+  return event.birthdayProperties?.type === 'anniversary' ? 'anniversary' : 'birthday'
+}
+
 /** YYYY-MM-DD as a UTC-midnight Date (all-day events have no timezone). */
 function dateKeyToUtc(key: string): Date {
   const [y, m, d] = key.split('-').map(Number)
@@ -42,7 +48,8 @@ export function normalizeEvent(event: GoogleEvent, uid: string, calKey: string):
   if (event.start?.date) {
     const startDate = event.start.date
     const endDate = event.end?.date ?? startDate
-    return { ...base, allDay: true, startDate, endDate, start: dateKeyToUtc(startDate), end: dateKeyToUtc(endDate) }
+    const special = specialKind(event)
+    return { ...base, allDay: true, startDate, endDate, start: dateKeyToUtc(startDate), end: dateKeyToUtc(endDate), ...(special ? { special } : {}) }
   }
 
   if (event.start?.dateTime) {

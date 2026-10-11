@@ -22,6 +22,7 @@ import {
   type CatalogSort,
 } from './catalog'
 import { lines, type Recipe, type RecipeDraft } from './recipesApi'
+import { groceryMessage, type GroceryResult } from '../meals/upcomingMeals'
 
 type PlanSlot = Exclude<MealSlot, 'notes'>
 
@@ -36,8 +37,8 @@ export interface BookProps {
   onSave: (draft: RecipeDraft, id?: string) => Promise<string | void> | void
   onDelete: (recipe: Recipe) => void
   onPlan: (recipe: Recipe, date: string, slot: PlanSlot) => void
-  /** Adds these ingredient lines (as shown: scaled, metric) to the grocery list; resolves with how many were added. */
-  onAddToGrocery?: (recipe: Recipe, items: string[]) => Promise<number> | number
+  /** Adds these ingredient lines (as shown: scaled, metric) to the grocery list; resolves with what was added and skipped. */
+  onAddToGrocery?: (recipe: Recipe, items: string[]) => Promise<GroceryResult> | GroceryResult
   onMarkReviewed?: (recipe: Recipe) => void
   onFavorite?: (id: string, favorite: boolean) => void
   onSaveTags?: (recipe: Recipe, tags: RecipeTags) => void
@@ -270,7 +271,7 @@ interface ViewProps {
   onEdit?: () => void
   onDelete?: () => void
   onPlan?: (date: string, slot: PlanSlot) => void
-  onAddToGrocery?: (items: string[]) => Promise<number> | number
+  onAddToGrocery?: (items: string[]) => Promise<GroceryResult> | GroceryResult
   onMarkReviewed?: () => void
   onFavorite?: () => void
   onSaveTags?: (tags: RecipeTags) => void
@@ -433,8 +434,7 @@ export function RecipeView({ recipe, today, onEdit, onDelete, onPlan, onAddToGro
                 type="button"
                 className="button"
                 onClick={async () => {
-                  const n = await onAddToGrocery(ingredients)
-                  setGrocery(`Added ${n} item${n === 1 ? '' : 's'} to the grocery list.`)
+                  setGrocery(groceryMessage(await onAddToGrocery(ingredients)))
                 }}
               >
                 Add ingredients to grocery list
@@ -503,7 +503,7 @@ export function RecipeView({ recipe, today, onEdit, onDelete, onPlan, onAddToGro
               type="button"
               className="link"
               onClick={() => {
-                if (confirm(`Delete "${recipe.title}"?`)) onDelete()
+                onDelete()
               }}
             >
               Delete

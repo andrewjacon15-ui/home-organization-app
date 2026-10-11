@@ -1,6 +1,8 @@
 import type { User } from 'firebase/auth'
 import { lazy, Suspense, useEffect, useState } from 'react'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { FamilySetup } from './components/FamilySetup'
+import { OfflineIcon } from './components/Icons'
 import { NavRail } from './components/NavRail'
 import { navFor, TABS, type Tab } from './components/navTabs'
 import { SignIn } from './components/SignIn'
@@ -11,7 +13,9 @@ import { ScreensaverProvider } from './features/photos/ScreensaverContext'
 import { ReminderCenter } from './features/reminders/ReminderCenter'
 import { AlarmOverlay, TimerButton, TimerDock, TimerPanel } from './features/timers/Timers'
 import { TimersProvider } from './features/timers/TimersContext'
+import { UndoProvider } from './components/UndoToast'
 import { SettingsProvider, useSettings } from './features/settings/SettingsContext'
+import { textSizeFor } from './features/settings/settingsApi'
 import { CurrentWeather } from './features/weather/WeatherBadges'
 import { WeatherProvider } from './features/weather/WeatherContext'
 import { DEFAULT_ACCENT, isHex, mixHex, readableOn, withAlpha } from './lib/colors'
@@ -19,7 +23,7 @@ import { DeviceProvider, useDevice } from './lib/DeviceContext'
 import { markWelcomed, resolveFamily } from './lib/family'
 import { detectPlatform, rememberWelcomed, shouldWelcome, tourSteps } from './features/welcome/welcome'
 import { WelcomeTour } from './features/welcome/WelcomeTour'
-import { useAuthUser, useFamily, useNow } from './lib/hooks'
+import { useAuthUser, useFamily, useNow, useOffline } from './lib/hooks'
 import { reloadToLatest, useUpdateCheck } from './lib/version'
 
 // Home loads with the app (it's the wall display's start page); every other section loads
@@ -34,6 +38,8 @@ const RewardsPage = lazy(() => import('./features/rewards/RewardsPage').then((m)
 const WeatherPage = lazy(() => import('./features/weather/WeatherPage').then((m) => ({ default: m.WeatherPage })))
 const SettingsPage = lazy(() => import('./features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })))
 const TAB_KEY = 'last-tab'
+/** The household's theme, text size, density and highlight color from last time (read by index.html). */
+const LOOK_KEY = 'look'
 
 function initialTab(): Tab {
   try {
@@ -46,9 +52,11 @@ function initialTab(): Tab {
 
 export default function App() {
   return (
-    <DeviceProvider>
-      <Signed />
-    </DeviceProvider>
+    <ErrorBoundary full>
+      <DeviceProvider>
+        <Signed />
+      </DeviceProvider>
+    </ErrorBoundary>
   )
 }
 
@@ -63,17 +71,48 @@ function SignedIn({ user }: { user: User }) {
   // undefined = still looking, null = no family yet
   const [familyId, setFamilyId] = useState<string | null | undefined>(undefined)
   const [error, setError] = useState<string | null>(null)
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
-    resolveFamily(user)
-      .then(setFamilyId)
-      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
-  }, [user])
+    let live = true
+    resolveFamily(user).then(
+      (id) => {
+        if (!live) return
+        setError(null)
+        setFamilyId(id)
+      },
+      (e) => live && setError(e instanceof Error ? e.message : String(e)),
+    )
+    return () => {
+      live = false
+    }
+  }, [user, attempt])
+
+  // Often the wall tablet starting up before its Wi-Fi has: keep trying, sooner once it's back online.
+  useEffect(() => {
+    if (!error) return
+    const again = () => setAttempt((n) => n + 1)
+    const t = setTimeout(again, retryDelay(attempt))
+    window.addEventListener('online', again)
+    return () => {
+      clearTimeout(t)
+      window.removeEventListener('online', again)
+    }
+  }, [error, attempt])
 
   if (error) {
     return (
       <main className="center-screen">
-        <p className="error" role="alert">Couldn't load your family: {error}</p>
+        <div className="crash card" role="alert">
+          <h2 className="crash__title">Can’t reach your household right now.</h2>
+          <p>Trying again by itself. Check that this device is online.</p>
+          <div className="row">
+            <button type="button" className="button button--primary" onClick={() => setAttempt((n) => n + 1)}>
+              Try again
+            </button>
+          </div>
+          <p className="crash__detail">{error}</p>
+        </div>
       </main>
     )
   }
@@ -86,7 +125,9 @@ function SignedIn({ user }: { user: User }) {
           <SleepProvider>
             <ScreensaverProvider familyId={familyId}>
               <TimersProvider>
-                <Home familyId={familyId} userId={user.uid} />
+                <UndoProvider>
+                  <Home familyId={familyId} userId={user.uid} />
+                </UndoProvider>
               </TimersProvider>
             </ScreensaverProvider>
           </SleepProvider>
@@ -100,9 +141,22 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
   const { family, members } = useFamily(familyId)
   const [tab, setTabState] = useState<Tab>(initialTab)
   const now = useNow()
+  const offline = useOffline(familyId)
   const { settings } = useSettings()
   const { device } = useDevice()
   const update = useUpdateCheck({ onMount: true })
+  // Each kind of device can open to a set tab (Settings → Device & side bar). Applied once,
+  // when the household's settings first arrive, so changing it later doesn't jump you there.
+  const startTab = settings.startTab[device]
+  const [starting, setStarting] = useState(true)
+  useEffect(() => {
+    const t = setTimeout(() => setStarting(false), 5000)
+    return () => clearTimeout(t)
+  }, [])
+  if (starting && startTab) {
+    setStarting(false)
+    if (TABS.some((t) => t.id === startTab)) setTabState(startTab as Tab)
+  }
   // New people get the welcome tour once; anyone can replay it from Settings → About.
   const [tour, setTour] = useState<boolean | null>(null)
   const me = members.find((m) => m.id === userId)
@@ -125,18 +179,28 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
   }
 
   // Theme, highlight color, text size, and density are page-wide CSS variables (see index.css).
+  const textSize = textSizeFor(settings, device)
   useEffect(() => {
     const root = document.documentElement
-    root.dataset.textSize = settings.textSize
+    root.dataset.textSize = textSize
     root.dataset.density = settings.density
     root.dataset.theme = settings.theme
     const accent = isHex(settings.accentColor) ? settings.accentColor : DEFAULT_ACCENT
-    root.style.setProperty('--accent', accent)
-    root.style.setProperty('--accent-ink', readableOn(accent))
-    root.style.setProperty('--accent-soft', withAlpha(accent, 0.12))
-    // Lifted toward white so accent-colored text stays readable on dark backgrounds.
-    root.style.setProperty('--accent-text-dark', mixHex(accent, '#ffffff', 0.45))
-  }, [settings.textSize, settings.density, settings.theme, settings.accentColor])
+    const vars = {
+      '--accent': accent,
+      '--accent-ink': readableOn(accent),
+      '--accent-soft': withAlpha(accent, 0.12),
+      // Lifted toward white so accent-colored text stays readable on dark backgrounds.
+      '--accent-text-dark': mixHex(accent, '#ffffff', 0.45),
+    }
+    for (const [k, v] of Object.entries(vars)) root.style.setProperty(k, v)
+    // Remembered for next time, so the page opens in these colors and sizes before settings load (index.html).
+    try {
+      localStorage.setItem(LOOK_KEY, JSON.stringify({ theme: settings.theme, textSize, density: settings.density, vars }))
+    } catch {
+      // Only saves a flash of the default look on the next start.
+    }
+  }, [textSize, settings.density, settings.theme, settings.accentColor])
 
   if (!family) return <Splash />
 
@@ -165,6 +229,11 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
             <span className="masthead__full">{now.toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}</span>
           </div>
           <div className="masthead__meta">
+            {offline && (
+              <span className="masthead__offline" role="status" title="Showing what this device saved. Changes made here go out when it’s back online.">
+                <OfflineIcon size={18} aria-hidden /> Offline
+              </span>
+            )}
             <span className="masthead__time">{now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span>
             <button type="button" className="masthead__weather" onClick={() => setTab('weather')} aria-label="Open the forecast">
               <CurrentWeather />
@@ -174,6 +243,8 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
           <span className="masthead__name">{settings.calendarName || family.name}</span>
         </header>
         <main className="content">
+          {/* A page that breaks shows a note in its place; the side bar and other pages keep working. */}
+          <ErrorBoundary key={shown}>
           <Suspense fallback={<p className="muted">Loading…</p>}>
           {shown === 'home' && <HomePage familyId={familyId} userId={userId} members={members} onNavigate={setTab} />}
           {shown === 'calendar' && <CalendarPage familyId={familyId} userId={userId} members={members} />}
@@ -186,6 +257,7 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
           {shown === 'photos' && <PhotosPage familyId={familyId} userId={userId} />}
           {shown === 'settings' && <SettingsPage family={family} members={members} userId={userId} onOpenRecipes={() => setTab('recipes')} onShowTour={() => setTour(true)} />}
           </Suspense>
+          </ErrorBoundary>
         </main>
       </div>
       {showTour && <WelcomeTour steps={tourSteps(settings.calendarName || family.name, device, detectPlatform())} onNavigate={setTab} onClose={closeTour} />}
@@ -195,6 +267,11 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
       <AlarmOverlay />
     </div>
   )
+}
+
+/** 5 s, 10 s, 20 s, 40 s, then every minute. */
+function retryDelay(attempt: number): number {
+  return Math.min(60_000, 5_000 * 2 ** attempt)
 }
 
 function Splash() {
