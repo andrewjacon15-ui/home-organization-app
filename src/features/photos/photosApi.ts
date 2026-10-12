@@ -62,17 +62,62 @@ export function fitWithin(width: number, height: number, max = MAX_EDGE): { widt
   return { width: Math.round(width * scale), height: Math.round(height * scale) }
 }
 
-/** Downscales a photo to JPEG in the browser (respecting phone camera rotation). */
-async function shrinkImage(file: Blob, max = MAX_EDGE, quality = 0.86): Promise<{ blob: Blob; width: number; height: number }> {
-  const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
-  const { width, height } = fitWithin(bitmap.width, bitmap.height, max)
+/** Photos uploading at once: the network work overlaps, while decoding stays one at a time. */
+export const UPLOADS_AT_ONCE = 2
+
+let decoding: Promise<unknown> = Promise.resolve()
+
+/**
+ * Runs `work` after any earlier work has finished, so only one big photo is open in memory at a
+ * time. Phones close the page when several are (iOS above all: a 48 MP photo is about 190 MB decoded).
+ */
+export function oneAtATime<T>(work: () => Promise<T>): Promise<T> {
+  const run = decoding.then(work, work)
+  decoding = run.catch(() => undefined)
+  return run
+}
+
+function drawn(source: CanvasImageSource, width: number, height: number): HTMLCanvasElement {
   const canvas = document.createElement('canvas')
   canvas.width = width
   canvas.height = height
-  canvas.getContext('2d')!.drawImage(bitmap, 0, 0, width, height)
+  const ctx = canvas.getContext('2d')!
+  ctx.imageSmoothingQuality = 'high'
+  ctx.drawImage(source, 0, 0, width, height)
+  return canvas
+}
+
+function jpeg(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
+  return new Promise<Blob>((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Could not process that photo.'))), 'image/jpeg', quality))
+}
+
+/**
+ * Downscales a photo to JPEG in the browser (respecting phone camera rotation), and makes its grid
+ * thumbnail from the downscaled copy, so the original is decoded once.
+ */
+async function prepareImage(file: Blob): Promise<{ blob: Blob; width: number; height: number; thumb: Blob | null }> {
+  const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
+  const { width, height } = fitWithin(bitmap.width, bitmap.height, MAX_EDGE)
+  const canvas = drawn(bitmap, width, height)
   bitmap.close()
-  const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Could not process that photo.'))), 'image/jpeg', quality))
-  return { blob, width, height }
+  const t = fitWithin(width, height, THUMB_EDGE)
+  const small = drawn(canvas, t.width, t.height)
+  try {
+    const [blob, thumb] = await Promise.all([jpeg(canvas, 0.86), jpeg(small, 0.8).catch(() => null)])
+    return { blob, width, height, thumb }
+  } finally {
+    // iOS caps the memory all canvases may use; give it back now rather than whenever they're collected.
+    for (const c of [canvas, small]) c.width = c.height = 0
+  }
+}
+
+/** Uploads one file to Storage and resolves with its download URL. */
+async function put(path: string, body: Blob, contentType: string, onProgress?: (fraction: number) => void): Promise<string> {
+  const task = uploadBytesResumable(ref(storage, path), body, { contentType, cacheControl: CACHE })
+  await new Promise<void>((resolve, reject) => {
+    task.on('state_changed', (s) => onProgress?.(s.totalBytes ? s.bytesTransferred / s.totalBytes : 0), reject, () => resolve())
+  })
+  return getDownloadURL(task.snapshot.ref)
 }
 
 /** Uploads one photo or video and records it. `onProgress` gets 0..1. */
@@ -85,50 +130,84 @@ export async function uploadMedia(familyId: string, userId: string, file: File, 
   let contentType = file.type
   let ext = (file.name.split('.').pop() || (isVideo ? 'mp4' : 'jpg')).toLowerCase()
   let size: { width?: number; height?: number } = {}
+  let thumbBlob: Blob | null = null
   if (!isVideo) {
     try {
-      const small = await shrinkImage(file)
+      const small = await oneAtATime(() => prepareImage(file))
       body = small.blob
       contentType = 'image/jpeg'
       ext = 'jpg'
       size = { width: small.width, height: small.height }
+      thumbBlob = small.thumb
     } catch {
-      // Formats the browser can't decode (e.g. HEIC outside Safari) upload as-is.
+      // Formats the browser can't decode (e.g. HEIC outside Safari) upload as-is, without a thumbnail.
     }
   }
 
+  // The photo and its small copy for the grid go up together. Without a thumbnail, the grid
+  // falls back to the full photo.
   const storagePath = `families/${familyId}/photos/${id}.${ext}`
-  const task = uploadBytesResumable(ref(storage, storagePath), body, { contentType, cacheControl: CACHE })
-  await new Promise<void>((resolve, reject) => {
-    task.on('state_changed', (s) => onProgress?.(s.totalBytes ? s.bytesTransferred / s.totalBytes : 0), reject, () => resolve())
-  })
-  const url = await getDownloadURL(task.snapshot.ref)
-
-  // A small thumbnail for the grid, so browsing the library doesn't download every full photo.
-  let thumb: { thumbPath: string; thumbUrl: string } | Record<string, never> = {}
-  let bytes = body.size
-  if (!isVideo && contentType === 'image/jpeg') {
-    try {
-      const small = await shrinkImage(body, THUMB_EDGE, 0.8)
-      const thumbPath = `families/${familyId}/photos/${id}_thumb.jpg`
-      const t = await uploadBytesResumable(ref(storage, thumbPath), small.blob, { contentType: 'image/jpeg', cacheControl: CACHE })
-      thumb = { thumbPath, thumbUrl: await getDownloadURL(t.ref) }
-      bytes += small.blob.size
-    } catch {
-      // The grid falls back to the full photo.
-    }
-  }
+  const thumbPath = `families/${familyId}/photos/${id}_thumb.jpg`
+  const [url, thumbUrl] = await Promise.all([
+    put(storagePath, body, contentType, onProgress),
+    thumbBlob ? put(thumbPath, thumbBlob, 'image/jpeg').catch(() => null) : Promise.resolve(null),
+  ])
   await setDoc(doc(photosCol(familyId), id), {
     storagePath,
     url,
     kind: isVideo ? 'video' : 'image',
     ...size,
-    ...thumb,
-    bytes,
+    ...(thumbUrl ? { thumbPath, thumbUrl } : {}),
+    bytes: body.size + (thumbUrl && thumbBlob ? thumbBlob.size : 0),
     caption: '',
     uploadedBy: userId,
     createdAt: serverTimestamp(),
   })
+}
+
+export interface UploadProgress {
+  /** Files finished (uploaded or failed). */
+  done: number
+  total: number
+  /** How far along the files still uploading are, added up (0..UPLOADS_AT_ONCE). */
+  fraction: number
+}
+
+/**
+ * Uploads a batch `atOnce` files at a time, reporting progress as it goes. Resolves with a
+ * line for each file that failed, in the order they were chosen.
+ */
+export async function uploadAll(
+  files: File[],
+  uploadOne: (file: File, onProgress: (fraction: number) => void) => Promise<void>,
+  onProgress: (p: UploadProgress) => void,
+  atOnce = UPLOADS_AT_ONCE,
+): Promise<string[]> {
+  const failed: { i: number; text: string }[] = []
+  const going = new Map<number, number>()
+  let done = 0
+  let next = 0
+  const report = () => onProgress({ done, total: files.length, fraction: [...going.values()].reduce((a, b) => a + b, 0) })
+  const worker = async () => {
+    while (next < files.length) {
+      const i = next++
+      going.set(i, 0)
+      report()
+      try {
+        await uploadOne(files[i], (fraction) => {
+          going.set(i, fraction)
+          report()
+        })
+      } catch (e) {
+        failed.push({ i, text: `${files[i].name}: ${e instanceof Error ? e.message : String(e)}` })
+      }
+      going.delete(i)
+      done++
+      report()
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(atOnce, files.length) }, worker))
+  return failed.sort((a, b) => a.i - b.i).map((x) => x.text)
 }
 
 export function updateCaption(familyId: string, photoId: string, caption: string) {

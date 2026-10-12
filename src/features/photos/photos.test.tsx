@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { StaticSettings } from '../settings/SettingsContext'
 import { PhotoLibrary } from './PhotoLibrary'
-import { fitWithin, formatBytes, libraryUsage, shuffled, type Photo } from './photosApi'
+import { fitWithin, formatBytes, libraryUsage, oneAtATime, shuffled, uploadAll, type Photo, type UploadProgress } from './photosApi'
 import { ScreensaverProvider, useScreensaver } from './ScreensaverContext'
 import { Slideshow } from './Slideshow'
 
@@ -20,6 +20,67 @@ vi.mock('./photosApi', async (importActual) => ({
 }))
 
 const photo = (id: string, extra: Partial<Photo> = {}): Photo => ({ id, storagePath: `families/f/photos/${id}.jpg`, url: `https://img/${id}.jpg`, kind: 'image', caption: '', uploadedBy: 'u', ...extra })
+
+describe('uploading a batch', () => {
+  const file = (name: string) => new File(['x'], name, { type: 'image/jpeg' })
+  /** An upload that waits until the test lets it finish. */
+  function controlled() {
+    const running = new Map<string, { progress: (f: number) => void; finish: (error?: Error) => void }>()
+    let most = 0
+    const uploadOne = (f: File, progress: (fraction: number) => void) =>
+      new Promise<void>((resolve, reject) => {
+        running.set(f.name, { progress, finish: (error) => (running.delete(f.name), error ? reject(error) : resolve()) })
+        most = Math.max(most, running.size)
+      })
+    return { running, uploadOne, most: () => most }
+  }
+  const settle = () => act(async () => void (await new Promise((r) => setTimeout(r, 0))))
+
+  it('uploads two at a time, and reports the finished ones plus how far the others are', async () => {
+    const up = controlled()
+    const seen: UploadProgress[] = []
+    const all = uploadAll([file('a.jpg'), file('b.jpg'), file('c.jpg')], up.uploadOne, (p) => seen.push(p))
+    await settle()
+    expect([...up.running.keys()]).toEqual(['a.jpg', 'b.jpg'])
+    up.running.get('a.jpg')!.progress(0.5)
+    up.running.get('b.jpg')!.progress(0.25)
+    expect(seen.at(-1)).toEqual({ done: 0, total: 3, fraction: 0.75 })
+    up.running.get('a.jpg')!.finish()
+    await settle()
+    expect([...up.running.keys()]).toEqual(['b.jpg', 'c.jpg'])
+    expect(seen.at(-1)).toEqual({ done: 1, total: 3, fraction: 0.25 })
+    up.running.get('c.jpg')!.finish()
+    up.running.get('b.jpg')!.finish()
+    expect(await all).toEqual([])
+    expect(up.most()).toBe(2)
+    expect(seen.at(-1)).toEqual({ done: 3, total: 3, fraction: 0 })
+  })
+
+  it('keeps going past a failure and lists failures in the order the photos were chosen', async () => {
+    const up = controlled()
+    const all = uploadAll([file('a.jpg'), file('b.jpg'), file('c.jpg')], up.uploadOne, () => undefined)
+    await settle()
+    up.running.get('b.jpg')!.finish(new Error('network'))
+    await settle()
+    up.running.get('c.jpg')!.finish(new Error('too big'))
+    up.running.get('a.jpg')!.finish(new Error('network'))
+    expect(await all).toEqual(['a.jpg: network', 'b.jpg: network', 'c.jpg: too big'])
+  })
+
+  it('opens one big photo at a time, even when a decode fails', async () => {
+    const order: string[] = []
+    const step = (name: string, fail = false) => async () => {
+      order.push(`${name} start`)
+      await new Promise((r) => setTimeout(r, 5))
+      order.push(`${name} end`)
+      if (fail) throw new Error('bad photo')
+      return name
+    }
+    const results = await Promise.allSettled([oneAtATime(step('a', true)), oneAtATime(step('b')), oneAtATime(step('c'))])
+    expect(order).toEqual(['a start', 'a end', 'b start', 'b end', 'c start', 'c end'])
+    expect(results.map((r) => r.status)).toEqual(['rejected', 'fulfilled', 'fulfilled'])
+  })
+})
 
 describe('fitWithin', () => {
   it('scales the longest side down to the limit and never enlarges', () => {
