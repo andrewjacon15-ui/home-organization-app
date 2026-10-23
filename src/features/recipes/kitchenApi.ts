@@ -11,7 +11,7 @@ export function watchKitchen(familyId: string, onChange: (k: KitchenSettings) =>
 }
 
 export function saveKitchen(familyId: string, k: KitchenSettings) {
-  return setDoc(kitchenRef(familyId), { staples: k.staples.slice(0, 60), sites: k.sites.slice(0, 30) })
+  return setDoc(kitchenRef(familyId), { staples: k.staples.slice(0, 60), sites: k.sites.slice(0, 30), searchPriority: k.searchPriority })
 }
 
 export interface OnlineResult {
@@ -34,8 +34,8 @@ export interface OnlineResult {
   searchRank?: number | null
   /** Why it's shown, in plain words. */
   reasons?: string[]
-  /** The ranking's parts, each 0–1 (match is null when searching for a dish). */
-  parts?: { match: number | null; rating: number; search: number }
+  /** The ranking's parts, each 0–1 (match and fit are null when searching for a dish). */
+  parts?: { match: number | null; fit?: number | null; rating: number; search: number }
 }
 
 /** Search by what's in the kitchen (ingredients), or for a dish by name. */

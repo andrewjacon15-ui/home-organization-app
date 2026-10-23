@@ -601,6 +601,8 @@ describe('kitchen settings', () => {
     await assertSucceeds(setDoc(kitchen(dbFor(BOB)), { staples: ['salt', 'butter'], sites: ['seriouseats.com'] }))
     await assertSucceeds(getDoc(kitchen(dbFor(ALICE))))
     await assertFails(setDoc(kitchen(dbFor(BOB)), { staples: 'salt', sites: [] }))
+    await assertSucceeds(setDoc(kitchen(dbFor(BOB)), { staples: ['salt'], sites: [], searchPriority: 'rating' }))
+    await assertFails(setDoc(kitchen(dbFor(BOB)), { staples: ['salt'], sites: [], searchPriority: 'cheapest' }))
     await assertFails(setDoc(kitchen(dbFor(BOB)), { staples: [], sites: [], braveKey: 'x' }))
     await assertFails(setDoc(kitchen(dbFor(BOB)), { staples: [], sites: Array.from({ length: 31 }, (_, i) => `s${i}.com`) }))
     await assertFails(getDoc(kitchen(dbFor(MALLORY))))

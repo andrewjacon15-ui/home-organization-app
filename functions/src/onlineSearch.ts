@@ -10,15 +10,20 @@
 import { hash } from './cookbooks.js'
 import { parseIngredient } from './shared/recipes/ingredient.js'
 import { onSite, readKitchen } from './shared/recipes/kitchen.js'
-import { matchRecipe, onlineScore, popularity, searchScore, tokenizeHave } from './shared/recipes/matcher.js'
+import { mainIngredients, matchRecipe, popularity, rankScore, searchScore, tokenizeHave } from './shared/recipes/matcher.js'
 import { fetchPage, type FetcherDeps } from './web/fetcher.js'
 import { readRecipePage, type WebRecipe } from './web/schemaRecipe.js'
 
 /** Brave gives $5 of free credit a month = 1,000 searches; stop well before it. */
 export const MONTHLY_CAP = 900
 const CACHE_MS = 7 * 86_400_000
-const MAX_PAGES = 8
-const TOP = 5
+/** Pages read from the first search; a second, broader search reads up to FALLBACK_PAGES more. */
+const MAX_PAGES = 10
+const FALLBACK_PAGES = 6
+/** Fewer real recipes than this from the first search → one broader search. */
+const ENOUGH = 5
+/** Results returned: the app shows the top 5 for the chosen priority, and re-sorts without searching again. */
+const RETURNED = 12
 
 export interface OnlineResult {
   url: string
@@ -40,8 +45,8 @@ export interface OnlineResult {
   searchRank: number | null
   /** Why it's shown, in plain words ("You have 4 of its 5 ingredients", "Rated 4.7★ by 3,214 cooks"). */
   reasons: string[]
-  /** The ranking's parts, each 0–1 (match is null when searching for a dish). */
-  parts: { match: number | null; rating: number; search: number }
+  /** The ranking's parts, each 0–1 (match and fit are null when searching for a dish). */
+  parts: { match: number | null; fit: number | null; rating: number; search: number }
 }
 
 /** A parsed recipe kept in the cache (structured facts only). */
@@ -157,7 +162,8 @@ export async function findOnlineRecipes(deps: SearchDeps, uid: string | undefine
   const now = (deps.now ?? Date.now)()
   const keys = have.map((h) => h.key).slice(0, 8)
   const what = dish ? `dish:${dish.toLowerCase()}` : [...keys].sort().join('|')
-  const cacheKey = `q_${hash(what + '#' + [...sites].sort().join(','))}`
+  // v2: searches by the main ingredients, with a broader second search (older entries were by every ingredient).
+  const cacheKey = `q2_${hash(what + '#' + [...sites].sort().join(','))}`
 
   let recipes: Cached[]
   const cached = await deps.store.getCache(cacheKey)
@@ -167,19 +173,32 @@ export async function findOnlineRecipes(deps: SearchDeps, uid: string | undefine
     if (!(await deps.store.takeSearch(new Date(now).toISOString().slice(0, 7), MONTHLY_CAP))) {
       throw new SearchError('resource-exhausted', "This month's online searches are used up (kept under the free allowance). Cookbook search still works.")
     }
-    const query = `${dish || keys.join(' ')} recipe (${sites.slice(0, 12).map((s) => `site:${s}`).join(' OR ')})`
-    const urls = [...new Set((await deps.search(query)).filter((u) => onSite(u, sites)))].slice(0, MAX_PAGES)
-    const pages = await pool(urls, 4, async (u, rank) => {
-      try {
-        const page = await fetchPage(deps.fetcher, u)
-        const r = readRecipePage(page.html, page.url)
-        // Only real structured recipes: a page-text guess isn't good enough to recommend.
-        return r && r.method !== 'page' && r.ingredientLines.length >= 2 ? toCached(r, rank + 1) : null
-      } catch {
-        return null
-      }
-    })
-    recipes = [...new Map(pages.filter((r): r is Cached => !!r).map((r) => [r.url, r])).values()]
+    const siteFilter = `(${sites.slice(0, 12).map((s) => `site:${s}`).join(' OR ')})`
+    // Every ingredient in one query finds almost nothing; the two or three a dish is built on find real recipes.
+    const mains = dish ? [] : mainIngredients(have, kitchen.staples)
+    const read = async (urls: string[], from: number) => {
+      const pages = await pool(urls, 4, async (u, rank) => {
+        try {
+          const page = await fetchPage(deps.fetcher, u)
+          const r = readRecipePage(page.html, page.url)
+          // Only real structured recipes: a page-text guess isn't good enough to recommend.
+          return r && r.method !== 'page' && r.ingredientLines.length >= 2 ? toCached(r, from + rank + 1) : null
+        } catch {
+          return null
+        }
+      })
+      return pages.filter((r): r is Cached => !!r)
+    }
+    const seen = new Set<string>()
+    const fresh = (list: string[], max: number) => [...new Set(list.filter((u) => onSite(u, sites) && !seen.has(u)))].slice(0, max).map((u) => (seen.add(u), u))
+    const first = fresh(await deps.search(`${dish || mains.join(' ')} recipe ${siteFilter}`), MAX_PAGES)
+    let found = await read(first, 0)
+    // Too few real recipes: one broader search on the single main ingredient (if the month allows it).
+    if (!dish && found.length < ENOUGH && mains.length > 1 && (await deps.store.takeSearch(new Date(now).toISOString().slice(0, 7), MONTHLY_CAP))) {
+      const more = fresh(await deps.search(`${mains[0]} recipe ${siteFilter}`), FALLBACK_PAGES)
+      found = [...found, ...(await read(more, first.length))]
+    }
+    recipes = [...new Map(found.map((r) => [r.url, r])).values()]
     await deps.store.putCache(cacheKey, recipes, now)
   }
 
@@ -190,18 +209,20 @@ export async function findOnlineRecipes(deps: SearchDeps, uid: string | undefine
       const searchRank = r.searchRank ?? null
       const m = dish ? null : matchRecipe(k, families, have, kitchen.staples)
       const search = searchScore(searchRank, of)
+      const parts = { match: m ? m.match : null, fit: m ? m.fit : null, rating: popularity(r.rating), search }
       return {
         ...r,
         searchRank,
         match: m?.match ?? 0,
         have: m?.have ?? [],
         missing: m?.missing ?? [],
-        score: onlineScore(m ? m.match : null, r.rating, search),
+        score: rankScore(parts, 'balanced'),
         reasons: reasonsFor({ ...r, searchRank }, m, of),
-        parts: { match: m ? m.match : null, rating: popularity(r.rating), search },
+        parts,
       }
     })
+    // Sorted balanced; the app re-sorts for the household's priority without searching again.
     .sort((a, b) => b.score - a.score)
-    .slice(0, TOP)
+    .slice(0, RETURNED)
   return { have: have.map((h) => h.key), query: dish || null, results }
 }

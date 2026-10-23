@@ -74,10 +74,28 @@ describe("What's in my kitchen", () => {
     expect(within(cards[0]).getByRole('list', { name: 'Why Fried Rice' })).toHaveTextContent('You have 3 of its 4 ingredients')
     expect(cards[0]).toHaveTextContent('Have: rice, egg, pea')
     expect(cards[0]).toHaveTextContent('Missing: soy sauce')
-    expect(within(cards[0]).getByLabelText('Ingredients 75%')).toBeInTheDocument()
+    // Fit: 3 of 4, everything listed is used, the missing soy sauce is minor.
+    expect(within(cards[0]).getByLabelText(/^Ingredients 8\d%$/)).toBeInTheDocument()
     expect(cards[1]).toHaveTextContent('One of your favorites')
     await user.click(within(cards[0]).getByRole('button', { name: 'Fried Rice' }))
     expect(props.onOpen).toHaveBeenCalledWith('fr')
+  })
+
+  it('re-sorts online results by the chosen priority without searching again, starting from the household default', async () => {
+    const r = (title: string, match: number, fit: number, rating: number) => ({ ...web, url: `https://x/${title}`, title, match, parts: { match, fit, rating, search: 1 }, reasons: [] })
+    const results = [r('Close Fit', 1, 0.95, 0.2), r('Crowd Favorite', 0.5, 0.5, 1), r('Barely', 0.2, 0.2, 1)]
+    const onFindOnline = vi.fn(async () => results)
+    const { user } = kitchen({ onFindOnline, priority: 'match' })
+    await user.type(screen.getByLabelText('Ingredients'), 'rice, eggs')
+    await user.click(screen.getByRole('button', { name: /Online/ }))
+    const titles = async () => within(await screen.findByRole('list', { name: 'Best matches' })).getAllByRole('button', { name: /^(Close Fit|Crowd Favorite|Barely)$/ }).map((b) => b.textContent)
+    expect(screen.getByRole('button', { name: 'Best match' })).toHaveAttribute('aria-pressed', 'true')
+    expect(await titles()).toEqual(['Close Fit', 'Crowd Favorite', 'Barely'])
+    await user.click(screen.getByRole('button', { name: 'Best rated' }))
+    // Ratings first, and "Barely" (20% of its ingredients) is left out.
+    expect(await titles()).toEqual(['Crowd Favorite', 'Close Fit'])
+    expect(screen.getByText(/left out/)).toBeInTheDocument()
+    expect(onFindOnline).toHaveBeenCalledTimes(1)
   })
 
   it('asks for ingredients first', async () => {
@@ -94,7 +112,7 @@ describe("What's in my kitchen", () => {
     await user.click(screen.getByRole('button', { name: /Online/ }))
     expect(onFindOnline).toHaveBeenCalledWith('rice, eggs')
     const list = await screen.findByRole('list', { name: 'Best matches' })
-    expect(screen.getByText(/Ranked by how many of the ingredients you have \(60%\), cooks’ ratings \(25%\)/)).toBeInTheDocument()
+    expect(screen.getByText(/Sorted by how well it fits what you have \(60%\), cooks’ ratings \(25%\)/)).toBeInTheDocument()
     const card = within(list).getAllByRole('listitem')[0]
     expect(within(card).getByRole('list', { name: 'Why Easy Fried Rice' })).toHaveTextContent('Rated 4.6★ by 900 cooks')
     expect(within(card).getByLabelText('Search rank 100%')).toBeInTheDocument()
@@ -191,7 +209,7 @@ describe('Search the web', () => {
     await user.type(screen.getByLabelText('Dish'), 'fried rice')
     await user.click(screen.getByRole('button', { name: 'Search' }))
     expect(onFind).toHaveBeenCalledWith('fried rice')
-    expect(await screen.findByText(/Ranked by cooks’ ratings \(60%\) and where the web search placed it \(40%\)/)).toBeInTheDocument()
+    expect(await screen.findByText(/Sorted by cooks’ ratings \(60%\) and where the web search placed it \(40%\)/)).toBeInTheDocument()
     expect(screen.queryByLabelText(/^Ingredients \d+%$/)).not.toBeInTheDocument()
   })
 

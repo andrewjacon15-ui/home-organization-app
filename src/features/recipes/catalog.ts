@@ -8,7 +8,7 @@ import { collection, doc, onSnapshot, updateDoc, serverTimestamp } from 'firebas
 import { httpsCallable } from 'firebase/functions'
 import { INDEX_VERSION, toIndexEntry, type IndexEntry } from '@shared/recipes/catalogIndex.js'
 import { foldAccents } from '@shared/recipes/dictionary.js'
-import type { MatchResult } from '@shared/recipes/matcher.js'
+import { RATED_MIN_MATCH, type MatchResult, type SearchPriority } from '@shared/recipes/matcher.js'
 import { TAG_OPTIONS, type RecipeTags } from '@shared/recipes/tagger.js'
 import { db, functions } from '../../firebase'
 import type { Recipe } from './recipesApi'
@@ -157,4 +157,17 @@ export function catalogReasons(entry: CatalogEntry, m: MatchResult): string[] {
     entry.f ? 'One of your favorites' : null,
     entry.m ? `Ready in ${entry.m} min` : null,
   ].filter((x): x is string => !!x)
+}
+
+/**
+ * Our recipes by a priority. They have no cooks' ratings, so favorites stand in: "Best match" is
+ * the fit alone, "Balanced" adds a little for favorites, "Best rated" puts favorites first
+ * (among those that use enough of what you have).
+ */
+export function rankOurs(list: { entry: CatalogEntry; result: MatchResult }[], priority: SearchPriority) {
+  const fav = (x: { entry: CatalogEntry }) => (x.entry.f ? 1 : 0)
+  const score = (x: { entry: CatalogEntry; result: MatchResult }) =>
+    priority === 'match' ? x.result.fit : priority === 'balanced' ? 0.8 * x.result.fit + 0.2 * fav(x) : 0.35 * x.result.fit + 0.65 * fav(x)
+  const pool = priority === 'rating' ? list.filter((x) => x.result.match >= RATED_MIN_MATCH) : list
+  return [...pool].sort((a, b) => score(b) - score(a) || b.result.match - a.result.match || a.entry.t.localeCompare(b.entry.t))
 }

@@ -533,9 +533,10 @@ service cloud.firestore {
         // Pantry staples and the recipe sites online search may use.
         function validKitchen() {
           let d = request.resource.data;
-          return onlyKeys(['staples', 'sites'])
+          return onlyKeys(['staples', 'sites', 'searchPriority'])
             && d.staples is list && d.staples.size() <= 60
-            && d.sites is list && d.sites.size() <= 30;
+            && d.sites is list && d.sites.size() <= 30
+            && (!('searchPriority' in d) || d.searchPriority in ['match', 'balanced', 'rating']);
         }
         function validLock() {
           let d = request.resource.data;
