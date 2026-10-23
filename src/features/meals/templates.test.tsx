@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { MealTemplates } from './MealTemplates'
-import { applyTemplate, templateFromWeek, type MealTemplate } from './templates'
+import { applyTemplate, templateFromWeek, type MealTemplate, type TemplateDraft } from './templates'
 
 const blank = { breakfast: '', lunch: '', dinner: '', notes: '' }
 // A Sunday-start week: Oct 4 (Sun) – Oct 10 (Sat), 2026.
@@ -40,31 +40,82 @@ describe('meal plan templates', () => {
 })
 
 describe('MealTemplates', () => {
-  const t: MealTemplate = { id: 't1', name: 'School week', days: templateFromWeek({ [MON]: { ...blank, dinner: 'Tacos' }, '2026-10-06': { ...blank, dinner: 'Pasta', lunch: 'Soup' } }, SUN) }
+  const t: MealTemplate = { id: 't1', name: 'School week', days: templateFromWeek({ [MON]: { ...blank, dinner: 'Tacos' }, '2026-10-06': { ...blank, dinner: 'Pasta', lunch: 'Soup' } }, SUN), people: 4, meals: ['lunch', 'dinner'] }
+  const base = {
+    weekStart: SUN,
+    currentWeekStart: SUN,
+    weekStartsOn: 0,
+    fromWeek: null,
+    templates: [t],
+    titles: ['Tacos', 'Pasta', 'Chili', 'Soup'],
+    defaultPeople: 3,
+    pick: vi.fn(async (wanted: { day: string; slot: string }[]) => Object.fromEntries(wanted.map((w, i) => [`${w.day}:${w.slot}`, ['Chili', 'Curry', 'Stir fry'][i % 3]]))),
+    onSave: vi.fn(async () => undefined),
+    onApply: vi.fn(async () => ({ message: 'Planned 2 days of Oct 4 – Oct 10 from “School week”.' })),
+    onAddGroceries: vi.fn(async () => undefined),
+    onDelete: vi.fn(),
+    onClose: vi.fn(),
+  }
 
-  it('saves the week on screen and applies a template to it, with groceries', async () => {
+  it('makes a template from scratch: name, how many, which meals, typed or random dinners', async () => {
     const user = userEvent.setup()
-    const onSave = vi.fn(async () => undefined)
-    const onApply = vi.fn(async () => 'Planned 2 days from “School week”. Added 9 items to the grocery list.')
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
-    render(<MealTemplates weekLabel="Oct 4 – Oct 10" weekEmpty={false} templates={[t]} onSave={onSave} onApply={onApply} onDelete={vi.fn()} onClose={vi.fn()} />)
-    expect(screen.getByText(/2 dinners, 1 lunch/)).toBeInTheDocument()
-
-    await user.type(screen.getByLabelText(/Save Oct 4 – Oct 10 as a template/), 'Busy week')
+    render(<MealTemplates {...base} templates={[]} />)
+    expect(screen.getByText(/No templates yet/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Save Oct 4 – Oct 10 as a template/ })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'New template' }))
+    await user.type(screen.getByLabelText('Name'), 'Busy week')
+    await user.type(screen.getByLabelText('Monday dinner'), 'Tacos')
+    await user.click(screen.getByRole('button', { name: 'Randomize Tuesday dinner' }))
+    expect(screen.getByLabelText('Tuesday dinner')).toHaveValue('Chili')
+    // Typed and picked meals are never picked again.
+    expect(base.pick).toHaveBeenLastCalledWith([{ day: '2', slot: 'dinner' }], ['Tacos'])
+    await user.click(screen.getByRole('button', { name: 'Randomize empty meals' }))
+    expect(base.pick).toHaveBeenLastCalledWith(expect.arrayContaining([{ day: '0', slot: 'dinner' }, { day: '6', slot: 'dinner' }]), ['Tacos', 'Chili'])
+    expect(base.pick.mock.lastCall![0]).toHaveLength(5)
     await user.click(screen.getByRole('button', { name: 'Save template' }))
-    expect(onSave).toHaveBeenCalledWith('Busy week')
+    expect(base.onSave).toHaveBeenCalledWith(expect.objectContaining({ name: 'Busy week', people: 3, meals: ['dinner'] }), undefined)
+    const saved = (base.onSave.mock.lastCall as unknown as [TemplateDraft])[0]
+    expect(saved.days[1].dinner).toBe('Tacos')
+    expect(saved.days[2].dinner).toBe('Chili')
     expect(await screen.findByRole('status')).toHaveTextContent('Saved “Busy week”.')
-
-    await user.click(screen.getByRole('button', { name: 'Use' }))
-    await user.click(screen.getByRole('button', { name: 'Replace the week' }))
-    await user.click(screen.getByRole('button', { name: 'Apply to Oct 4 – Oct 10' }))
-    expect(onApply).toHaveBeenCalledWith(t, 'replace', true)
-    expect(await screen.findByRole('status')).toHaveTextContent('Added 9 items to the grocery list.')
   })
 
-  it('asks for a planned week before saving one', () => {
-    render(<MealTemplates weekLabel="Oct 4 – Oct 10" weekEmpty templates={[]} onSave={vi.fn()} onApply={vi.fn()} onDelete={vi.fn()} onClose={vi.fn()} />)
-    expect(screen.getByRole('button', { name: 'Save template' })).toBeDisabled()
-    expect(screen.getByText(/No templates yet/)).toBeInTheDocument()
+  it('asks for a name, and keeps at least one meal', async () => {
+    const user = userEvent.setup()
+    render(<MealTemplates {...base} templates={[]} />)
+    await user.click(screen.getByRole('button', { name: 'New template' }))
+    await user.click(screen.getByRole('button', { name: 'Dinner' }))
+    expect(screen.getByRole('button', { name: 'Dinner' })).toHaveAttribute('aria-pressed', 'true')
+    await user.click(screen.getByRole('button', { name: 'Save template' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Give the template a name')
+  })
+
+  it('edits and copies a template, keeping its meals and people', async () => {
+    const user = userEvent.setup()
+    render(<MealTemplates {...base} />)
+    expect(screen.getByText(/2 dinners, 1 lunch · for 4/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Edit template School week' }))
+    expect(screen.getByLabelText('Tuesday lunch')).toHaveValue('Soup')
+    await user.clear(screen.getByLabelText('Monday dinner'))
+    await user.type(screen.getByLabelText('Monday dinner'), 'Chili')
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+    expect(base.onSave).toHaveBeenLastCalledWith(expect.objectContaining({ name: 'School week', people: 4, meals: ['lunch', 'dinner'] }), 't1')
+    await user.click(await screen.findByRole('button', { name: 'Copy template School week' }))
+    expect(screen.getByLabelText('Name')).toHaveValue('School week copy')
+  })
+
+  it('puts a template on next week for some people, then shows its grocery list to look over', async () => {
+    const user = userEvent.setup()
+    const plan = { lines: ['2 lb ground beef', '1 onion'], details: [{ line: '2 lb ground beef', sources: ['Mon dinner: Tacos'] }, { line: '1 onion', sources: ['Mon dinner: Tacos'] }], staples: [], onList: [] }
+    const onApply = vi.fn(async () => ({ message: 'Planned 2 days of Oct 11 – Oct 17 from “School week”.', groceries: { plan, people: 4 } }))
+    render(<MealTemplates {...base} onApply={onApply} />)
+    await user.click(screen.getByRole('button', { name: 'Use' }))
+    await user.click(screen.getByRole('button', { name: 'Next week' }))
+    await user.click(screen.getByRole('button', { name: 'Replace the week' }))
+    await user.click(screen.getByRole('button', { name: 'Plan Oct 11 – Oct 17' }))
+    expect(onApply).toHaveBeenCalledWith(t, { weekStart: '2026-10-11', mode: 'replace', people: 4, groceries: true })
+    expect(await screen.findByText('Planned 2 days of Oct 11 – Oct 17 from “School week”.')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Add 2 to the grocery list' }))
+    expect(base.onAddGroceries).toHaveBeenCalledWith(['2 lb ground beef', '1 onion'])
   })
 })

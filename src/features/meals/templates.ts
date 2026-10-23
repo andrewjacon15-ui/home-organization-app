@@ -1,4 +1,4 @@
-import { addDoc, collection, doc, onSnapshot, orderBy, query, serverTimestamp } from 'firebase/firestore'
+import { addDoc, collection, doc, onSnapshot, orderBy, query, serverTimestamp, updateDoc } from 'firebase/firestore'
 import { removeDocs } from '../../lib/undo'
 import { db } from '../../firebase'
 import { addDays, fromDateKey } from '../../lib/dates'
@@ -15,7 +15,14 @@ export interface MealTemplate {
   name: string
   /** Seven days, Sunday first. */
   days: MealPlan[]
+  /** How many it's planned for (scales its groceries); null = as each recipe is written. */
+  people: number | null
+  /** The meals it plans, in order (older templates: whichever meals they have). */
+  meals: PlannedSlot[]
 }
+
+/** What a template is made of, before it's saved. */
+export type TemplateDraft = Omit<MealTemplate, 'id'>
 
 export type ApplyMode = 'fill' | 'replace'
 
@@ -42,6 +49,22 @@ export function templateFromWeek(plans: Record<string, MealPlan>, weekStart: str
 
 export const isEmptyPlan = (p: MealPlan) => !p.breakfast && !p.lunch && !p.dinner && !p.notes
 
+/** The meals a template's days use, in order (Dinner when it has none yet). */
+export function mealsUsed(days: MealPlan[]): PlannedSlot[] {
+  const used = SLOTS.filter((s) => days.some((d) => d[s]))
+  return used.length ? used : ['dinner']
+}
+
+const readMeals = (v: unknown, days: MealPlan[]): PlannedSlot[] => {
+  const list = Array.isArray(v) ? SLOTS.filter((s) => v.includes(s)) : []
+  return list.length ? list : mealsUsed(days)
+}
+
+const readPeople = (v: unknown) => (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 30 ? v : null)
+
+/** An empty week of the given meals, for a new template. */
+export const blankTemplate = (meals: PlannedSlot[] = ['dinner'], people: number | null = null): TemplateDraft => ({ name: '', days: Array.from({ length: 7 }, () => ({ ...EMPTY })), people, meals })
+
 /**
  * What applying a template to a week changes: each day's new plan (only days that change),
  * and the meals the template put there (for the grocery list). "fill" keeps what's already
@@ -66,12 +89,31 @@ export function applyTemplate(t: Pick<MealTemplate, 'days'>, weekStart: string, 
 
 export function watchTemplates(familyId: string, onChange: (list: MealTemplate[]) => void) {
   return onSnapshot(query(col(familyId), orderBy('name')), (snap) =>
-    onChange(snap.docs.map((d) => ({ id: d.id, name: d.get('name'), days: (d.get('days') ?? []).map(clean) }))),
+    onChange(
+      snap.docs.map((d) => {
+        const days = ((d.get('days') ?? []) as Partial<MealPlan>[]).map(clean)
+        return { id: d.id, name: d.get('name'), days, people: readPeople(d.get('people')), meals: readMeals(d.get('meals'), days) }
+      }),
+    ),
   )
 }
 
-export function saveTemplate(familyId: string, userId: string, name: string, days: MealPlan[]) {
-  return addDoc(col(familyId), { name: name.trim().slice(0, 60), days: days.map(clean), createdBy: userId, createdAt: serverTimestamp() })
+const fields = (t: TemplateDraft) => {
+  // Meals that aren't part of it are left blank, so turning one off really removes it.
+  const days = t.days.map((d) => {
+    const c = clean(d)
+    for (const s of SLOTS) if (!t.meals.includes(s)) c[s] = ''
+    return c
+  })
+  return { name: t.name.trim().slice(0, 60), days, people: t.people, meals: SLOTS.filter((s) => t.meals.includes(s)) }
+}
+
+export function saveTemplate(familyId: string, userId: string, t: TemplateDraft) {
+  return addDoc(col(familyId), { ...fields(t), createdBy: userId, createdAt: serverTimestamp() })
+}
+
+export function updateTemplate(familyId: string, id: string, t: TemplateDraft) {
+  return updateDoc(doc(col(familyId), id), { ...fields(t), updatedAt: serverTimestamp() })
 }
 
 export const deleteTemplate = (familyId: string, id: string) => removeDocs([doc(col(familyId), id)])

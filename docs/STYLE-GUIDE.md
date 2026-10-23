@@ -200,6 +200,26 @@ Every part opens its own tab. Settings → Home screen switches a kind of device
   puts it back where it was, as typed, with Undo. The recipe and meal-plan grocery buttons skip
   pantry staples and what's on the list, and say how many.
 
+### Meals
+
+- **One place for planning.** The week grid, templates, randomize and groceries all live in the Meals
+  tab. Toolbar: Templates · Randomize empty dinners · Groceries for upcoming meals (on phones,
+  side by side as Templates · Randomize · Groceries; the full names stay for screen readers).
+- **Randomize** picks from the recipe book: dinner takes recipes tagged dinner or untagged, breakfast
+  and lunch their own tags first; never sides, desserts, drinks, recipes needing review, or anything on
+  Settings → Kitchen's "Never pick recipes with". No repeats in a week, nothing from the last two
+  weeks while there's anything else, favorites twice as likely, and the main ingredient spread out.
+  A small dice button sits at the end of each meal's label row (today on); every randomize offers Undo.
+- **Templates** are made from scratch or from the week on screen, in an editor: name, "Cooking for"
+  (as each recipe is written, or 1–12 people), Breakfast / Lunch / Dinner switches (at least one), a row
+  per weekday with recipe suggestions and a dice per meal, and "Randomize empty meals". Templates can
+  be edited and copied by anyone in the household. Use: This week / Next week, Fill empty meals /
+  Replace the week, Cooking for, and "Make a grocery list for it"; the planner jumps to that week, and
+  the change offers Undo.
+- **Grocery review** before anything is added: the combined list, scaled to "Cooking for", each line
+  with the meals it's for in `--ink-2`, every line ticked; untick what you have, then "Add N to the
+  grocery list". Pantry staples and what's already on the list are left off and counted.
+
 ### Undo, not "are you sure?"
 
 Deleting happens at once and shows a dark floating message along the bottom ("Deleted “Trash

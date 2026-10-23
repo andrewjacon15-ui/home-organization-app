@@ -52,6 +52,8 @@ describe('groceryLines', () => {
   it('rounds counts up to what you can buy, and shops a range at its top', () => {
     expect(groceryLines(['1/2 onion', '1/3 onion', '1 onion']).lines).toEqual(['2 onions'])
     expect(groceryLines(['2-3 cloves garlic', '2 cloves garlic']).lines).toEqual(['5 cloves garlic'])
+    // A single mention, scaled for more people.
+    expect(groceryLines(['1 1/2 lemons', '1 1/2 cans coconut milk', '3/4 cup parmesan']).lines).toEqual(['2 lemons', '2 cans coconut milk', '3/4 cup parmesan'])
   })
 
   it('remembers which meals asked for each line', () => {

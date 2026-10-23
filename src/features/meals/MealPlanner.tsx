@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { NextIcon } from '../../components/Icons'
+import { NextIcon, RandomIcon } from '../../components/Icons'
 import { WeekNav } from '../../components/WeekNav'
 import { addDays, fromDateKey } from '../../lib/dates'
 import type { MealPlan, MealSlot } from '../../types'
@@ -27,9 +27,11 @@ interface Props {
   /** When a meal names a saved recipe, this opens it. */
   onOpenRecipe?: (mealText: string) => void
   hasRecipe?: (mealText: string) => boolean
+  /** Picks a recipe for this meal at random (from the recipe book). */
+  onRandomize?: (date: string, slot: 'breakfast' | 'lunch' | 'dinner') => void
 }
 
-export function MealPlanner({ weekStart, today, plans, onSave, onWeekChange, currentWeekStart, recipeTitles = [], onOpenRecipe, hasRecipe }: Props) {
+export function MealPlanner({ weekStart, today, plans, onSave, onWeekChange, currentWeekStart, recipeTitles = [], onOpenRecipe, hasRecipe, onRandomize }: Props) {
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
 
   return (
@@ -64,6 +66,7 @@ export function MealPlanner({ weekStart, today, plans, onSave, onWeekChange, cur
                   multiline={slot === 'notes'}
                   suggest={slot !== 'notes' && recipeTitles.length > 0}
                   onOpenRecipe={slot !== 'notes' && onOpenRecipe && hasRecipe?.(plan[slot]) ? () => onOpenRecipe(plan[slot]) : undefined}
+                  onRandomize={slot !== 'notes' && onRandomize && date >= today ? () => onRandomize(date, slot) : undefined}
                   onCommit={(value) => onSave(date, { ...plan, [slot]: value })}
                 />
               ))}
@@ -86,11 +89,12 @@ interface FieldProps {
   multiline: boolean
   suggest?: boolean
   onOpenRecipe?: () => void
+  onRandomize?: () => void
   onCommit: (value: string) => void
 }
 
 /** Edits locally and commits on blur (or Enter), so typing doesn't write to Firestore on every keystroke. */
-function MealField({ label, dayLabel, value, multiline, suggest, onOpenRecipe, onCommit }: FieldProps) {
+function MealField({ label, dayLabel, value, multiline, suggest, onOpenRecipe, onRandomize, onCommit }: FieldProps) {
   const [draft, setDraft] = useState(value)
   const [editing, setEditing] = useState(false)
 
@@ -123,6 +127,11 @@ function MealField({ label, dayLabel, value, multiline, suggest, onOpenRecipe, o
         {onOpenRecipe && !editing && (
           <button type="button" className="meal__recipe" onClick={onOpenRecipe} aria-label={`Open recipe for ${dayLabel} ${label.toLowerCase()}`}>
             Recipe <NextIcon width={14} height={14} aria-hidden />
+          </button>
+        )}
+        {onRandomize && !editing && (
+          <button type="button" className="meal__random" onClick={onRandomize} aria-label={`Pick ${dayLabel} ${label.toLowerCase()} at random`} title="Pick a recipe at random">
+            <RandomIcon width={15} height={15} aria-hidden />
           </button>
         )}
       </span>

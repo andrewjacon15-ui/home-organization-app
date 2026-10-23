@@ -603,6 +603,9 @@ describe('kitchen settings', () => {
     await assertFails(setDoc(kitchen(dbFor(BOB)), { staples: 'salt', sites: [] }))
     await assertSucceeds(setDoc(kitchen(dbFor(BOB)), { staples: ['salt'], sites: [], searchPriority: 'rating' }))
     await assertFails(setDoc(kitchen(dbFor(BOB)), { staples: ['salt'], sites: [], searchPriority: 'cheapest' }))
+    await assertSucceeds(setDoc(kitchen(dbFor(BOB)), { staples: ['salt'], sites: [], people: 4, avoid: ['peanut'] }))
+    await assertSucceeds(setDoc(kitchen(dbFor(BOB)), { staples: ['salt'], sites: [], people: null, avoid: [] }))
+    await assertFails(setDoc(kitchen(dbFor(BOB)), { staples: ['salt'], sites: [], people: 0 }))
     await assertFails(setDoc(kitchen(dbFor(BOB)), { staples: [], sites: [], braveKey: 'x' }))
     await assertFails(setDoc(kitchen(dbFor(BOB)), { staples: [], sites: Array.from({ length: 31 }, (_, i) => `s${i}.com`) }))
     await assertFails(getDoc(kitchen(dbFor(MALLORY))))
@@ -804,6 +807,14 @@ describe('meal plan templates', () => {
     await assertFails(setDoc(doc(col(BOB), 't4'), { name: 'Theirs', days, createdBy: ALICE.uid }))
     await assertFails(setDoc(doc(col(MALLORY), 't5'), { name: 'Mine', days, createdBy: MALLORY.uid }))
     await assertFails(getDocs(col(MALLORY)))
+  })
+
+  it('lets anyone in the family edit a template (people, meals), keeping who made it', async () => {
+    await assertSucceeds(setDoc(doc(col(BOB), 't6'), { name: 'Busy week', days, people: 4, meals: ['dinner'], createdBy: BOB.uid }))
+    await assertSucceeds(setDoc(doc(col(ALICE), 't6'), { name: 'Busy week 2', days, people: 6, meals: ['lunch', 'dinner'], createdBy: BOB.uid }))
+    await assertFails(setDoc(doc(col(ALICE), 't6'), { name: 'Mine now', days, createdBy: ALICE.uid }))
+    await assertFails(setDoc(doc(col(BOB), 't7'), { name: 'Huge', days, people: 99, createdBy: BOB.uid }))
+    await assertFails(setDoc(doc(col(MALLORY), 't6'), { name: 'Theirs', days, createdBy: BOB.uid }))
   })
 })
 

@@ -26,25 +26,42 @@ describe('plannedMeals', () => {
 })
 
 describe('MealGroceries', () => {
-  it('ticks every meal with a recipe, lets you untick some, and reports what was added', async () => {
+  it('ticks every meal with a recipe, shows the combined list to look over, and adds what stays ticked', async () => {
     const user = userEvent.setup()
-    const onAdd = vi.fn(async () => ({ added: 9, staples: 2, onList: 1 }))
+    const plan = {
+      lines: ['2 lb ground beef', '1 onion', '6 tortillas'],
+      details: [
+        { line: '2 lb ground beef', sources: ['Sat dinner: Chicken tacos', 'Mon dinner: Tomato soup'] },
+        { line: '1 onion', sources: ['Mon dinner: Tomato soup'] },
+        { line: '6 tortillas', sources: ['Sat dinner: Chicken tacos'] },
+      ],
+      staples: ['salt', 'oil'],
+      onList: ['lime'],
+    }
+    const onReview = vi.fn(async () => plan)
+    const onAdd = vi.fn(async () => undefined)
     const onDays = vi.fn()
-    render(<MealGroceries today={TODAY} days={7} onDays={onDays} meals={plannedMeals(plans, TODAY, 7, recipeFor)} onAdd={onAdd} onClose={vi.fn()} />)
+    render(<MealGroceries today={TODAY} days={7} onDays={onDays} meals={plannedMeals(plans, TODAY, 7, recipeFor)} defaultPeople={4} onReview={onReview} onAdd={onAdd} onClose={vi.fn()} />)
     expect(screen.getByRole('checkbox', { name: /Leftovers/ })).toBeDisabled()
     expect(screen.getByText(/no saved recipe/)).toBeInTheDocument()
-    await user.click(screen.getByRole('checkbox', { name: /Pancakes/ }))
-    await user.click(screen.getByRole('button', { name: 'Add ingredients for 2 meals' }))
-    expect(onAdd).toHaveBeenCalledWith([expect.objectContaining({ text: 'Chicken tacos' }), expect.objectContaining({ text: 'Tomato soup' })])
-    expect(await screen.findByRole('status')).toHaveTextContent('Added 9 items to the grocery list. Skipped 2 pantry staples and 1 already on the list.')
     await user.click(screen.getByRole('button', { name: '14 days' }))
     expect(onDays).toHaveBeenCalledWith(14)
+    await user.click(screen.getByRole('checkbox', { name: /Pancakes/ }))
+    await user.click(screen.getByRole('button', { name: 'See the groceries for 2 meals' }))
+    expect(onReview).toHaveBeenCalledWith([expect.objectContaining({ text: 'Chicken tacos' }), expect.objectContaining({ text: 'Tomato soup' })], 4)
+    // Each line says which meals it's for; untick one you already have.
+    expect(await screen.findByText('Sat dinner: Chicken tacos · Mon dinner: Tomato soup')).toBeInTheDocument()
+    expect(screen.getByText(/Amounts are for 4 people/)).toBeInTheDocument()
+    await user.click(screen.getByRole('checkbox', { name: /1 onion/ }))
+    await user.click(screen.getByRole('button', { name: 'Add 2 to the grocery list' }))
+    expect(onAdd).toHaveBeenCalledWith(['2 lb ground beef', '6 tortillas'])
+    expect(await screen.findByRole('status')).toHaveTextContent('Added 2 items to the grocery list. Skipped 2 pantry staples and 1 already on the list.')
   })
 
   it('says when nothing is planned', () => {
-    render(<MealGroceries today={TODAY} days={3} onDays={vi.fn()} meals={[]} onAdd={vi.fn()} onClose={vi.fn()} />)
+    render(<MealGroceries today={TODAY} days={3} onDays={vi.fn()} meals={[]} defaultPeople={null} onReview={vi.fn()} onAdd={vi.fn()} onClose={vi.fn()} />)
     expect(screen.getByText(/Nothing planned in the next 3 days/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Add ingredients for 0 meals' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'See the groceries for 0 meals' })).toBeDisabled()
   })
 })
 
