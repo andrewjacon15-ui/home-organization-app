@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parseIngredient } from './ingredient.js'
-import { bayesianRating, listFromSpeech, matchRecipe, onlineScore, popularity, rankByMatch, searchScore, tokenizeHave } from './matcher.js'
+import { bayesianRating, ingredientWeight, listFromSpeech, mainIngredients, matchRecipe, popularity, rankByMatch, rankOnline, rankScore, searchScore, tokenizeHave } from './matcher.js'
 
 /** A fixture recipe as the catalog index stores it: ingredient keys and families. */
 function recipe(t: string, lines: string[], f = false) {
@@ -91,15 +91,50 @@ describe('ranking math', () => {
     expect(bayesianRating(null, null)).toBe(4)
   })
 
-  it('online score weighs match, popularity, and search position', () => {
-    expect(onlineScore(1, { value: 5, count: 1e9 })).toBeCloseTo(1)
+  it('scores fit, popularity and search position by the chosen priority', () => {
+    expect(rankScore({ fit: 1, rating: 1, search: 1 }, 'balanced')).toBeCloseTo(1)
     expect(popularity(null)).toBeCloseTo(0.5)
-    expect(onlineScore(0.5, null)).toBeCloseTo(0.3 + 0.25 * 0.5 + 0.15)
+    expect(rankScore({ fit: 0.5, rating: 0.5, search: 1 }, 'balanced')).toBeCloseTo(0.3 + 0.25 * 0.5 + 0.15)
     expect(searchScore(1, 8)).toBe(1)
     expect(searchScore(8, 8)).toBe(0)
     // Searching for a dish: popularity and position only.
-    expect(onlineScore(null, { value: 4.8, count: 5000 }, searchScore(3, 5))).toBeCloseTo(0.6 * popularity({ value: 4.8, count: 5000 }) + 0.4 * 0.5)
-    // A full match with a modest rating beats a half match with a famous one.
-    expect(onlineScore(1, { value: 4.2, count: 20 })).toBeGreaterThan(onlineScore(0.5, { value: 4.9, count: 10000 }))
+    expect(rankScore({ fit: null, rating: 0.8, search: 0.5 }, 'balanced')).toBeCloseTo(0.6 * 0.8 + 0.4 * 0.5)
+    expect(rankScore({ fit: null, rating: 0.8, search: 0.5 }, 'rating')).toBeCloseTo(0.8 * 0.8 + 0.2 * 0.5)
+    // A full match with a modest rating beats a half match with a famous one, unless they asked for ratings.
+    const modest = { fit: 1, rating: popularity({ value: 4.2, count: 20 }), search: 1 }
+    const famous = { fit: 0.5, rating: popularity({ value: 4.9, count: 10000 }), search: 1 }
+    expect(rankScore(modest, 'match')).toBeGreaterThan(rankScore(famous, 'match'))
+    expect(rankScore(modest, 'balanced')).toBeGreaterThan(rankScore(famous, 'balanced'))
+    expect(rankScore(famous, 'rating')).toBeGreaterThan(rankScore(modest, 'rating'))
+  })
+
+  it('re-sorts results for each priority; "best rated" drops ones that use too little of what they have', () => {
+    const r = (id: string, match: number, fit: number, rating: number) => ({ id, match, parts: { match, fit, rating, search: 1 } })
+    const list = [r('close', 1, 0.95, 0.3), r('famous', 0.5, 0.45, 1), r('off', 0.2, 0.15, 1)]
+    expect(rankOnline(list, 'match').map((x) => x.id)).toEqual(['close', 'famous', 'off'])
+    expect(rankOnline(list, 'rating').map((x) => x.id)).toEqual(['famous', 'close'])
+  })
+})
+
+describe('main ingredients and weights', () => {
+  it('weighs the meat a dish is built on over produce, pantry goods and aromatics', () => {
+    expect(ingredientWeight('chicken thigh')).toBe(3)
+    expect(ingredientWeight('broccoli')).toBe(1.5)
+    expect(ingredientWeight('rice')).toBe(1)
+    expect(ingredientWeight('garlic')).toBe(0.5)
+  })
+
+  it('searches by the weightiest two or three, never staples', () => {
+    const have = tokenizeHave('garlic, salt, rice, broccoli, chicken thighs, soy sauce')
+    expect(mainIngredients(have)).toEqual(['chicken thigh', 'broccoli', 'rice'])
+  })
+
+  it('fit rewards using what they listed and having the main ingredient', () => {
+    const have = tokenizeHave('chicken thighs, broccoli, rice')
+    const stirFry = matchRecipe(['chicken thigh', 'broccoli', 'rice', 'garlic'], [], have)
+    const garnish = matchRecipe(['broccoli', 'lemon'], [], have)
+    // Garnish has half its ingredients; stir-fry has 3 of 4, uses everything listed, and the missing one is minor.
+    expect(stirFry.fit).toBeGreaterThan(garnish.fit)
+    expect(stirFry.fit).toBeGreaterThan(0.85)
   })
 })

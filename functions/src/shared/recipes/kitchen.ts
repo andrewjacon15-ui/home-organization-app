@@ -2,11 +2,13 @@
  * Household kitchen settings (families/{f}/settings/kitchen): pantry staples that don't count
  * against a recipe, and the recipe sites online search may use. Defaults live here.
  */
-import { DEFAULT_STAPLES } from './matcher.js'
+import { DEFAULT_STAPLES, SEARCH_PRIORITIES, type SearchPriority } from './matcher.js'
 
 export interface KitchenSettings {
   staples: string[]
   sites: string[]
+  /** How online results are sorted by default (a switch above them changes it for one search). */
+  searchPriority: SearchPriority
 }
 
 /** Well-known recipe sites that publish schema.org recipes. Editable in Settings. */
@@ -25,7 +27,7 @@ export const DEFAULT_SITES = [
   'food52.com',
 ]
 
-export const DEFAULT_KITCHEN: KitchenSettings = { staples: DEFAULT_STAPLES, sites: DEFAULT_SITES }
+export const DEFAULT_KITCHEN: KitchenSettings = { staples: DEFAULT_STAPLES, sites: DEFAULT_SITES, searchPriority: 'balanced' }
 
 /** "https://www.SeriousEats.com/foo" → "seriouseats.com"; null when it isn't a host name. */
 export function normalizeSite(input: string): string | null {
@@ -54,5 +56,6 @@ export function onSite(url: string, sites: string[]): boolean {
 export function readKitchen(raw: unknown): KitchenSettings {
   const d = (raw ?? {}) as Partial<Record<keyof KitchenSettings, unknown>>
   const strings = (v: unknown, max: number) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string').slice(0, max) : null)
-  return { staples: strings(d.staples, 60) ?? DEFAULT_STAPLES, sites: strings(d.sites, 30) ?? DEFAULT_SITES }
+  const priority = SEARCH_PRIORITIES.find((p) => p === d.searchPriority) ?? 'balanced'
+  return { staples: strings(d.staples, 60) ?? DEFAULT_STAPLES, sites: strings(d.sites, 30) ?? DEFAULT_SITES, searchPriority: priority }
 }

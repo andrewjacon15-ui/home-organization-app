@@ -4946,6 +4946,16 @@ thead .sidebar-grid__current {
   cursor: default;
 }
 
+/* What results are sorted by: a switch above them, no new search. */
+.finder__priority {
+  align-self: flex-start;
+  margin-top: 8px;
+}
+.finder__more {
+  align-self: flex-start;
+  margin-top: 12px;
+}
+
 .finder__how {
   margin: 0;
 }
