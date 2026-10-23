@@ -2072,6 +2072,150 @@ letter-spacing: -0.015em;
   justify-content: space-between;
 }
 
+/* Pick this meal at random: a small dice button at the end of the label row. */
+.meal__label {
+  gap: 8px;
+}
+.meal__recipe,
+.meal__random {
+  margin-left: auto;
+}
+.meal__recipe + .meal__random {
+  margin-left: 0;
+}
+.meal__random {
+  display: inline-grid;
+  place-items: center;
+  min-width: 28px;
+  min-height: 24px;
+  border: none;
+  border-radius: var(--r);
+  background: none;
+  padding: 0;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.meal__random:hover {
+  color: var(--accent-text);
+}
+
+/* Template editor: name and people, meal switches, then a row per weekday. */
+.template-editor {
+  display: grid;
+  gap: 16px;
+}
+.template-editor h2 {
+  margin: 0;
+}
+.template-editor__basics {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 12px;
+}
+.template-editor__meals {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.template-editor__tools {
+  gap: 12px;
+}
+.template-editor__days {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.template-editor__day {
+  display: grid;
+  grid-template-columns: 112px repeat(var(--meals, 1), minmax(0, 1fr));
+  align-items: end;
+  gap: 8px 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--rule);
+}
+.template-editor__weekday {
+  font-weight: 600;
+  align-self: center;
+}
+.template-editor__cell {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.template-editor__slot {
+  font-size: var(--fs-label);
+  color: var(--ink-2);
+}
+.template-editor__field {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.template-editor__field input {
+  flex: 1;
+  min-width: 0;
+}
+.template-editor__actions {
+  gap: 12px;
+}
+:root[data-device='phone'] .template-editor__basics,
+:root[data-device='phone'] .template-editor__day {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.meal-templates__new {
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.meal-templates__people {
+  max-width: 280px;
+}
+
+/* The combined grocery list for some meals, to look over before it's added. */
+.grocery-review {
+  display: grid;
+  gap: 12px;
+}
+.grocery-review h3 {
+  margin: 0;
+}
+.grocery-review__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 50vh;
+  overflow: auto;
+  border-top: 1px solid var(--rule);
+}
+.grocery-review__list > li {
+  border-bottom: 1px solid var(--rule);
+}
+.grocery-review__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  cursor: pointer;
+}
+.grocery-review__item input {
+  margin-top: 3px;
+}
+.grocery-review__item > span {
+  display: grid;
+  gap: 2px;
+}
+.grocery-review__line {
+  font-weight: 500;
+}
+.grocery-review__for {
+  font-size: var(--fs-small);
+  color: var(--ink-2);
+}
+
 .meal__recipe {
   border: none;
   background: none;

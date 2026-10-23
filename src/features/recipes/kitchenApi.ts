@@ -11,7 +11,7 @@ export function watchKitchen(familyId: string, onChange: (k: KitchenSettings) =>
 }
 
 export function saveKitchen(familyId: string, k: KitchenSettings) {
-  return setDoc(kitchenRef(familyId), { staples: k.staples.slice(0, 60), sites: k.sites.slice(0, 30), searchPriority: k.searchPriority })
+  return setDoc(kitchenRef(familyId), { staples: k.staples.slice(0, 60), sites: k.sites.slice(0, 30), searchPriority: k.searchPriority, people: k.people, avoid: k.avoid.slice(0, 60) })
 }
 
 export interface OnlineResult {

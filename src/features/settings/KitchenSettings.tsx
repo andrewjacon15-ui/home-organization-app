@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { DEFAULT_KITCHEN, DEFAULT_SITES, normalizeSite, type KitchenSettings as Kitchen } from '@shared/recipes/kitchen.js'
 import { DEFAULT_STAPLES, PRIORITY_LABELS, SEARCH_PRIORITIES } from '@shared/recipes/matcher.js'
 import { CloseIcon } from '../../components/Icons'
+import { PEOPLE_OPTIONS, peopleValue, readPeopleValue } from '../meals/people'
 import { saveKitchen, watchKitchen } from '../recipes/kitchenApi'
 import { SelectRow, SettingsSection } from './SettingRows'
 
@@ -57,7 +58,11 @@ export function KitchenSettings({ familyId }: { familyId: string }) {
   }
   return (
     <SettingsSection title="Kitchen" id="kitchen">
-      <p className="settings-note">Used by “What can I make?” in Recipes.</p>
+      <p className="settings-note">Used by “What can I make?” in Recipes and by meal planning in Meals.</p>
+      <SelectRow label="Usually cooking for" value={peopleValue(kitchen.people)} options={PEOPLE_OPTIONS} onChange={(v) => save({ ...kitchen, people: readPeopleValue(v) })} />
+      <p className="settings-note">Grocery lists from the meal plan scale each recipe to this many. A template can say its own number.</p>
+      <ChipList label="Never pick recipes with" items={kitchen.avoid} onChange={(avoid) => save({ ...kitchen, avoid })} normalize={ingredientName} placeholder="e.g. peanuts" resetTo={[]} />
+      <p className="settings-note">Allergies and dislikes: “Randomize” in Meals skips any recipe that uses these.</p>
       <ChipList label="Pantry staples" items={kitchen.staples} onChange={(staples) => save({ ...kitchen, staples })} normalize={ingredientName} placeholder="e.g. butter" resetTo={DEFAULT_STAPLES} />
       <p className="settings-note">Staples are things you always have; recipes aren't marked down for needing them.</p>
       <ChipList label="Recipe sites for online search" items={kitchen.sites} onChange={(sites) => save({ ...kitchen, sites })} normalize={normalizeSite} placeholder="e.g. thekitchn.com" resetTo={DEFAULT_SITES} />

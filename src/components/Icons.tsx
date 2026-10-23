@@ -11,6 +11,8 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Copy,
+  Dices,
   CloudRain,
   CloudSun,
   Droplets,
@@ -120,5 +122,7 @@ export const ThermometerIcon = icon(Thermometer)
 export const TimerIcon = icon(Timer)
 export const TrashIcon = icon(Trash2)
 export const WindIcon = icon(Wind)
+export const CopyIcon = icon(Copy)
+export const RandomIcon = icon(Dices)
 export const OfflineIcon = icon(WifiOff)
 

@@ -1,14 +1,22 @@
+import type { GroceryPlan } from '@shared/recipes/groceries.js'
 import { CloseIcon } from '../../components/Icons'
+import { Select } from '../../components/Select'
 import { useState } from 'react'
 import { addDays, fromDateKey } from '../../lib/dates'
-import { groceryMessage, mealKey, SLOT_LABELS, SPANS, type GroceryResult, type PlannedMeal } from './upcomingMeals'
+import { GroceryReview } from './GroceryReview'
+import { PEOPLE_OPTIONS, peopleValue, readPeopleValue } from './people'
+import { mealKey, SLOT_LABELS, SPANS, type PlannedMeal } from './upcomingMeals'
 
 interface Props {
   today: string
   days: number
   onDays: (n: number) => void
   meals: PlannedMeal[] | null
-  onAdd: (meals: PlannedMeal[]) => Promise<GroceryResult>
+  /** How many the household usually cooks for (Settings → Kitchen). */
+  defaultPeople: number | null
+  /** The combined grocery list for these meals, scaled to `people`, to look over. */
+  onReview: (meals: PlannedMeal[], people: number | null) => Promise<GroceryPlan>
+  onAdd: (lines: string[]) => Promise<void>
   onClose: () => void
 }
 
@@ -19,11 +27,12 @@ const dayLabel = (date: string, today: string) =>
  * Groceries for upcoming meals: tick the planned meals to shop for, and their recipes'
  * ingredients go on the grocery list, combined (two recipes' rice becomes one line).
  */
-export function MealGroceries({ today, days, onDays, meals, onAdd, onClose }: Props) {
+export function MealGroceries({ today, days, onDays, meals, defaultPeople, onReview, onAdd, onClose }: Props) {
   const withRecipe = (meals ?? []).filter((m) => m.recipeId)
   const [picked, setPicked] = useState<Set<string> | null>(null)
+  const [people, setPeople] = useState(defaultPeople)
   const [busy, setBusy] = useState(false)
-  const [result, setResult] = useState<string | null>(null)
+  const [review, setReview] = useState<GroceryPlan | null>(null)
   const [error, setError] = useState<string | null>(null)
   // Every meal with a recipe starts ticked; changing the span starts over.
   const chosen = picked ?? new Set(withRecipe.map(mealKey))
@@ -33,15 +42,13 @@ export function MealGroceries({ today, days, onDays, meals, onAdd, onClose }: Pr
     if (next.has(k)) next.delete(k)
     else next.add(k)
     setPicked(next)
-    setResult(null)
   }
 
-  async function add() {
+  async function next() {
     setBusy(true)
     setError(null)
     try {
-      const r = await onAdd(withRecipe.filter((m) => chosen.has(mealKey(m))))
-      setResult(groceryMessage(r))
+      setReview(await onReview(withRecipe.filter((m) => chosen.has(mealKey(m))), people))
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -57,7 +64,11 @@ export function MealGroceries({ today, days, onDays, meals, onAdd, onClose }: Pr
           <CloseIcon size={22} />
         </button>
         <h2>Groceries for upcoming meals</h2>
-        <p className="muted">Pick the meals you’re shopping for. Their ingredients go on the grocery list, added up across recipes; pantry staples and anything already on the list are left off.</p>
+        {review ? (
+          <GroceryReview plan={review} people={people} onAdd={onAdd} onDone={onClose} />
+        ) : (
+          <>
+        <p className="muted">Pick the meals you’re shopping for. Their ingredients are added up across recipes; pantry staples and anything already on the list are left off. You’ll see the list before anything is added.</p>
         <div className="meal-groceries__span">
           <span id="meal-span">Next</span>
           <div className="segmented segmented--small" role="group" aria-labelledby="meal-span">
@@ -65,7 +76,6 @@ export function MealGroceries({ today, days, onDays, meals, onAdd, onClose }: Pr
               <button key={n} type="button" className={`segmented__item${n === days ? ' segmented__item--active' : ''}`} aria-pressed={n === days} onClick={() => {
                   onDays(n)
                   setPicked(null)
-                  setResult(null)
                 }}>
                 {n} days
               </button>
@@ -102,18 +112,19 @@ export function MealGroceries({ today, days, onDays, meals, onAdd, onClose }: Pr
           </ul>
         )}
 
+        <label className="field meal-templates__people">
+          Cooking for
+          <Select value={peopleValue(people)} options={PEOPLE_OPTIONS} onChange={(v) => setPeople(readPeopleValue(v))} aria-label="Cooking for" />
+        </label>
         <div className="row">
-          <button type="button" className="button button--primary" disabled={busy || count === 0} onClick={() => void add()}>
-            {busy ? 'Adding…' : `Add ingredients for ${count} meal${count === 1 ? '' : 's'}`}
+          <button type="button" className="button button--primary" disabled={busy || count === 0} onClick={() => void next()}>
+            {busy ? 'Adding up…' : `See the groceries for ${count} meal${count === 1 ? '' : 's'}`}
           </button>
           <button type="button" className="button" onClick={onClose}>
             Done
           </button>
         </div>
-        {result && (
-          <p className="meal-groceries__result" role="status">
-            {result}
-          </p>
+          </>
         )}
         {error && (
           <p className="error" role="alert">

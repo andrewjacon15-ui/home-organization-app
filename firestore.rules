@@ -282,13 +282,16 @@ service cloud.firestore {
       match /mealTemplates/{templateId} {
         function validTemplate() {
           let d = request.resource.data;
-          return onlyKeys(['name', 'days', 'createdBy', 'createdAt'])
+          return onlyKeys(['name', 'days', 'people', 'meals', 'createdBy', 'createdAt', 'updatedAt'])
             && d.name is string && d.name.size() > 0 && d.name.size() <= 60
             && d.days is list && d.days.size() == 7
-            && d.createdBy == request.auth.uid;
+            && (!('people' in d) || d.people == null || (d.people is int && d.people >= 1 && d.people <= 30))
+            && (!('meals' in d) || (d.meals is list && d.meals.size() <= 3));
         }
         allow read, delete: if isMember(familyId);
-        allow create: if isMember(familyId) && validTemplate();
+        allow create: if isMember(familyId) && validTemplate() && request.resource.data.createdBy == request.auth.uid;
+        // Anyone in the household may edit a template; who made it stays the same.
+        allow update: if isMember(familyId) && validTemplate() && request.resource.data.createdBy == resource.data.createdBy;
       }
 
       match /countdowns/{countdownId} {
@@ -533,10 +536,12 @@ service cloud.firestore {
         // Pantry staples and the recipe sites online search may use.
         function validKitchen() {
           let d = request.resource.data;
-          return onlyKeys(['staples', 'sites', 'searchPriority'])
+          return onlyKeys(['staples', 'sites', 'searchPriority', 'people', 'avoid'])
             && d.staples is list && d.staples.size() <= 60
             && d.sites is list && d.sites.size() <= 30
-            && (!('searchPriority' in d) || d.searchPriority in ['match', 'balanced', 'rating']);
+            && (!('searchPriority' in d) || d.searchPriority in ['match', 'balanced', 'rating'])
+            && (!('people' in d) || d.people == null || (d.people is int && d.people >= 1 && d.people <= 30))
+            && (!('avoid' in d) || (d.avoid is list && d.avoid.size() <= 60));
         }
         function validLock() {
           let d = request.resource.data;

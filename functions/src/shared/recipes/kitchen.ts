@@ -9,6 +9,10 @@ export interface KitchenSettings {
   sites: string[]
   /** How online results are sorted by default (a switch above them changes it for one search). */
   searchPriority: SearchPriority
+  /** How many the household usually cooks for (scales grocery amounts); null = as each recipe is written. */
+  people: number | null
+  /** Ingredients never wanted (allergies, dislikes): the meal randomizer skips recipes with them. */
+  avoid: string[]
 }
 
 /** Well-known recipe sites that publish schema.org recipes. Editable in Settings. */
@@ -27,7 +31,7 @@ export const DEFAULT_SITES = [
   'food52.com',
 ]
 
-export const DEFAULT_KITCHEN: KitchenSettings = { staples: DEFAULT_STAPLES, sites: DEFAULT_SITES, searchPriority: 'balanced' }
+export const DEFAULT_KITCHEN: KitchenSettings = { staples: DEFAULT_STAPLES, sites: DEFAULT_SITES, searchPriority: 'balanced', people: null, avoid: [] }
 
 /** "https://www.SeriousEats.com/foo" → "seriouseats.com"; null when it isn't a host name. */
 export function normalizeSite(input: string): string | null {
@@ -57,5 +61,6 @@ export function readKitchen(raw: unknown): KitchenSettings {
   const d = (raw ?? {}) as Partial<Record<keyof KitchenSettings, unknown>>
   const strings = (v: unknown, max: number) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string').slice(0, max) : null)
   const priority = SEARCH_PRIORITIES.find((p) => p === d.searchPriority) ?? 'balanced'
-  return { staples: strings(d.staples, 60) ?? DEFAULT_STAPLES, sites: strings(d.sites, 30) ?? DEFAULT_SITES, searchPriority: priority }
+  const people = typeof d.people === 'number' && Number.isInteger(d.people) && d.people >= 1 && d.people <= 30 ? d.people : null
+  return { staples: strings(d.staples, 60) ?? DEFAULT_STAPLES, sites: strings(d.sites, 30) ?? DEFAULT_SITES, searchPriority: priority, people, avoid: strings(d.avoid, 60) ?? [] }
 }
