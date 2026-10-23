@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { NextIcon, RandomIcon } from '../../components/Icons'
+import { BookIcon, CloseIcon, RandomIcon } from '../../components/Icons'
 import { WeekNav } from '../../components/WeekNav'
 import { addDays, fromDateKey } from '../../lib/dates'
 import type { MealPlan, MealSlot } from '../../types'
@@ -29,14 +29,27 @@ interface Props {
   hasRecipe?: (mealText: string) => boolean
   /** Picks a recipe for this meal at random (from the recipe book). */
   onRandomize?: (date: string, slot: 'breakfast' | 'lunch' | 'dinner') => void
+  /** Clears one meal, a whole day, or the whole week (and what was bought for them, with Undo). */
+  onClearMeal?: (date: string, slot: MealSlot) => void
+  onClearDay?: (date: string) => void
+  onClearWeek?: () => void
 }
 
-export function MealPlanner({ weekStart, today, plans, onSave, onWeekChange, currentWeekStart, recipeTitles = [], onOpenRecipe, hasRecipe, onRandomize }: Props) {
+export function MealPlanner({ weekStart, today, plans, onSave, onWeekChange, currentWeekStart, recipeTitles = [], onOpenRecipe, hasRecipe, onRandomize, onClearMeal, onClearDay, onClearWeek }: Props) {
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+  const planned = (d: string) => !!plans[d] && SLOTS.some(({ slot }) => plans[d][slot].trim())
+  const weekPlanned = days.some(planned)
 
   return (
     <section className="meals" aria-labelledby="meals-heading">
-      <WeekNav weekStart={weekStart} currentWeekStart={currentWeekStart} onWeekChange={onWeekChange} headingId="meals-heading" />
+      <div className="meals__nav">
+        <WeekNav weekStart={weekStart} currentWeekStart={currentWeekStart} onWeekChange={onWeekChange} headingId="meals-heading" />
+        {onClearWeek && weekPlanned && (
+          <button type="button" className="link meals__clear-week" onClick={onClearWeek}>
+            Clear this week
+          </button>
+        )}
+      </div>
 
       {recipeTitles.length > 0 && (
         <datalist id="recipe-titles">
@@ -56,6 +69,11 @@ export function MealPlanner({ weekStart, today, plans, onSave, onWeekChange, cur
                 <span className="day__weekday">{fmt(date, { weekday: 'short' })}</span>
                 <span className="day__date">{fromDateKey(date).getDate()}</span>
                 {isToday && <span className="day__today">Today</span>}
+                {onClearDay && planned(date) && (
+                  <button type="button" className="link day__clear" onClick={() => onClearDay(date)} aria-label={`Clear ${fmt(date, { weekday: 'long' })}`}>
+                    Clear
+                  </button>
+                )}
               </div>
               {SLOTS.map(({ slot, label }) => (
                 <MealField
@@ -67,6 +85,7 @@ export function MealPlanner({ weekStart, today, plans, onSave, onWeekChange, cur
                   suggest={slot !== 'notes' && recipeTitles.length > 0}
                   onOpenRecipe={slot !== 'notes' && onOpenRecipe && hasRecipe?.(plan[slot]) ? () => onOpenRecipe(plan[slot]) : undefined}
                   onRandomize={slot !== 'notes' && onRandomize && date >= today ? () => onRandomize(date, slot) : undefined}
+                  onClear={slot !== 'notes' && onClearMeal && plan[slot].trim() ? () => onClearMeal(date, slot) : undefined}
                   onCommit={(value) => onSave(date, { ...plan, [slot]: value })}
                 />
               ))}
@@ -90,11 +109,12 @@ interface FieldProps {
   suggest?: boolean
   onOpenRecipe?: () => void
   onRandomize?: () => void
+  onClear?: () => void
   onCommit: (value: string) => void
 }
 
 /** Edits locally and commits on blur (or Enter), so typing doesn't write to Firestore on every keystroke. */
-function MealField({ label, dayLabel, value, multiline, suggest, onOpenRecipe, onRandomize, onCommit }: FieldProps) {
+function MealField({ label, dayLabel, value, multiline, suggest, onOpenRecipe, onRandomize, onClear, onCommit }: FieldProps) {
   const [draft, setDraft] = useState(value)
   const [editing, setEditing] = useState(false)
 
@@ -123,16 +143,26 @@ function MealField({ label, dayLabel, value, multiline, suggest, onOpenRecipe, o
   return (
     <div className="meal">
       <span className="meal__label">
-        {label}
-        {onOpenRecipe && !editing && (
-          <button type="button" className="meal__recipe" onClick={onOpenRecipe} aria-label={`Open recipe for ${dayLabel} ${label.toLowerCase()}`}>
-            Recipe <NextIcon width={14} height={14} aria-hidden />
-          </button>
-        )}
-        {onRandomize && !editing && (
-          <button type="button" className="meal__random" onClick={onRandomize} aria-label={`Pick ${dayLabel} ${label.toLowerCase()} at random`} title="Pick a recipe at random">
-            <RandomIcon width={15} height={15} aria-hidden />
-          </button>
+        <span className="meal__name">{label}</span>
+        {!editing && (onOpenRecipe || onRandomize || onClear) && (
+          // Small icon buttons, so they fit a day column on the wall tablet.
+          <span className="meal__actions">
+            {onOpenRecipe && (
+              <button type="button" className="meal__action meal__action--recipe" onClick={onOpenRecipe} aria-label={`Open recipe for ${dayLabel} ${label.toLowerCase()}`} title="Open the recipe">
+                <BookIcon width={15} height={15} aria-hidden />
+              </button>
+            )}
+            {onRandomize && (
+              <button type="button" className="meal__action" onClick={onRandomize} aria-label={`Pick ${dayLabel} ${label.toLowerCase()} at random`} title="Pick a recipe at random">
+                <RandomIcon width={15} height={15} aria-hidden />
+              </button>
+            )}
+            {onClear && (
+              <button type="button" className="meal__action" onClick={onClear} aria-label={`Clear ${dayLabel} ${label.toLowerCase()}`} title="Clear this meal">
+                <CloseIcon width={15} height={15} aria-hidden />
+              </button>
+            )}
+          </span>
         )}
       </span>
       {multiline ? (
