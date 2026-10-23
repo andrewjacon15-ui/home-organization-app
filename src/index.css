@@ -2072,22 +2072,48 @@ letter-spacing: -0.015em;
   justify-content: space-between;
 }
 
-/* Pick this meal at random: a small dice button at the end of the label row. */
-.meal__label {
-  gap: 8px;
+/* Clearing meals: a day's "Clear" in its header, "Clear this week" beside the week. */
+.meals__nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 12px;
 }
-.meal__recipe,
-.meal__random {
+.meals__nav .week-nav {
+  margin-bottom: 0;
+}
+.meals__clear-week,
+.day__clear {
+  font-size: var(--fs-small);
+}
+.day__clear {
   margin-left: auto;
 }
-.meal__recipe + .meal__random {
-  margin-left: 0;
+
+/* A meal's label row: its name, then small icon buttons (open the recipe, pick at random,
+   clear), sized to fit a day column on the wall tablet. */
+.meal__label {
+  gap: 4px;
+  min-width: 0;
 }
-.meal__random {
+.meal__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.meal__actions {
+  display: inline-flex;
+  flex: none;
+  gap: 2px;
+  margin-left: auto;
+}
+.meal__action {
   display: inline-grid;
   place-items: center;
-  min-width: 28px;
-  min-height: 24px;
+  width: 26px;
+  height: 24px;
   border: none;
   border-radius: var(--r);
   background: none;
@@ -2095,7 +2121,10 @@ letter-spacing: -0.015em;
   color: var(--ink-2);
   cursor: pointer;
 }
-.meal__random:hover {
+.meal__action:hover {
+  color: var(--accent-text);
+}
+.meal__action--recipe {
   color: var(--accent-text);
 }
 
@@ -2181,6 +2210,13 @@ letter-spacing: -0.015em;
 .meal-templates__starters h3 {
   margin: 0;
 }
+.meal-templates__notes {
+  display: grid;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: var(--fs-small);
+  color: var(--ink-2);
+}
 .meal-templates__people {
   max-width: 280px;
 }
@@ -2192,6 +2228,13 @@ letter-spacing: -0.015em;
 }
 .grocery-review h3 {
   margin: 0;
+}
+.grocery-review__all {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 600;
+  cursor: pointer;
 }
 .grocery-review__list {
   list-style: none;
@@ -2224,16 +2267,6 @@ letter-spacing: -0.015em;
 .grocery-review__for {
   font-size: var(--fs-small);
   color: var(--ink-2);
-}
-
-.meal__recipe {
-  border: none;
-  background: none;
-  padding: 0;
-  cursor: pointer;
-  font: inherit;
-  font-size: var(--fs-label);
-  color: var(--accent-text);
 }
 
 .overlay {
@@ -7061,9 +7094,8 @@ thead .sidebar-grid__current {
   font-size: var(--fs-small);
 }
 
-/* Text with a trailing or leading icon ("Open >", "Recipe >", a done count, a ticked menu item). */
+/* Text with a trailing or leading icon ("Open >", a done count, a ticked menu item). */
 .home-panel__head .link,
-.meal__recipe,
 .home-person__count,
 .chore-col__progress span,
 .menu [role='menuitemcheckbox'] {
@@ -7624,8 +7656,7 @@ thead .sidebar-grid__current {
 
 /* Small controls get a bigger invisible tap area (at least ~42px), without moving anything. */
 .countdown__remove::before,
-.chore-card__delete::before,
-.meal__recipe::before {
+.chore-card__delete::before {
   content: '';
   position: absolute;
 }
@@ -7637,12 +7668,6 @@ thead .sidebar-grid__current {
 }
 .chore-card__delete::before {
   inset: -4px;
-}
-.meal__recipe {
-  position: relative;
-}
-.meal__recipe::before {
-  inset: -12px -8px;
 }
 
 /* Chores: "Take turns" — people picked in turn order, each with their number. */

@@ -606,6 +606,8 @@ describe('kitchen settings', () => {
     await assertSucceeds(setDoc(kitchen(dbFor(BOB)), { staples: ['salt'], sites: [], people: 4, avoid: ['peanut'] }))
     await assertSucceeds(setDoc(kitchen(dbFor(BOB)), { staples: ['salt'], sites: [], people: null, avoid: [] }))
     await assertFails(setDoc(kitchen(dbFor(BOB)), { staples: ['salt'], sites: [], people: 0 }))
+    await assertSucceeds(setDoc(kitchen(dbFor(BOB)), { staples: ['salt'], sites: [], starterRecipes: 1 }))
+    await assertFails(setDoc(kitchen(dbFor(BOB)), { staples: ['salt'], sites: [], starterRecipes: 'yes' }))
     await assertFails(setDoc(kitchen(dbFor(BOB)), { staples: [], sites: [], braveKey: 'x' }))
     await assertFails(setDoc(kitchen(dbFor(BOB)), { staples: [], sites: Array.from({ length: 31 }, (_, i) => `s${i}.com`) }))
     await assertFails(getDoc(kitchen(dbFor(MALLORY))))
@@ -869,6 +871,9 @@ describe('lists', () => {
     await assertSucceeds(updateDoc(doc(db, `families/${FAM_A}/lists/l1`), { categories: [{ id: 'p', name: 'Produce' }] }))
     await assertSucceeds(updateDoc(doc(db, `families/${FAM_A}/lists/l1/items/i2`), { text: 'Hem the blue dress', categoryId: 'p', updatedAt: Timestamp.now() }))
     await assertFails(updateDoc(doc(db, `families/${FAM_A}/lists/l1/items/i2`), { categoryId: 7 }))
+    // Grocery items added from the meal plan remember the meals they're for.
+    await assertSucceeds(setDoc(doc(db, `families/${FAM_A}/lists/l1/items/i3`), { ...item, text: '2 lb ground beef', meals: ['2026-10-25:dinner'] }))
+    await assertFails(setDoc(doc(db, `families/${FAM_A}/lists/l1/items/i4`), { ...item, text: 'Rice', meals: 'Sunday' }))
     await assertFails(updateDoc(doc(db, `families/${FAM_A}/lists/l1/items/i2`), { expireAt: 'soon' }))
     await assertFails(updateDoc(doc(db, `families/${FAM_A}/lists/l1`), { categories: 'Produce' }))
     await assertSucceeds(updateDoc(doc(db, `families/${FAM_A}/lists/l1`), { title: 'Groceries', sections: true }))

@@ -1,4 +1,4 @@
-import { doc, onSnapshot, setDoc } from 'firebase/firestore'
+import { doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore'
 import { httpsCallable } from 'firebase/functions'
 import { readKitchen, type KitchenSettings } from '@shared/recipes/kitchen.js'
 import { db, functions } from '../../firebase'
@@ -10,8 +10,13 @@ export function watchKitchen(familyId: string, onChange: (k: KitchenSettings) =>
   return onSnapshot(kitchenRef(familyId), (snap) => onChange(readKitchen(snap.exists() ? snap.data() : null)))
 }
 
+/** The kitchen settings as saved now (one read), for a change made outside the settings screen. */
+export async function getKitchen(familyId: string) {
+  return readKitchen((await getDoc(kitchenRef(familyId))).data() ?? null)
+}
+
 export function saveKitchen(familyId: string, k: KitchenSettings) {
-  return setDoc(kitchenRef(familyId), { staples: k.staples.slice(0, 60), sites: k.sites.slice(0, 30), searchPriority: k.searchPriority, people: k.people, avoid: k.avoid.slice(0, 60) })
+  return setDoc(kitchenRef(familyId), { staples: k.staples.slice(0, 60), sites: k.sites.slice(0, 30), searchPriority: k.searchPriority, people: k.people, avoid: k.avoid.slice(0, 60), starterRecipes: k.starterRecipes })
 }
 
 export interface OnlineResult {

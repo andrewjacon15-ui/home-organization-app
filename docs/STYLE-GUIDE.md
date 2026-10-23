@@ -216,8 +216,15 @@ Every part opens its own tab. Settings → Home screen switches a kind of device
   be edited and copied by anyone in the household. Use: This week / Next week, Fill empty meals /
   Replace the week, Cooking for, and "Make a grocery list for it"; the planner jumps to that week, and
   the change offers Undo.
+- **Clearing:** each meal's label row ends in small icon buttons (open the recipe, pick at random, clear);
+  a day has "Clear" in its header and the week "Clear this week" beside its dates. A template that is
+  on the week (at least half its meals still as it planned them) says so, with "Remove from this week".
+  Clearing also takes off the grocery items added only for those meals and not bought yet; one Undo
+  brings back both.
+- **Starter recipes:** every household gets the recipes the starter templates use, once (Settings →
+  Kitchen remembers); adapted ones say where from, with a link.
 - **Grocery review** before anything is added: the combined list, scaled to "Cooking for", each line
-  with the meals it's for in `--ink-2`, every line ticked; untick what you have, then "Add N to the
+  with the meals it's for in `--ink-2`, every line ticked (a select-all box above); untick what you have, then "Add N to the
   grocery list". Pantry staples and what's already on the list are left off and counted.
 
 ### Undo, not "are you sure?"

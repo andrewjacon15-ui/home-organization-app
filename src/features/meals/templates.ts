@@ -117,3 +117,21 @@ export function updateTemplate(familyId: string, id: string, t: TemplateDraft) {
 }
 
 export const deleteTemplate = (familyId: string, id: string) => removeDocs([doc(col(familyId), id)])
+
+/**
+ * The meals of a week that still came from this template: same weekday, same meal, same words
+ * (anything changed since is the household's own). Keys are "YYYY-MM-DD:slot"; `notes` are the
+ * days whose notes are still the template's.
+ */
+export function templateMealsOn(t: Pick<MealTemplate, 'days'>, weekStart: string, plans: Record<string, MealPlan>): { keys: string[]; notes: string[] } {
+  const keys: string[] = []
+  const notes: string[] = []
+  for (let i = 0; i < 7; i++) {
+    const date = addDays(weekStart, i)
+    const from = clean(t.days[weekday(date)])
+    const now = clean(plans[date])
+    for (const s of SLOTS) if (from[s] && now[s] === from[s]) keys.push(`${date}:${s}`)
+    if (from.notes && now.notes === from.notes) notes.push(date)
+  }
+  return { keys, notes }
+}

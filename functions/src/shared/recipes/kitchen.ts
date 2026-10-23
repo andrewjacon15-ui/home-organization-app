@@ -13,6 +13,8 @@ export interface KitchenSettings {
   people: number | null
   /** Ingredients never wanted (allergies, dislikes): the meal randomizer skips recipes with them. */
   avoid: string[]
+  /** Which set of starter recipes the household has been given (0 = none yet). */
+  starterRecipes: number
 }
 
 /** Well-known recipe sites that publish schema.org recipes. Editable in Settings. */
@@ -31,7 +33,7 @@ export const DEFAULT_SITES = [
   'food52.com',
 ]
 
-export const DEFAULT_KITCHEN: KitchenSettings = { staples: DEFAULT_STAPLES, sites: DEFAULT_SITES, searchPriority: 'balanced', people: null, avoid: [] }
+export const DEFAULT_KITCHEN: KitchenSettings = { staples: DEFAULT_STAPLES, sites: DEFAULT_SITES, searchPriority: 'balanced', people: null, avoid: [], starterRecipes: 0 }
 
 /** "https://www.SeriousEats.com/foo" → "seriouseats.com"; null when it isn't a host name. */
 export function normalizeSite(input: string): string | null {
@@ -62,5 +64,5 @@ export function readKitchen(raw: unknown): KitchenSettings {
   const strings = (v: unknown, max: number) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string').slice(0, max) : null)
   const priority = SEARCH_PRIORITIES.find((p) => p === d.searchPriority) ?? 'balanced'
   const people = typeof d.people === 'number' && Number.isInteger(d.people) && d.people >= 1 && d.people <= 30 ? d.people : null
-  return { staples: strings(d.staples, 60) ?? DEFAULT_STAPLES, sites: strings(d.sites, 30) ?? DEFAULT_SITES, searchPriority: priority, people, avoid: strings(d.avoid, 60) ?? [] }
+  return { staples: strings(d.staples, 60) ?? DEFAULT_STAPLES, sites: strings(d.sites, 30) ?? DEFAULT_SITES, searchPriority: priority, people, avoid: strings(d.avoid, 60) ?? [], starterRecipes: typeof d.starterRecipes === 'number' ? d.starterRecipes : 0 }
 }

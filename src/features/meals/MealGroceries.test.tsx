@@ -31,14 +31,15 @@ describe('MealGroceries', () => {
     const plan = {
       lines: ['2 lb ground beef', '1 onion', '6 tortillas'],
       details: [
-        { line: '2 lb ground beef', sources: ['Sat dinner: Chicken tacos', 'Mon dinner: Tomato soup'] },
-        { line: '1 onion', sources: ['Mon dinner: Tomato soup'] },
-        { line: '6 tortillas', sources: ['Sat dinner: Chicken tacos'] },
+        { line: '2 lb ground beef', sources: ['2026-10-03:dinner', '2026-10-05:dinner'] },
+        { line: '1 onion', sources: ['2026-10-05:dinner'] },
+        { line: '6 tortillas', sources: ['2026-10-03:dinner'] },
       ],
       staples: ['salt', 'oil'],
       onList: ['lime'],
     }
-    const onReview = vi.fn(async () => plan)
+    const labels = { '2026-10-03:dinner': 'Sat dinner: Chicken tacos', '2026-10-05:dinner': 'Mon dinner: Tomato soup' }
+    const onReview = vi.fn(async () => ({ plan, labels }))
     const onAdd = vi.fn(async () => undefined)
     const onDays = vi.fn()
     render(<MealGroceries today={TODAY} days={7} onDays={onDays} meals={plannedMeals(plans, TODAY, 7, recipeFor)} defaultPeople={4} onReview={onReview} onAdd={onAdd} onClose={vi.fn()} />)
@@ -46,6 +47,10 @@ describe('MealGroceries', () => {
     expect(screen.getByText(/no saved recipe/)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '14 days' }))
     expect(onDays).toHaveBeenCalledWith(14)
+    // Every meal with a recipe starts ticked; the select-all box unticks and reticks them.
+    await user.click(screen.getByRole('checkbox', { name: 'Every meal with a recipe' }))
+    expect(screen.getByRole('button', { name: 'See the groceries for 0 meals' })).toBeDisabled()
+    await user.click(screen.getByRole('checkbox', { name: 'Every meal with a recipe' }))
     await user.click(screen.getByRole('checkbox', { name: /Pancakes/ }))
     await user.click(screen.getByRole('button', { name: 'See the groceries for 2 meals' }))
     expect(onReview).toHaveBeenCalledWith([expect.objectContaining({ text: 'Chicken tacos' }), expect.objectContaining({ text: 'Tomato soup' })], 4)
@@ -53,8 +58,20 @@ describe('MealGroceries', () => {
     expect(await screen.findByText('Sat dinner: Chicken tacos · Mon dinner: Tomato soup')).toBeInTheDocument()
     expect(screen.getByText(/Amounts are for 4 people/)).toBeInTheDocument()
     await user.click(screen.getByRole('checkbox', { name: /1 onion/ }))
+    expect(screen.getByRole('checkbox', { name: '2 of 3 ticked' })).toHaveProperty('indeterminate', true)
+    // The select-all box ticks everything again, or nothing.
+    await user.click(screen.getByRole('checkbox', { name: '2 of 3 ticked' }))
+    expect(screen.getByRole('button', { name: 'Add 3 to the grocery list' })).toBeEnabled()
+    await user.click(screen.getByRole('checkbox', { name: 'Everything ticked' }))
+    expect(screen.getByRole('button', { name: 'Add 0 to the grocery list' })).toBeDisabled()
+    await user.click(screen.getByRole('checkbox', { name: 'Nothing ticked' }))
+    await user.click(screen.getByRole('checkbox', { name: /1 onion/ }))
     await user.click(screen.getByRole('button', { name: 'Add 2 to the grocery list' }))
-    expect(onAdd).toHaveBeenCalledWith(['2 lb ground beef', '6 tortillas'])
+    // Each line goes on the list with the meals it's for, so clearing those meals can take it off.
+    expect(onAdd).toHaveBeenCalledWith([
+      { text: '2 lb ground beef', meals: ['2026-10-03:dinner', '2026-10-05:dinner'] },
+      { text: '6 tortillas', meals: ['2026-10-03:dinner'] },
+    ])
     expect(await screen.findByRole('status')).toHaveTextContent('Added 2 items to the grocery list. Skipped 2 pantry staples and 1 already on the list.')
   })
 

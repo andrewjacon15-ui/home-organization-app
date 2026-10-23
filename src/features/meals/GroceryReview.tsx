@@ -1,13 +1,14 @@
 import { useState } from 'react'
-import type { GroceryPlan } from '@shared/recipes/groceries.js'
+import type { NewItem } from '../lists/listsApi'
+import type { Shopping } from './shopping'
 import { groceryMessage } from './upcomingMeals'
 
 interface Props {
-  plan: GroceryPlan
+  shopping: Shopping
   /** Scaled for this many (null = as each recipe is written). */
   people: number | null
-  /** Adds the ticked lines to the grocery list. */
-  onAdd: (lines: string[]) => Promise<void>
+  /** Adds the ticked lines to the grocery list, each with the meals it's for. */
+  onAdd: (lines: NewItem[]) => Promise<void>
   onDone: () => void
 }
 
@@ -15,8 +16,11 @@ interface Props {
  * The combined grocery list for some meals, before anything is added: every line ticked, with
  * the meals it's for; untick what you already have, then add the rest in one go.
  */
-export function GroceryReview({ plan, people, onAdd, onDone }: Props) {
+export function GroceryReview({ shopping, people, onAdd, onDone }: Props) {
+  const { plan, labels } = shopping
   const [off, setOff] = useState<Set<number>>(new Set())
+  const allOn = off.size === 0
+  const noneOn = off.size === plan.details.length
   const [busy, setBusy] = useState(false)
   const [result, setResult] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -27,7 +31,7 @@ export function GroceryReview({ plan, people, onAdd, onDone }: Props) {
     setBusy(true)
     setError(null)
     try {
-      await onAdd(chosen.map((d) => d.line))
+      await onAdd(chosen.map((d) => ({ text: d.line, meals: d.sources })))
       setResult(groceryMessage({ added: chosen.length, staples: plan.staples.length, onList: plan.onList.length }))
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -58,6 +62,18 @@ export function GroceryReview({ plan, people, onAdd, onDone }: Props) {
       {plan.details.length === 0 ? (
         <p className="empty">Nothing new to buy for these meals.</p>
       ) : (
+        <>
+        <label className="grocery-review__all">
+          <input
+            type="checkbox"
+            checked={allOn}
+            ref={(el) => {
+              if (el) el.indeterminate = !allOn && !noneOn
+            }}
+            onChange={() => setOff(allOn ? new Set(plan.details.map((_, i) => i)) : new Set())}
+          />
+          {allOn ? 'Everything ticked' : noneOn ? 'Nothing ticked' : `${chosen.length} of ${plan.details.length} ticked`}
+        </label>
         <ul className="grocery-review__list" aria-label="Groceries to add">
           {plan.details.map((d, i) => (
             <li key={`${d.line}-${i}`}>
@@ -76,12 +92,13 @@ export function GroceryReview({ plan, people, onAdd, onDone }: Props) {
                 />
                 <span>
                   <span className="grocery-review__line">{d.line}</span>
-                  {d.sources.length > 0 && <span className="grocery-review__for">{d.sources.join(' · ')}</span>}
+                  {d.sources.length > 0 && <span className="grocery-review__for">{d.sources.map((s) => labels[s] ?? s).join(' · ')}</span>}
                 </span>
               </label>
             </li>
           ))}
         </ul>
+        </>
       )}
       {error && (
         <p className="error" role="alert">

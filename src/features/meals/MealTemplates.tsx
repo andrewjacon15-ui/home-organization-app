@@ -1,14 +1,16 @@
 import { useState } from 'react'
-import type { GroceryPlan } from '@shared/recipes/groceries.js'
 import { AddIcon, CloseIcon, CopyIcon, PencilIcon, TrashIcon } from '../../components/Icons'
 import { Select } from '../../components/Select'
 import { addDays, fromDateKey } from '../../lib/dates'
+import type { MealPlan } from '../../types'
+import type { NewItem } from '../lists/listsApi'
 import { GroceryReview } from './GroceryReview'
+import type { Shopping } from './shopping'
 import { PEOPLE_OPTIONS, peopleValue, readPeopleValue } from './people'
 import type { Wanted } from './randomize'
 import { STARTER_TEMPLATES } from './starters'
 import { TemplateEditor } from './TemplateEditor'
-import { blankTemplate, isEmptyPlan, type ApplyMode, type MealTemplate, type TemplateDraft } from './templates'
+import { blankTemplate, isEmptyPlan, templateMealsOn, type ApplyMode, type MealTemplate, type TemplateDraft } from './templates'
 
 export interface ApplyOptions {
   /** First day of the week it goes on. */
@@ -22,7 +24,7 @@ export interface ApplyResult {
   /** What happened, in a sentence. */
   message: string
   /** The grocery list for the meals it planned, to review before adding (when asked for). */
-  groceries?: { plan: GroceryPlan; people: number | null }
+  groceries?: { shopping: Shopping; people: number | null }
 }
 
 interface Props {
@@ -30,6 +32,10 @@ interface Props {
   weekStart: string
   currentWeekStart: string
   weekStartsOn: number
+  /** What's planned for the week on screen (to tell which templates are on it). */
+  weekPlans: Record<string, MealPlan>
+  /** Takes a template's meals back off the week on screen (and their groceries); resolves with what happened. */
+  onRemoveFromWeek: (t: MealTemplate) => Promise<string>
   /** The week on screen as a template (to save it), or null when nothing's planned. */
   fromWeek: TemplateDraft | null
   templates: MealTemplate[]
@@ -40,7 +46,7 @@ interface Props {
   pick: (wanted: Wanted[], taken: string[]) => Promise<Record<string, string>>
   onSave: (draft: TemplateDraft, id?: string) => Promise<void>
   onApply: (t: MealTemplate, opts: ApplyOptions) => Promise<ApplyResult>
-  onAddGroceries: (lines: string[]) => Promise<void>
+  onAddGroceries: (lines: NewItem[]) => Promise<void>
   onDelete: (t: MealTemplate) => void
   onClose: () => void
 }
@@ -57,7 +63,7 @@ function summary(t: Pick<MealTemplate, 'days' | 'people'>): string {
   return t.people ? `${what} · for ${t.people}` : what
 }
 
-type View = { kind: 'list' } | { kind: 'edit'; draft: TemplateDraft; id?: string } | { kind: 'review'; message: string; plan: GroceryPlan; people: number | null }
+type View = { kind: 'list' } | { kind: 'edit'; draft: TemplateDraft; id?: string } | { kind: 'review'; message: string; shopping: Shopping; people: number | null }
 
 /**
  * Meal plan templates: make one from scratch (typed, picked from the recipe book, or at
@@ -84,6 +90,23 @@ export function MealTemplates(p: Props) {
   // Starters the household hasn't added yet (by name).
   const have = new Set(p.templates.map((t) => t.name.trim().toLowerCase()))
   const starters = STARTER_TEMPLATES.filter((s) => !have.has(s.name.toLowerCase()))
+  const starterFor = (t: MealTemplate) => STARTER_TEMPLATES.find((s) => s.name.toLowerCase() === t.name.trim().toLowerCase())
+  const outdated = (t: MealTemplate) => {
+    const s = starterFor(t)
+    return !!s && JSON.stringify(s.days) !== JSON.stringify(t.days)
+  }
+  async function runMessage(work: () => Promise<string>) {
+    setBusy(true)
+    setError(null)
+    setStatus(null)
+    try {
+      setStatus(await work())
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
   async function addStarters(list: TemplateDraft[]) {
     setBusy(true)
     setError(null)
@@ -149,7 +172,7 @@ export function MealTemplates(p: Props) {
             <p className="meal-groceries__result" role="status">
               {view.message}
             </p>
-            <GroceryReview plan={view.plan} people={view.people} onAdd={p.onAddGroceries} onDone={() => setView({ kind: 'list' })} />
+            <GroceryReview shopping={view.shopping} people={view.people} onAdd={p.onAddGroceries} onDone={() => setView({ kind: 'list' })} />
           </>
         )}
 
@@ -175,7 +198,13 @@ export function MealTemplates(p: Props) {
               <p className="empty">No templates yet. Start one from scratch (the dice fill a week from your recipes), or plan a week you like and save it.</p>
             ) : (
               <ul className="meal-templates__list" aria-label="Templates">
-                {p.templates.map((t) => (
+                {p.templates.map((t) => {
+                  // On the week when at least half its meals are there as it planned them (templates that
+                  // share a breakfast or two with the week don't count).
+                  const matched = templateMealsOn(t, p.weekStart, p.weekPlans).keys.length
+                  const total = t.days.reduce((n, d) => n + [d.breakfast, d.lunch, d.dinner].filter(Boolean).length, 0)
+                  const onWeek = matched > 0 && matched * 2 >= total ? matched : 0
+                  return (
                   <li key={t.id}>
                     <div className="meal-templates__row">
                       <span>
@@ -197,6 +226,37 @@ export function MealTemplates(p: Props) {
                         </button>
                       </span>
                     </div>
+                    {(onWeek > 0 || outdated(t)) && (
+                      <div className="meal-templates__notes">
+                        {onWeek > 0 && (
+                          <span>
+                            {count(onWeek, 'meal')} on {weekRange(p.weekStart)} ·{' '}
+                            <button type="button" className="link" disabled={busy} onClick={() => void runMessage(() => p.onRemoveFromWeek(t))}>
+                              Remove from this week
+                            </button>
+                          </span>
+                        )}
+                        {outdated(t) && (
+                          <span>
+                            A newer version uses the starter recipes ·{' '}
+                            <button
+                              type="button"
+                              className="link"
+                              disabled={busy}
+                              onClick={() =>
+                                void runMessage(async () => {
+                                  const s = starterFor(t)!
+                                  await p.onSave({ ...s, name: t.name, people: t.people }, t.id)
+                                  return `Updated “${t.name}”.`
+                                })
+                              }
+                            >
+                              Update
+                            </button>
+                          </span>
+                        )}
+                      </div>
+                    )}
                     {using === t.id && (
                       <div className="meal-templates__use" role="group" aria-label={`Use ${t.name}`}>
                         <div className="segmented segmented--small" role="group" aria-label="Which week">
@@ -232,7 +292,8 @@ export function MealTemplates(p: Props) {
                       </div>
                     )}
                   </li>
-                ))}
+                  )
+                })}
               </ul>
             )}
             {status && (

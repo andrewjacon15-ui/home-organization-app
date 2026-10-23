@@ -1,10 +1,11 @@
-import type { GroceryPlan } from '@shared/recipes/groceries.js'
 import { CloseIcon } from '../../components/Icons'
 import { Select } from '../../components/Select'
 import { useState } from 'react'
 import { addDays, fromDateKey } from '../../lib/dates'
 import { GroceryReview } from './GroceryReview'
+import type { NewItem } from '../lists/listsApi'
 import { PEOPLE_OPTIONS, peopleValue, readPeopleValue } from './people'
+import type { Shopping } from './shopping'
 import { mealKey, SLOT_LABELS, SPANS, type PlannedMeal } from './upcomingMeals'
 
 interface Props {
@@ -15,8 +16,8 @@ interface Props {
   /** How many the household usually cooks for (Settings → Kitchen). */
   defaultPeople: number | null
   /** The combined grocery list for these meals, scaled to `people`, to look over. */
-  onReview: (meals: PlannedMeal[], people: number | null) => Promise<GroceryPlan>
-  onAdd: (lines: string[]) => Promise<void>
+  onReview: (meals: PlannedMeal[], people: number | null) => Promise<Shopping>
+  onAdd: (lines: NewItem[]) => Promise<void>
   onClose: () => void
 }
 
@@ -32,7 +33,7 @@ export function MealGroceries({ today, days, onDays, meals, defaultPeople, onRev
   const [picked, setPicked] = useState<Set<string> | null>(null)
   const [people, setPeople] = useState(defaultPeople)
   const [busy, setBusy] = useState(false)
-  const [review, setReview] = useState<GroceryPlan | null>(null)
+  const [review, setReview] = useState<Shopping | null>(null)
   const [error, setError] = useState<string | null>(null)
   // Every meal with a recipe starts ticked; changing the span starts over.
   const chosen = picked ?? new Set(withRecipe.map(mealKey))
@@ -65,7 +66,7 @@ export function MealGroceries({ today, days, onDays, meals, defaultPeople, onRev
         </button>
         <h2>Groceries for upcoming meals</h2>
         {review ? (
-          <GroceryReview plan={review} people={people} onAdd={onAdd} onDone={onClose} />
+          <GroceryReview shopping={review} people={people} onAdd={onAdd} onDone={onClose} />
         ) : (
           <>
         <p className="muted">Pick the meals you’re shopping for. Their ingredients are added up across recipes; pantry staples and anything already on the list are left off. You’ll see the list before anything is added.</p>
@@ -90,6 +91,20 @@ export function MealGroceries({ today, days, onDays, meals, defaultPeople, onRev
         ) : meals.length === 0 ? (
           <p className="empty">Nothing planned in the next {days} days. Plan meals here, or from any recipe with “Add to meal plan”.</p>
         ) : (
+          <>
+          {withRecipe.length > 1 && (
+            <label className="grocery-review__all">
+              <input
+                type="checkbox"
+                checked={count === withRecipe.length}
+                ref={(el) => {
+                  if (el) el.indeterminate = count > 0 && count < withRecipe.length
+                }}
+                onChange={() => setPicked(count === withRecipe.length ? new Set() : new Set(withRecipe.map(mealKey)))}
+              />
+              Every meal with a recipe
+            </label>
+          )}
           <ul className="meal-groceries__list" aria-label="Planned meals">
             {meals.map((m) => {
               const k = mealKey(m)
@@ -110,6 +125,7 @@ export function MealGroceries({ today, days, onDays, meals, defaultPeople, onRev
               )
             })}
           </ul>
+          </>
         )}
 
         <label className="field meal-templates__people">

@@ -11,6 +11,23 @@ const week = (name: string, days: Week): TemplateDraft => ({
   meals: ['breakfast', 'lunch', 'dinner'],
 })
 
+// Every meal is named exactly as a starter recipe (starterRecipes.ts), so the grocery list comes
+// from it; the reheated dinners say "(leftovers)" so the batch isn't bought twice.
+const YOGURT = 'Yogurt, granola and berries'
+const AVO_EGG = 'Avocado toast with a fried egg'
+const AVO_FETA = 'Avocado toast with tomato and feta'
+const OATS = 'Overnight oats with banana'
+const FRUIT = 'Fruit bowl and hard-boiled eggs'
+const BERRY = 'Berry smoothie'
+const MANGO = 'Mango pineapple smoothie'
+const PANCAKES = 'Banana pancakes with berries'
+const BURRITO = 'Chicken burrito bowl'
+const SESAME = 'Sesame ginger chicken bowl'
+const PEANUT = 'Peanut chicken bowl'
+const SWEET_CHILI = 'Sweet chili chicken bowl'
+const OUT = 'Leftovers or eat out'
+const PREP = 'Cook the big batch; make the week’s chicken and rice lunches'
+
 /**
  * Starter templates every household can add with one tap (Meals → Templates), then change.
  * Plain on purpose: easy breakfasts, chicken-rice-and-vegetable lunches that change only the
@@ -19,30 +36,30 @@ const week = (name: string, days: Week): TemplateDraft => ({
  */
 export const STARTER_TEMPLATES: TemplateDraft[] = [
   week('Simple week: chili', [
-    ['Greek yogurt, granola and berries', 'Chicken burrito bowl: rice, black beans, corn, salsa', 'Turkey chili (big batch)', 'Cook the chili; bake chicken and rice for the week’s lunches'],
-    ['Avocado toast with a fried egg', 'Chicken, rice and broccoli with teriyaki', 'Turkey chili (reheat)', ''],
-    ['Overnight oats with banana', 'Chicken, rice and green beans with lemon garlic', 'Turkey chili (reheat)', ''],
-    ['Fruit bowl and hard-boiled eggs', 'Asian chicken bowl: rice, cucumber, carrot, edamame, sesame ginger', 'Turkey chili (reheat), over rice', ''],
-    ['Greek yogurt, granola and berries', 'Chicken, rice and roasted peppers with buffalo sauce', 'Turkey chili (reheat), with cornbread', ''],
-    ['Avocado toast with everything seasoning', 'Chicken burrito bowl: rice, pinto beans, fajita peppers, guacamole', 'Homemade pizza night', 'Fun dinner: everyone makes their own pizza'],
-    ['Banana pancakes with berries', 'Asian chicken bowl: rice, bok choy, peanut sauce', 'Leftovers or eat out', ''],
+    [YOGURT, BURRITO, 'Turkey chili (big batch)', PREP],
+    [AVO_EGG, 'Teriyaki chicken, rice and broccoli', 'Turkey chili (leftovers)', ''],
+    [OATS, 'Lemon garlic chicken, rice and green beans', 'Turkey chili (leftovers)', ''],
+    [FRUIT, SESAME, 'Turkey chili (leftovers)', ''],
+    [YOGURT, 'Buffalo chicken, rice and peppers', 'Turkey chili (leftovers)', ''],
+    [AVO_FETA, BURRITO, 'Homemade pizza night', 'Fun dinner: everyone makes their own pizza'],
+    [PANCAKES, PEANUT, OUT, ''],
   ]),
   week('Simple week: curry', [
-    ['Smoothie: banana, berries, spinach, yogurt', 'Asian chicken bowl: rice, snap peas, carrot, sweet chili', 'Chicken and chickpea curry (big batch)', 'Cook the curry; bake chicken and rice for the week’s lunches'],
-    ['Greek yogurt, granola and honey', 'Chicken, rice and zucchini with chimichurri', 'Chicken and chickpea curry (reheat)', ''],
-    ['Avocado toast with tomato and feta', 'Chicken burrito bowl: rice, black beans, corn, salsa verde', 'Chicken and chickpea curry (reheat), with naan', ''],
-    ['Fruit bowl and cottage cheese', 'Chicken, rice and cauliflower with tikka sauce', 'Chicken and chickpea curry (reheat)', ''],
-    ['Overnight oats with apple and cinnamon', 'Asian chicken bowl: rice, cucumber, edamame, teriyaki', 'Chicken and chickpea curry (reheat), over rice', ''],
-    ['Greek yogurt, granola and berries', 'Chicken, rice and spinach with pesto', 'Leftovers or eat out', ''],
-    ['Avocado toast with a poached egg', 'Chicken burrito bowl: rice, pinto beans, fajita peppers, pico', 'Make-your-own sushi bowls', 'Fun dinner: sushi rice, salmon or shrimp, avocado, cucumber, nori'],
+    [BERRY, SWEET_CHILI, 'Chicken and chickpea curry (big batch)', PREP],
+    [YOGURT, 'Chimichurri chicken, rice and zucchini', 'Chicken and chickpea curry (leftovers)', ''],
+    [AVO_FETA, BURRITO, 'Chicken and chickpea curry (leftovers)', ''],
+    [FRUIT, 'Tikka chicken, rice and cauliflower', 'Chicken and chickpea curry (leftovers)', ''],
+    [OATS, SESAME, 'Chicken and chickpea curry (leftovers)', ''],
+    [YOGURT, 'Pesto chicken, rice and spinach', OUT, ''],
+    [AVO_EGG, BURRITO, 'Make-your-own sushi bowls', 'Fun dinner: everyone builds a bowl'],
   ]),
   week('Simple week: baked ziti', [
-    ['Greek yogurt, granola and peaches', 'Chicken, rice and asparagus with lemon herb', 'Baked ziti (big batch)', 'Bake the ziti; bake chicken and rice for the week’s lunches'],
-    ['Avocado toast with chili flakes', 'Asian chicken bowl: rice, broccoli, carrot, sesame ginger', 'Baked ziti (reheat), with a side salad', ''],
-    ['Fruit bowl and a granola bar', 'Chicken burrito bowl: rice, black beans, corn, chipotle crema', 'Baked ziti (reheat)', ''],
-    ['Overnight oats with peanut butter', 'Chicken, rice and Brussels sprouts with honey mustard', 'Baked ziti (reheat), with garlic bread', ''],
-    ['Smoothie: mango, pineapple, yogurt', 'Asian chicken bowl: rice, bok choy, mushrooms, hoisin', 'Baked ziti (reheat)', ''],
-    ['Greek yogurt, granola and berries', 'Chicken, rice and green beans with BBQ sauce', 'Smash burger and fries night', 'Fun dinner: smash burgers at home'],
-    ['Avocado toast with a fried egg', 'Chicken burrito bowl: rice, pinto beans, peppers, guacamole', 'Leftovers or eat out', ''],
+    [YOGURT, 'Lemon herb chicken, rice and asparagus', 'Baked ziti (big batch)', PREP],
+    [AVO_EGG, SESAME, 'Baked ziti (leftovers)', ''],
+    [FRUIT, BURRITO, 'Baked ziti (leftovers)', ''],
+    [OATS, 'Honey mustard chicken, rice and Brussels sprouts', 'Baked ziti (leftovers)', ''],
+    [MANGO, PEANUT, 'Baked ziti (leftovers)', ''],
+    [YOGURT, 'BBQ chicken, rice and green beans', 'Smash burger and fries night', 'Fun dinner: smash burgers at home'],
+    [AVO_FETA, BURRITO, OUT, ''],
   ]),
 ]

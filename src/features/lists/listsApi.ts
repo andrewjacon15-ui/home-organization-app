@@ -110,16 +110,39 @@ export const sortsItself = (list: FamilyList | undefined): list is FamilyList =>
  * given, a grocery list files each item under its aisle ("bananas" → Produce), or wherever the
  * household moved that item before.
  */
-export async function addItems(familyId: string, listId: string, userId: string, texts: string[], memberId: string | null = null, opts: { categoryId?: string | null; list?: FamilyList } = {}) {
-  const clean = texts.map((t) => t.trim()).filter(Boolean)
+/** A line to add, and (from the meal plan) the meals it's for, as "YYYY-MM-DD:slot". */
+export type NewItem = string | { text: string; meals?: string[] }
+
+export async function addItems(familyId: string, listId: string, userId: string, texts: NewItem[], memberId: string | null = null, opts: { categoryId?: string | null; list?: FamilyList } = {}) {
+  const clean = texts.map((t) => (typeof t === 'string' ? { text: t.trim() } : { ...t, text: t.text.trim() })).filter((t) => t.text)
   if (clean.length === 0) return
   const batch = writeBatch(db)
   const base = Date.now()
-  clean.forEach((text, i) => {
+  clean.forEach(({ text, meals }, i) => {
     const categoryId = opts.categoryId !== undefined ? opts.categoryId : sortsItself(opts.list) && !memberId ? groceryCategory(text, opts.list.categories ?? [], opts.list.learned) : null
-    batch.set(doc(itemsCol(familyId, listId)), { text: text.slice(0, 300), done: false, memberId, categoryId: categoryId ?? null, order: base + i, createdBy: userId, createdAt: serverTimestamp() })
+    batch.set(doc(itemsCol(familyId, listId)), {
+      text: text.slice(0, 300),
+      done: false,
+      memberId,
+      categoryId: categoryId ?? null,
+      order: base + i,
+      ...(meals?.length ? { meals: meals.slice(0, 60) } : {}),
+      createdBy: userId,
+      createdAt: serverTimestamp(),
+    })
   })
   await batch.commit()
+}
+
+/** The grocery items not bought yet (not checked off) that were added for any of these meals. */
+export async function itemsForMeals(familyId: string, listId: string, mealKeys: string[]) {
+  const keys = new Set(mealKeys)
+  const snap = await getDocs(itemsCol(familyId, listId))
+  return snap.docs.flatMap((d) => {
+    const raw = d.get('meals') as unknown
+    const meals = Array.isArray(raw) ? raw.map(String) : []
+    return !d.get('done') && meals.some((k) => keys.has(k)) ? [{ doc: d, meals }] : []
+  })
 }
 
 /** How items compare for repeats: grocery items by the thing itself ("2 bags Bananas" = "banana"), others by their words. */
