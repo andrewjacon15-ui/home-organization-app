@@ -131,8 +131,11 @@ export function groceryLines(ingredientLines: GroceryInput[], staples: string[] 
   }
 
   const details: GroceryLine[] = [...groups.values()].map((g) => {
-    // One mention keeps its own wording; so do mentions without amounts.
-    if (g.raws.length === 1 || !g.measured) return { line: g.raws[0], sources: g.sources }
+    // One mention keeps its own wording, unless it's part of something you buy whole (a recipe
+    // scaled for more people asks for 1 1/2 lemons); so do mentions without amounts.
+    const whole = (n: number) => Math.abs(n - Math.round(n)) < 1e-9
+    const partCount = !g.ml && !g.g && ((g.count > 0 && !whole(g.count)) || [...g.units.values()].some((n) => !whole(n)))
+    if ((g.raws.length === 1 && !partCount) || !g.measured) return { line: g.raws[0], sources: g.sources }
     const parts: string[] = []
     if (g.ml) parts.push(volumeText(g.ml, g.metric).join(' '))
     if (g.g) parts.push(weightText(g.g, g.metric).join(' '))

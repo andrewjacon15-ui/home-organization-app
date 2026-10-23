@@ -173,10 +173,10 @@ export function MealsPage({ familyId, userId }: Props) {
           <MealsIcon size={18} /> Templates
         </button>
         <button type="button" className="button" disabled={emptyDinners.length === 0} onClick={() => void randomizeDinners()} title={emptyDinners.length ? undefined : 'Every dinner from today on is planned'}>
-          <RandomIcon size={18} /> Randomize empty dinners
+          <RandomIcon size={18} aria-hidden /> <span className="meals__tool-long">Randomize empty dinners</span><span className="meals__tool-short" aria-hidden>Randomize</span>
         </button>
         <button type="button" className="button" onClick={() => setShopping(true)}>
-          <CartIcon size={18} /> Groceries for upcoming meals
+          <CartIcon size={18} aria-hidden /> <span className="meals__tool-long">Groceries for upcoming meals</span><span className="meals__tool-short" aria-hidden>Groceries</span>
         </button>
       </div>
       <MealPlanner
