@@ -119,6 +119,7 @@ export function RecipesPage({ familyId, userId }: { familyId: string; userId: st
         <KitchenSearch
           entries={entries ?? []}
           staples={kitchen.staples}
+          priority={kitchen.searchPriority}
           onOpen={open}
           onFindOnline={ONLINE_SEARCH ? (have) => findOnline(familyId, { have }) : undefined}
           onCookOnline={cookOnline}
@@ -129,6 +130,7 @@ export function RecipesPage({ familyId, userId }: { familyId: string; userId: st
           onFind={ONLINE_SEARCH ? (query) => findOnline(familyId, { query }) : undefined}
           onCookOnline={cookOnline}
           onImport={(url) => importRecipe(familyId, url)}
+          priority={kitchen.searchPriority}
           onOpen={open}
         />
       )}

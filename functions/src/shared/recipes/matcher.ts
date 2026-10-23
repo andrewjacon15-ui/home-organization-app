@@ -3,6 +3,7 @@
  * recipes by how much of them that covers. Rule-based: the same dictionary as the parser
  * (synonyms, plurals, families), plus a small typo allowance for words it doesn't know.
  */
+import { aisleFor } from './aisles.js'
 import { familyOf, lookupPhrase, maxPhraseWords } from './dictionary.js'
 import { parseIngredient } from './ingredient.js'
 
@@ -109,9 +110,43 @@ export function covers(h: HaveItem, key: string, family: string): boolean {
   return !h.known && close(h.key, key)
 }
 
+/** Flavor builders: most savory recipes use them, so having them says little about the dish. */
+const AROMATICS = new Set(['onion', 'garlic', 'shallot', 'ginger', 'scallion', 'green onion', 'red onion'])
+const HERBS = new Set(['basil', 'parsley', 'cilantro', 'mint', 'dill', 'thyme', 'rosemary', 'sage', 'chive', 'tarragon', 'oregano', 'bay leaf'])
+
+/**
+ * How much an ingredient counts toward a match: the meat or fish a dish is built on most
+ * (3), fresh produce, dairy and bread next (1.5), pantry goods and spices 1, herbs and
+ * aromatics like onion and garlic least (0.5).
+ */
+export function ingredientWeight(key: string, family = familyOf(key) || key): number {
+  if (AROMATICS.has(key) || AROMATICS.has(family) || HERBS.has(key) || HERBS.has(family)) return 0.5
+  const aisle = aisleFor(key)
+  if (aisle === 'Meat & Seafood') return 3
+  if (aisle === 'Produce' || aisle === 'Dairy & Eggs' || aisle === 'Bakery' || aisle === 'Frozen') return 1.5
+  return 1
+}
+
+/** The two or three ingredients a search should be about: the weightiest they listed, never staples. */
+export function mainIngredients(have: HaveItem[], staples: string[] = DEFAULT_STAPLES, n = 3): string[] {
+  const staple = new Set(staples.map((s) => s.toLowerCase()))
+  const real = have.filter((h) => !staple.has(h.key) && !staple.has(h.family))
+  const pool = real.length ? real : have
+  return pool
+    .map((h, i) => ({ key: h.key, w: ingredientWeight(h.key, h.family), i }))
+    .sort((a, b) => b.w - a.w || a.i - b.i)
+    .slice(0, n)
+    .map((x) => x.key)
+}
+
 export interface MatchResult {
   /** 0–1 share of the non-staple ingredients they have. */
   match: number
+  /**
+   * 0–1 how well the recipe fits what they have: the share they have, weighted toward main
+   * ingredients (70%), how much of what they listed it uses (30%), less 0.03 per missing item.
+   */
+  fit: number
   have: string[]
   missing: string[]
   /** Staples the recipe uses (not counted). */
@@ -121,7 +156,7 @@ export interface MatchResult {
 /** Scores one recipe's ingredient keys (and their families) against what they have. */
 export function matchRecipe(keys: string[], families: string[], have: HaveItem[], staples: string[] = DEFAULT_STAPLES): MatchResult {
   const staple = new Set(staples.map((s) => s.toLowerCase()))
-  const res: MatchResult = { match: 0, have: [], missing: [], staples: [] }
+  const res: MatchResult = { match: 0, fit: 0, have: [], missing: [], staples: [] }
   const seen = new Set<string>()
   keys.forEach((key, i) => {
     if (seen.has(key)) return
@@ -134,6 +169,11 @@ export function matchRecipe(keys: string[], families: string[], have: HaveItem[]
   })
   const needed = res.have.length + res.missing.length
   res.match = needed ? res.have.length / needed : res.staples.length ? 1 : 0
+  const weigh = (list: string[]) => list.reduce((n, k) => n + ingredientWeight(k, families[keys.indexOf(k)] || familyOf(k) || k), 0)
+  const got = weigh(res.have)
+  const weighted = needed ? got / (got + weigh(res.missing)) : res.match
+  const used = have.length ? have.filter((h) => keys.some((k, i) => covers(h, k, families[i] || familyOf(k) || k))).length / have.length : 0
+  res.fit = Math.max(0, Math.min(1, 0.7 * weighted + 0.3 * used - 0.03 * res.missing.length))
   return res
 }
 
@@ -172,11 +212,38 @@ export function searchScore(rank: number | null | undefined, of: number): number
   return Math.max(0, 1 - (rank - 1) / (of - 1))
 }
 
-/**
- * Online ranking. Searching by ingredients: 60% ingredient match, 25% popularity, 15% search
- * position. Searching for a dish (no match to weigh): 60% popularity, 40% search position.
- */
-export function onlineScore(match: number | null, rating: { value: number; count: number } | null | undefined, position = 1): number {
-  const pop = popularity(rating)
-  return match == null ? 0.6 * pop + 0.4 * position : 0.6 * match + 0.25 * pop + 0.15 * position
+/** What online results are sorted by (Settings → Kitchen, and a switch above the results). */
+export type SearchPriority = 'match' | 'balanced' | 'rating'
+export const SEARCH_PRIORITIES: SearchPriority[] = ['match', 'balanced', 'rating']
+export const PRIORITY_LABELS: Record<SearchPriority, string> = { match: 'Best match', balanced: 'Balanced', rating: 'Best rated' }
+
+/** Each priority's weights for ingredient fit, popularity and web-search position. */
+export const PRIORITY_WEIGHTS: Record<SearchPriority, { fit: number; rating: number; search: number }> = {
+  match: { fit: 0.8, rating: 0.1, search: 0.1 },
+  balanced: { fit: 0.6, rating: 0.25, search: 0.15 },
+  rating: { fit: 0.3, rating: 0.6, search: 0.1 },
+}
+
+/** "Best rated" never shows a recipe that uses less than this share of a recipe's ingredients they have. */
+export const RATED_MIN_MATCH = 0.4
+
+export interface RankParts {
+  /** null when searching for a dish (nothing to match). */
+  fit: number | null
+  rating: number
+  search: number
+}
+
+/** One result's score for a priority. A dish search has no fit: popularity and position only. */
+export function rankScore(parts: RankParts, priority: SearchPriority = 'balanced'): number {
+  if (parts.fit == null) return priority === 'rating' ? 0.8 * parts.rating + 0.2 * parts.search : 0.6 * parts.rating + 0.4 * parts.search
+  const w = PRIORITY_WEIGHTS[priority]
+  return w.fit * parts.fit + w.rating * parts.rating + w.search * parts.search
+}
+
+/** Results in a priority's order. "Best rated" leaves out recipes that use too little of what they have. */
+export function rankOnline<T extends { match: number; parts?: { match?: number | null; fit?: number | null; rating: number; search: number } }>(results: T[], priority: SearchPriority): T[] {
+  const partsOf = (r: T): RankParts => ({ fit: r.parts?.fit ?? r.parts?.match ?? null, rating: r.parts?.rating ?? 0.5, search: r.parts?.search ?? 1 })
+  const pool = priority === 'rating' ? results.filter((r) => partsOf(r).fit == null || r.match >= RATED_MIN_MATCH) : results
+  return [...pool].sort((a, b) => rankScore(partsOf(b), priority) - rankScore(partsOf(a), priority))
 }

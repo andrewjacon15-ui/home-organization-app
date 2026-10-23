@@ -1,14 +1,39 @@
 import { useState, type FormEvent } from 'react'
-import { listFromSpeech, matchRecipe, rankByMatch, tokenizeHave, type MatchResult } from '@shared/recipes/matcher.js'
+import { listFromSpeech, matchRecipe, PRIORITY_LABELS, PRIORITY_WEIGHTS, rankOnline, RATED_MIN_MATCH, tokenizeHave, type MatchResult, type SearchPriority } from '@shared/recipes/matcher.js'
 import { BookIcon, GlobeIcon, MicIcon, MicOffIcon, SearchIcon } from '../../components/Icons'
 import { useSpeech } from '../../lib/useSpeech'
-import { catalogReasons, type CatalogEntry, type ImportResult } from './catalog'
+import { catalogReasons, rankOurs, type CatalogEntry, type ImportResult } from './catalog'
 import { ListeningPanel, SearchingPanel } from './Feedback'
 import { ImportForm } from './ImportForm'
 import type { OnlineResult } from './kitchenApi'
 
-/** How many choices a search offers. */
+/** How many choices a search offers at first ("Show more" for the rest). */
 export const TOP = 5
+/** Our recipes considered for re-sorting (the top 5 of them are shown first). */
+const OURS_POOL = 12
+
+/** The priority switch above results: what they're sorted by, changed without searching again. */
+function PrioritySwitch({ value, onChange, options }: { value: SearchPriority; onChange: (p: SearchPriority) => void; options: SearchPriority[] }) {
+  return (
+    <div className="segmented segmented--small finder__priority" role="group" aria-label="Sort results by">
+      {options.map((p) => (
+        <button key={p} type="button" className={`segmented__item${p === value ? ' segmented__item--active' : ''}`} aria-pressed={p === value} onClick={() => onChange(p)}>
+          {PRIORITY_LABELS[p]}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+const pct = (n: number) => `${Math.round(n * 100)}%`
+
+/** How results are ordered, in words, for the priority chosen. */
+function howRanked(priority: SearchPriority, byIngredients: boolean): string {
+  if (!byIngredients) return priority === 'rating' ? 'Sorted by cooks’ ratings (80%) and where the web search placed it (20%).' : 'Sorted by cooks’ ratings (60%) and where the web search placed it (40%).'
+  const w = PRIORITY_WEIGHTS[priority]
+  const base = `Sorted by how well it fits what you have (${pct(w.fit)}), cooks’ ratings (${pct(w.rating)}), and web search position (${pct(w.search)}).`
+  return priority === 'rating' ? `${base} Recipes using less than ${pct(RATED_MIN_MATCH)} of what you have are left out.` : base
+}
 
 const names = (keys: string[]) => keys.join(', ')
 const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`
@@ -58,7 +83,7 @@ function OnlineCard({ r, rank, byIngredients, onCook }: { r: OnlineResult; rank:
         )}
         {r.parts && (
           <div className="result-card__meters">
-            {r.parts.match != null && <Meter label="Ingredients" value={r.parts.match} />}
+            {r.parts.match != null && <Meter label="Ingredients" value={r.parts.fit ?? r.parts.match} />}
             <Meter label="Ratings" value={r.parts.rating} />
             <Meter label="Search rank" value={r.parts.search} />
           </div>
@@ -122,20 +147,29 @@ function OnlineCard({ r, rank, byIngredients, onCook }: { r: OnlineResult; rank:
   )
 }
 
-function OnlineResults({ results, byIngredients, onCook }: { results: OnlineResult[]; byIngredients: boolean; onCook?: (r: OnlineResult) => Promise<unknown> }) {
+function OnlineResults({ results, byIngredients, onCook, priority: initial }: { results: OnlineResult[]; byIngredients: boolean; onCook?: (r: OnlineResult) => Promise<unknown>; priority: SearchPriority }) {
+  // A dish search has nothing to match, so only ratings vs balanced apply.
+  const options: SearchPriority[] = byIngredients ? ['match', 'balanced', 'rating'] : ['balanced', 'rating']
+  const [priority, setPriority] = useState<SearchPriority>(options.includes(initial) ? initial : 'balanced')
+  const [all, setAll] = useState(false)
+  const ranked = rankOnline(results, priority)
+  const shown = all ? ranked : ranked.slice(0, TOP)
   return (
     <>
-      <p className="settings-note finder__how">
-        {byIngredients
-          ? 'Ranked by how many of the ingredients you have (60%), cooks’ ratings (25%), and where the web search placed it (15%). Ratings count for more when lots of people rated.'
-          : 'Ranked by cooks’ ratings (60%) and where the web search placed it (40%). Ratings count for more when lots of people rated.'}
-      </p>
+      {results.length > 1 && <PrioritySwitch value={priority} onChange={setPriority} options={options} />}
+      <p className="settings-note finder__how">{howRanked(priority, byIngredients)} Ratings count for more when lots of people rated.</p>
       <ol className="result-list" aria-label="Best matches">
         {results.length === 0 && <li className="muted">Nothing found on your recipe sites. Try different words.</li>}
-        {results.map((r, i) => (
+        {results.length > 0 && ranked.length === 0 && <li className="muted">None of these use enough of what you have. Try Best match.</li>}
+        {shown.map((r, i) => (
           <OnlineCard key={r.url} r={r} rank={i + 1} byIngredients={byIngredients} onCook={onCook} />
         ))}
       </ol>
+      {!all && ranked.length > TOP && (
+        <button type="button" className="button finder__more" onClick={() => setAll(true)}>
+          Show {ranked.length - TOP} more
+        </button>
+      )}
     </>
   )
 }
@@ -163,6 +197,8 @@ function useOnline(find: ((text: string) => Promise<OnlineResult[]>) | undefined
 interface KitchenProps {
   entries: CatalogEntry[]
   staples: string[]
+  /** How results are sorted at first (Settings → Kitchen). */
+  priority?: SearchPriority
   onOpen: (id: string) => void
   /** Undefined when online search isn't turned on. */
   onFindOnline?: (have: string) => Promise<OnlineResult[]>
@@ -172,7 +208,8 @@ interface KitchenProps {
 type Where = 'ours' | 'online'
 
 /** What's in my kitchen: say or type what you have, then look in our recipes or online. */
-export function KitchenSearch({ entries, staples, onOpen, onFindOnline, onCookOnline }: KitchenProps) {
+export function KitchenSearch({ entries, staples, onOpen, onFindOnline, onCookOnline, priority: initial = 'balanced' }: KitchenProps) {
+  const [oursPriority, setOursPriority] = useState<SearchPriority>(initial)
   const [text, setText] = useState('')
   const [where, setWhere] = useState<Where | null>(null)
   const [local, setLocal] = useState<{ entry: CatalogEntry; result: MatchResult }[] | null>(null)
@@ -189,7 +226,13 @@ export function KitchenSearch({ entries, staples, onOpen, onFindOnline, onCookOn
     setError(null)
     if (!understood.length) return setError('Tell me a few ingredients first, like “chicken, rice, broccoli”.')
     setWhere(w)
-    if (w === 'ours') setLocal(rankByMatch(entries, (en) => matchRecipe(en.k, en.fa, understood, staples), TOP).map((r) => ({ entry: r.item, result: r.result })))
+    if (w === 'ours')
+      setLocal(
+        entries
+          .map((entry) => ({ entry, result: matchRecipe(entry.k, entry.fa, understood, staples) }))
+          .sort((a, b) => b.result.fit - a.result.fit)
+          .slice(0, OURS_POOL),
+      )
     else void online.run(text)
   }
   const submit = (e: FormEvent) => {
@@ -254,10 +297,17 @@ export function KitchenSearch({ entries, staples, onOpen, onFindOnline, onCookOn
 
       {where === 'ours' && local && (
         <>
-          <p className="settings-note finder__how">Ranked by how many of the ingredients you have, then fewest missing, then your favorites.</p>
+          {local.length > 1 && <PrioritySwitch value={oursPriority} onChange={setOursPriority} options={['match', 'balanced', 'rating']} />}
+          <p className="settings-note finder__how">
+            {oursPriority === 'match'
+              ? 'Sorted by how well each fits what you have.'
+              : oursPriority === 'balanced'
+                ? 'Sorted by how well each fits what you have, with a nudge for your favorites.'
+                : `Your favorites first, among recipes using at least ${pct(RATED_MIN_MATCH)} of what you have.`}
+          </p>
           <ol className="result-list" aria-label="Best matches">
             {local.length === 0 && <li className="muted">No recipes saved yet.</li>}
-            {local.map(({ entry, result }, i) => (
+            {rankOurs(local, oursPriority).slice(0, TOP).map(({ entry, result }, i) => (
               <li key={entry.id} className="result-card">
                 <span className="result-card__rank" aria-hidden>
                   {i + 1}
@@ -273,7 +323,7 @@ export function KitchenSearch({ entries, staples, onOpen, onFindOnline, onCookOn
                     ))}
                   </ul>
                   <div className="result-card__meters">
-                    <Meter label="Ingredients" value={result.match} />
+                    <Meter label="Ingredients" value={result.fit} />
                   </div>
                   <HaveMissing have={result.have} missing={result.missing} />
                 </div>
@@ -283,12 +333,14 @@ export function KitchenSearch({ entries, staples, onOpen, onFindOnline, onCookOn
         </>
       )}
       {where === 'online' && online.busy && <SearchingPanel what="your recipe sites" />}
-      {where === 'online' && online.results && <OnlineResults results={online.results} byIngredients onCook={onCookOnline} />}
+      {where === 'online' && online.results && <OnlineResults results={online.results} byIngredients onCook={onCookOnline} priority={initial} />}
     </section>
   )
 }
 
 interface WebProps {
+  /** How results are sorted at first (Settings → Kitchen). */
+  priority?: SearchPriority
   /** Undefined when online search isn't turned on. */
   onFind?: (dish: string) => Promise<OnlineResult[]>
   onCookOnline?: (r: OnlineResult) => Promise<unknown>
@@ -297,7 +349,7 @@ interface WebProps {
 }
 
 /** Search the web for a dish by name, or paste a link to a recipe. */
-export function WebSearch({ onFind, onCookOnline, onImport, onOpen }: WebProps) {
+export function WebSearch({ onFind, onCookOnline, onImport, onOpen, priority = 'balanced' }: WebProps) {
   const [dish, setDish] = useState('')
   const online = useOnline(onFind)
   const submit = (e: FormEvent) => {
@@ -330,7 +382,7 @@ export function WebSearch({ onFind, onCookOnline, onImport, onOpen }: WebProps) 
         </p>
       )}
       {online.busy && <SearchingPanel what={`for “${dish.trim()}”`} />}
-      {online.results && <OnlineResults results={online.results} byIngredients={false} onCook={onCookOnline} />}
+      {online.results && <OnlineResults results={online.results} byIngredients={false} onCook={onCookOnline} priority={priority} />}
 
       <div className="finder__link">
         <p className="finder__step">Have a link?</p>

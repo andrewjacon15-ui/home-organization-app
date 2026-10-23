@@ -69,7 +69,10 @@ describe('findOnlineRecipes', () => {
   it('searches only the family sites, keeps real recipes, and ranks by match and popularity', async () => {
     const { deps, search } = setup()
     const res = await findOnlineRecipes(deps, 'andrew', { familyId: 'f', have: 'rice, eggs, peas and soy sauce' })
-    expect(search).toHaveBeenCalledWith(expect.stringMatching(/^rice egg pea soy sauce recipe \(site:budgetbytes\.com OR site:allrecipes\.com\)$/))
+    // The main ingredients only (soy sauce is a pantry flavoring), weightiest first.
+    expect(search).toHaveBeenNthCalledWith(1, 'egg rice pea recipe (site:budgetbytes.com OR site:allrecipes.com)')
+    // Only three real recipes came back, so one broader search on the main ingredient.
+    expect(search).toHaveBeenNthCalledWith(2, 'egg recipe (site:budgetbytes.com OR site:allrecipes.com)')
     expect(res.results.map((r) => r.title)).toEqual(['Fried Rice', 'Egg Rice Bowl', 'Paella'])
     expect(res.results[0]).toMatchObject({ match: 1, missing: [], siteName: 'budgetbytes.com', url: 'https://budgetbytes.com/fried-rice' })
     expect(res.results[2].missing).toEqual(['shrimp', 'sausage', 'saffron', 'onion'])
@@ -101,12 +104,28 @@ describe('findOnlineRecipes', () => {
   it('serves repeat searches from the 7-day cache without using the search allowance', async () => {
     const { deps, search, store, advance } = setup()
     await findOnlineRecipes(deps, 'andrew', { familyId: 'f', have: 'rice, eggs' })
+    // The first search plus the broader one (few recipes in this fixture).
+    expect(search).toHaveBeenCalledTimes(2)
+    expect(store.searches).toBe(2)
     await findOnlineRecipes(deps, 'andrew', { familyId: 'f', have: 'eggs and rice' })
-    expect(search).toHaveBeenCalledTimes(1)
-    expect(store.searches).toBe(1)
+    expect(search).toHaveBeenCalledTimes(2)
     advance(8 * 86_400_000)
     await findOnlineRecipes(deps, 'andrew', { familyId: 'f', have: 'rice, eggs' })
-    expect(search).toHaveBeenCalledTimes(2)
+    expect(search).toHaveBeenCalledTimes(4)
+  })
+
+  it('skips the broader search when it would pass the monthly cap', async () => {
+    const { deps, search, store } = setup()
+    store.searches = MONTHLY_CAP - 1
+    const res = await findOnlineRecipes(deps, 'andrew', { familyId: 'f', have: 'rice, eggs' })
+    expect(search).toHaveBeenCalledTimes(1)
+    expect(res.results.length).toBeGreaterThan(0)
+  })
+
+  it('returns every result with its parts, so the app can re-sort without searching again', async () => {
+    const { deps } = setup()
+    const res = await findOnlineRecipes(deps, 'andrew', { familyId: 'f', have: 'rice, eggs, peas and soy sauce' })
+    for (const r of res.results) expect(r.parts.fit).toEqual(expect.any(Number))
   })
 
   it('stops at the monthly cap', async () => {

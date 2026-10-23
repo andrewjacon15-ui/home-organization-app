@@ -1,9 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { DEFAULT_KITCHEN, DEFAULT_SITES, normalizeSite, type KitchenSettings as Kitchen } from '@shared/recipes/kitchen.js'
-import { DEFAULT_STAPLES } from '@shared/recipes/matcher.js'
+import { DEFAULT_STAPLES, PRIORITY_LABELS, SEARCH_PRIORITIES } from '@shared/recipes/matcher.js'
 import { CloseIcon } from '../../components/Icons'
 import { saveKitchen, watchKitchen } from '../recipes/kitchenApi'
-import { SettingsSection } from './SettingRows'
+import { SelectRow, SettingsSection } from './SettingRows'
 
 /** Editable chip list: remove with ✕, add with the field. */
 export function ChipList({ label, items, onChange, normalize, placeholder, resetTo }: { label: string; items: string[]; onChange: (next: string[]) => void; normalize: (s: string) => string | null; placeholder: string; resetTo: string[] }) {
@@ -61,6 +61,13 @@ export function KitchenSettings({ familyId }: { familyId: string }) {
       <ChipList label="Pantry staples" items={kitchen.staples} onChange={(staples) => save({ ...kitchen, staples })} normalize={ingredientName} placeholder="e.g. butter" resetTo={DEFAULT_STAPLES} />
       <p className="settings-note">Staples are things you always have; recipes aren't marked down for needing them.</p>
       <ChipList label="Recipe sites for online search" items={kitchen.sites} onChange={(sites) => save({ ...kitchen, sites })} normalize={normalizeSite} placeholder="e.g. thekitchn.com" resetTo={DEFAULT_SITES} />
+      <SelectRow
+        label="Sort search results by"
+        value={kitchen.searchPriority}
+        options={SEARCH_PRIORITIES.map((p) => ({ value: p, label: PRIORITY_LABELS[p] }))}
+        onChange={(searchPriority) => save({ ...kitchen, searchPriority })}
+      />
+      <p className="settings-note">Best match favors recipes that use what you have; Best rated favors what lots of cooks rated highly. You can switch above any results without searching again.</p>
       <p className="settings-note">Online search looks only at these sites, reads each page politely (it follows each site's rules for automated tools), and never saves a recipe until you choose one.</p>
       {error && (
         <p className="error" role="alert">
