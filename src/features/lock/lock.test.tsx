@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { choose } from '../../test-utils'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
@@ -91,6 +91,8 @@ describe('LockSettings', () => {
     await typePin(user, '2468')
     expect(screen.getByRole('group', { name: 'Enter it again' })).toBeInTheDocument()
     await typePin(user, '2468')
+    // Saving waits on hashing the PIN, which can finish after the last keypress on a slow machine.
+    await waitFor(() => expect(save).toHaveBeenCalled())
     expect(markUnlocked).toHaveBeenCalled()
     const saved = save.mock.calls[0][0] as LockConfig
     expect(saved).toMatchObject({ enabled: true, lockAfterMinutes: 5 })
