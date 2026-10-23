@@ -2171,6 +2171,16 @@ letter-spacing: -0.015em;
   flex-wrap: wrap;
   margin-bottom: 16px;
 }
+.meal-templates__starters {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule);
+}
+.meal-templates__starters h3 {
+  margin: 0;
+}
 .meal-templates__people {
   max-width: 280px;
 }

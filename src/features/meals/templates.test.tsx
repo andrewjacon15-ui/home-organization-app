@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { MealTemplates } from './MealTemplates'
+import { STARTER_TEMPLATES } from './starters'
 import { applyTemplate, templateFromWeek, type MealTemplate, type TemplateDraft } from './templates'
 
 const blank = { breakfast: '', lunch: '', dinner: '', notes: '' }
@@ -39,9 +40,8 @@ describe('meal plan templates', () => {
   })
 })
 
-describe('MealTemplates', () => {
-  const t: MealTemplate = { id: 't1', name: 'School week', days: templateFromWeek({ [MON]: { ...blank, dinner: 'Tacos' }, '2026-10-06': { ...blank, dinner: 'Pasta', lunch: 'Soup' } }, SUN), people: 4, meals: ['lunch', 'dinner'] }
-  const base = {
+const t: MealTemplate = { id: 't1', name: 'School week', days: templateFromWeek({ [MON]: { ...blank, dinner: 'Tacos' }, '2026-10-06': { ...blank, dinner: 'Pasta', lunch: 'Soup' } }, SUN), people: 4, meals: ['lunch', 'dinner'] }
+const base = {
     weekStart: SUN,
     currentWeekStart: SUN,
     weekStartsOn: 0,
@@ -57,6 +57,7 @@ describe('MealTemplates', () => {
     onClose: vi.fn(),
   }
 
+describe('MealTemplates', () => {
   it('makes a template from scratch: name, how many, which meals, typed or random dinners', async () => {
     const user = userEvent.setup()
     render(<MealTemplates {...base} templates={[]} />)
@@ -117,5 +118,36 @@ describe('MealTemplates', () => {
     expect(await screen.findByText('Planned 2 days of Oct 11 – Oct 17 from “School week”.')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Add 2 to the grocery list' }))
     expect(base.onAddGroceries).toHaveBeenCalledWith(['2 lb ground beef', '1 onion'])
+  })
+})
+
+describe('starter templates', () => {
+  it('plan every meal of every day, within the limits a template allows', () => {
+    expect(STARTER_TEMPLATES).toHaveLength(3)
+    for (const s of STARTER_TEMPLATES) {
+      expect(s.days).toHaveLength(7)
+      for (const d of s.days) {
+        for (const k of ['breakfast', 'lunch', 'dinner'] as const) expect(d[k].length).toBeGreaterThan(0)
+        for (const k of ['breakfast', 'lunch', 'dinner', 'notes'] as const) expect(d[k].length).toBeLessThanOrEqual(200)
+      }
+      // Lunches are chicken and rice; one big dinner reheated; a fun Friday or Saturday.
+      expect(s.days.every((d) => /chicken/i.test(d.lunch) && /rice/i.test(d.lunch))).toBe(true)
+      expect(s.days.filter((d) => /reheat/i.test(d.dinner)).length).toBeGreaterThanOrEqual(3)
+      expect([s.days[5].notes, s.days[6].notes].some((n) => /fun dinner/i.test(n))).toBe(true)
+      expect(s.days.some((d) => /burrito bowl/i.test(d.lunch)) && s.days.some((d) => /asian/i.test(d.lunch))).toBe(true)
+    }
+  })
+
+  it('offers the starters not yet added, one at a time or all at once, for the usual number of people', async () => {
+    const user = userEvent.setup()
+    const onSave = vi.fn(async () => undefined)
+    const added = { id: 'x', ...STARTER_TEMPLATES[0] }
+    render(<MealTemplates {...base} templates={[added]} onSave={onSave} />)
+    const section = screen.getByRole('region', { name: 'Starter templates' })
+    expect(section).not.toHaveTextContent('Simple week: chili')
+    await user.click(screen.getByRole('button', { name: 'Add all 2' }))
+    expect(onSave).toHaveBeenCalledTimes(2)
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ name: 'Simple week: curry', people: 3 }))
+    expect(await screen.findByRole('status')).toHaveTextContent('Added 2 starter templates.')
   })
 })

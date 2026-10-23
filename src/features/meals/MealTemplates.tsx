@@ -6,6 +6,7 @@ import { addDays, fromDateKey } from '../../lib/dates'
 import { GroceryReview } from './GroceryReview'
 import { PEOPLE_OPTIONS, peopleValue, readPeopleValue } from './people'
 import type { Wanted } from './randomize'
+import { STARTER_TEMPLATES } from './starters'
 import { TemplateEditor } from './TemplateEditor'
 import { blankTemplate, isEmptyPlan, type ApplyMode, type MealTemplate, type TemplateDraft } from './templates'
 
@@ -49,7 +50,7 @@ const short = (key: string) => fromDateKey(key).toLocaleDateString(undefined, { 
 const weekRange = (start: string) => `${short(start)} – ${short(addDays(start, 6))}`
 
 /** "5 dinners, 2 lunches · for 4" */
-function summary(t: MealTemplate): string {
+function summary(t: Pick<MealTemplate, 'days' | 'people'>): string {
   const n = (k: 'breakfast' | 'lunch' | 'dinner') => t.days.filter((d) => d[k]).length
   const parts = [n('dinner') && count(n('dinner'), 'dinner'), n('lunch') && count(n('lunch'), 'lunch', 'lunches'), n('breakfast') && count(n('breakfast'), 'breakfast', 'breakfasts')].filter(Boolean)
   const what = parts.length ? parts.join(', ') : t.days.some((d) => !isEmptyPlan(d)) ? 'Notes only' : 'Empty'
@@ -79,6 +80,23 @@ export function MealTemplates(p: Props) {
   const [busy, setBusy] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  // Starters the household hasn't added yet (by name).
+  const have = new Set(p.templates.map((t) => t.name.trim().toLowerCase()))
+  const starters = STARTER_TEMPLATES.filter((s) => !have.has(s.name.toLowerCase()))
+  async function addStarters(list: TemplateDraft[]) {
+    setBusy(true)
+    setError(null)
+    setStatus(null)
+    try {
+      for (const s of list) await p.onSave({ ...s, people: s.people ?? p.defaultPeople })
+      setStatus(list.length === 1 ? `Added “${list[0].name}”.` : `Added ${list.length} starter templates.`)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
 
   const use = (t: MealTemplate) => {
     setUsing(using === t.id ? null : t.id)
@@ -221,6 +239,40 @@ export function MealTemplates(p: Props) {
               <p className="meal-groceries__result" role="status">
                 {status}
               </p>
+            )}
+
+            {starters.length > 0 && (
+              <section className="meal-templates__starters" aria-label="Starter templates">
+                <div className="meal-templates__row">
+                  <h3>Starter templates</h3>
+                  {starters.length > 1 && (
+                    <button type="button" className="button" disabled={busy} onClick={() => void addStarters(starters)}>
+                      Add all {starters.length}
+                    </button>
+                  )}
+                </div>
+                <p className="settings-note">Simple weeks to start from: easy breakfasts, chicken, rice and vegetable lunches with a different sauce each day, one big dinner reheated through the week, and a fun one at the end. Change anything after adding.</p>
+                <ul className="meal-templates__list">
+                  {starters.map((s) => (
+                    <li key={s.name}>
+                      <div className="meal-templates__row">
+                        <span>
+                          <strong>{s.name}</strong>
+                          <span className="muted"> · {summary(s)}</span>
+                        </span>
+                        <span className="row">
+                          <button type="button" className="button" disabled={busy} onClick={() => void addStarters([s])}>
+                            Add
+                          </button>
+                          <button type="button" className="icon-button" aria-label={`Look at and change ${s.name} before adding`} onClick={() => setView({ kind: 'edit', draft: { ...s, people: s.people ?? p.defaultPeople } })}>
+                            <PencilIcon size={18} />
+                          </button>
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </section>
             )}
           </>
         )}
