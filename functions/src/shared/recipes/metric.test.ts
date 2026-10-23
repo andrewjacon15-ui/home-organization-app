@@ -36,9 +36,34 @@ describe('metricText', () => {
 })
 
 describe('groceryLines', () => {
-  it('adds up the same ingredient across recipes when the units match', () => {
+  it('adds up the same ingredient across recipes, whatever the wording', () => {
     const plan = groceryLines(['1 cup rice', '2 cups rice', '1 lb ground beef', '1 onion, diced', '2 onions', '8 oz ground beef'])
-    expect(plan.lines).toEqual(['3 cups rice', '1 lb ground beef', '3 onions', '8 oz ground beef'])
+    expect(plan.lines).toEqual(['3 cups rice', '1 1/2 lb ground beef', '3 onions'])
+  })
+
+  it('converts units before adding, and writes the total in the unit a shopper reads best', () => {
+    expect(groceryLines(['1 cup milk', '4 tbsp milk']).lines).toEqual(['1 1/4 cups milk'])
+    expect(groceryLines(['2 tsp cumin', '1 tbsp cumin']).lines).toEqual(['2 tbsp cumin'])
+    expect(groceryLines(['12 oz chicken thighs', '1/2 lb chicken thighs']).lines).toEqual(['1 1/4 lb chicken thighs'])
+    expect(groceryLines(['200 g flour', '300 g flour']).lines).toEqual(['500 g flour'])
+    expect(groceryLines(['2 cans black beans', '1 can black beans']).lines).toEqual(['3 cans black beans'])
+  })
+
+  it('rounds counts up to what you can buy, and shops a range at its top', () => {
+    expect(groceryLines(['1/2 onion', '1/3 onion', '1 onion']).lines).toEqual(['2 onions'])
+    expect(groceryLines(['2-3 cloves garlic', '2 cloves garlic']).lines).toEqual(['5 cloves garlic'])
+  })
+
+  it('remembers which meals asked for each line', () => {
+    const plan = groceryLines([
+      { text: '1 lb ground beef', source: 'Tue: Tacos' },
+      { text: '1 lb ground beef', source: 'Thu: Chili' },
+      { text: '1 onion', source: 'Thu: Chili' },
+    ])
+    expect(plan.details).toEqual([
+      { line: '2 lb ground beef', sources: ['Tue: Tacos', 'Thu: Chili'] },
+      { line: '1 onion', sources: ['Thu: Chili'] },
+    ])
   })
 
   it('leaves out staples, group labels, and what is already on the list', () => {
