@@ -2,24 +2,24 @@
 
 Firebase project: `home-organization-app-dkcbl` · <https://home-organization-app-dkcbl.web.app>
 
-## What runs automatically
+## Checks run locally
 
-| Workflow | When | What |
+GitHub only stores the code: no Actions workflows run, so no Actions minutes are used
+(apart from Dependabot's monthly update run). Before merging any pull request, run every
+check from its branch:
+
+```bash
+npm ci && npm --prefix functions ci
+npm run verify
+```
+
+`verify` runs lint + functions typecheck, the cost and repository guards, web, functions and
+security-rules tests (rules tests need Java for the emulators), both builds, the bundle budget
+and a production dependency audit of both packages. Merge only when it exits 0.
+
+| | When | What |
 |---|---|---|
-| **CI** (`.github/workflows/ci.yml`) | Every PR and push to `main` | Lint + functions typecheck, web tests, functions tests, security-rules tests on the emulators, both builds, production dependency audit. The **CI passed** job summarizes them (use it for branch protection). |
-| **Deploy** (`.github/workflows/deploy.yml`) | After CI passes on `main` (or run by hand) | Builds and deploys **hosting + Firestore/Storage rules** from the exact commit CI tested. Dormant until the `FIREBASE_SERVICE_ACCOUNT` secret exists. |
-| **Dependabot** (`.github/dependabot.yml`) | Weekly | Grouped minor/patch dependency PRs, checked by CI. |
-
-## Turning on automatic deploys (one time)
-
-1. Google Cloud console → **IAM & Admin → Service Accounts** → *Create service account*
-   named `github-deploy`.
-2. Grant it: **Firebase Hosting Admin**, **Firebase Rules Admin**, **Cloud Datastore Index Admin**,
-   **Service Usage Consumer**. (Nothing else — it can't read your data or deploy functions.)
-3. On that account: **Keys → Add key → JSON**. A file downloads.
-4. GitHub repo → **Settings → Secrets and variables → Actions → New repository secret**:
-   name `FIREBASE_SERVICE_ACCOUNT`, value = the whole JSON file. Then delete the downloaded file.
-5. Optional: **Settings → Environments → production** → require a reviewer, if you want to approve each deploy.
+| **Dependabot** (`.github/dependabot.yml`) | Monthly | Grouped minor/patch dependency PRs. Check out the PR and run `npm run verify` before merging. |
 
 ## Manual deploys
 
