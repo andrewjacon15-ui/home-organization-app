@@ -53,10 +53,9 @@ describe('MealGroceries', () => {
     await user.click(screen.getByRole('checkbox', { name: 'Every meal with a recipe' }))
     await user.click(screen.getByRole('checkbox', { name: /Pancakes/ }))
     await user.click(screen.getByRole('button', { name: 'See the groceries for 2 meals' }))
-    expect(onReview).toHaveBeenCalledWith([expect.objectContaining({ text: 'Chicken tacos' }), expect.objectContaining({ text: 'Tomato soup' })], 4)
+    expect(onReview).toHaveBeenCalledWith([expect.objectContaining({ text: 'Chicken tacos' }), expect.objectContaining({ text: 'Tomato soup' })], 'plan')
     // Each line says which meals it's for; untick one you already have.
     expect(await screen.findByText('Sat dinner: Chicken tacos · Mon dinner: Tomato soup')).toBeInTheDocument()
-    expect(screen.getByText(/Amounts are for 4 people/)).toBeInTheDocument()
     await user.click(screen.getByRole('checkbox', { name: /1 onion/ }))
     expect(screen.getByRole('checkbox', { name: '2 of 3 ticked' })).toHaveProperty('indeterminate', true)
     // The select-all box ticks everything again, or nothing.

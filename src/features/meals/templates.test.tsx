@@ -2,12 +2,17 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { MealTemplates } from './MealTemplates'
+import type { CatalogEntry } from '../recipes/catalog'
+import { searchRecipes } from './recipeSearch'
+import { isFirstStarter, STARTER_ALIASES, FIRST_STARTER_TEMPLATES } from './starterAliases'
 import { STARTER_RECIPES } from './starterRecipes'
 import { starterDraft } from './starterSeed'
 import { STARTER_TEMPLATES } from './starters'
-import { applyTemplate, templateFromWeek, templateMealsOn, type MealTemplate, type TemplateDraft } from './templates'
+import { chooseNow } from '../../test-utils'
+import { applyTemplate, dayOnWeek, templateFromWeek, templateMealsOn, type MealTemplate, type TemplateDraft } from './templates'
 
 const blank = { breakfast: '', lunch: '', dinner: '', notes: '' }
+const entry = (t: string, o: Partial<CatalogEntry> = {}): CatalogEntry => ({ id: t.toLowerCase().replace(/\W+/g, '-'), t, k: [], fa: [], g: { meal: [], cuisine: [], main: [], diet: [] }, m: 30, s: 'manual', b: null, f: false, r: false, rv: null, rc: null, n: 4, ...o })
 // A Sunday-start week: Oct 4 (Sun) – Oct 10 (Sat), 2026.
 const SUN = '2026-10-04'
 const MON = '2026-10-05'
@@ -51,7 +56,8 @@ const base = {
     onRemoveFromWeek: vi.fn(async () => 'Took 2 meals from “School week” off this week.'),
     fromWeek: null,
     templates: [t],
-    titles: ['Tacos', 'Pasta', 'Chili', 'Soup'],
+    entries: ['Tacos', 'Pasta', 'Chili', 'Soup'].map((t) => entry(t)),
+    today: SUN,
     defaultPeople: 3,
     pick: vi.fn(async (wanted: { day: string; slot: string }[]) => Object.fromEntries(wanted.map((w, i) => [`${w.day}:${w.slot}`, ['Chili', 'Curry', 'Stir fry'][i % 3]]))),
     onSave: vi.fn(async () => undefined),
@@ -67,7 +73,7 @@ describe('MealTemplates', () => {
     render(<MealTemplates {...base} templates={[]} />)
     expect(screen.getByText(/No templates yet/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Save Oct 4 – Oct 10 as a template/ })).toBeDisabled()
-    await user.click(screen.getByRole('button', { name: 'New template' }))
+    await user.click(screen.getByRole('button', { name: 'New week template' }))
     await user.type(screen.getByLabelText('Name'), 'Busy week')
     await user.type(screen.getByLabelText('Monday dinner'), 'Tacos')
     await user.click(screen.getByRole('button', { name: 'Randomize Tuesday dinner' }))
@@ -88,7 +94,7 @@ describe('MealTemplates', () => {
   it('asks for a name, and keeps at least one meal', async () => {
     const user = userEvent.setup()
     render(<MealTemplates {...base} templates={[]} />)
-    await user.click(screen.getByRole('button', { name: 'New template' }))
+    await user.click(screen.getByRole('button', { name: 'New week template' }))
     await user.click(screen.getByRole('button', { name: 'Dinner' }))
     expect(screen.getByRole('button', { name: 'Dinner' })).toHaveAttribute('aria-pressed', 'true')
     await user.click(screen.getByRole('button', { name: 'Save template' }))
@@ -207,5 +213,85 @@ describe('templates on the week, and starters to update', () => {
     render(<MealTemplates {...base} templates={[old]} onSave={onSave} />)
     await user.click(screen.getByRole('button', { name: 'Update' }))
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ name: 'Simple week: chili', people: 4, days: STARTER_TEMPLATES[0].days }), 'old')
+  })
+})
+
+describe('day templates', () => {
+  it('makes a day template, then puts it on a chosen day', async () => {
+    const user = userEvent.setup()
+    const onSave = vi.fn(async () => undefined)
+    render(<MealTemplates {...base} templates={[]} onSave={onSave} />)
+    await user.click(screen.getByRole('button', { name: 'New day template' }))
+    await user.type(screen.getByLabelText('Name'), 'Taco Tuesday')
+    await user.type(screen.getByLabelText('The day dinner'), 'Tacos')
+    await user.click(screen.getByRole('button', { name: 'Save template' }))
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ name: 'Taco Tuesday', kind: 'day', meals: ['breakfast', 'lunch', 'dinner'] }), undefined)
+    const saved = (onSave.mock.lastCall as unknown as [TemplateDraft])[0]
+    expect(saved.days).toHaveLength(1)
+    expect(saved.days[0].dinner).toBe('Tacos')
+  })
+
+  it('applies to its one day', () => {
+    const { changes } = applyTemplate(dayOnWeek({ days: [{ ...blank, dinner: 'Tacos' }] }, '2026-10-06'), '2026-10-06', {}, 'fill')
+    expect(Object.keys(changes)).toEqual(['2026-10-06'])
+    expect(changes['2026-10-06'].dinner).toBe('Tacos')
+  })
+
+  it('fills a week template’s days, or Monday to Friday, from a day template', async () => {
+    const user = userEvent.setup()
+    const taco: MealTemplate = { id: 'd1', name: 'Taco Tuesday', kind: 'day', days: [{ ...blank, lunch: 'Soup', dinner: 'Tacos' }], people: null, meals: ['lunch', 'dinner'] }
+    render(<MealTemplates {...base} templates={[taco]} />)
+    expect(screen.getByRole('region', { name: 'Day templates' })).toHaveTextContent('Taco Tuesday')
+    await user.click(screen.getByRole('button', { name: 'New week template' }))
+    await chooseNow(screen.getByRole('combobox', { name: 'Fill Monday to Friday from a day template' }), 'Taco Tuesday')
+    // Its lunch turns the lunch column on.
+    expect(screen.getByLabelText('Wednesday lunch')).toHaveValue('Soup')
+    expect(screen.getByLabelText('Friday dinner')).toHaveValue('Tacos')
+    expect(screen.getByLabelText('Saturday dinner')).toHaveValue('')
+  })
+})
+
+describe('searching recipes while making a template', () => {
+  const book = [
+    entry('Chicken burrito bowl', { k: ['chicken thigh', 'rice', 'black bean'], fa: ['chicken', 'rice', 'bean'], g: { meal: ['lunch'], cuisine: ['mexican'], main: ['chicken'], diet: [] } }),
+    entry('Teriyaki chicken, rice and broccoli', { k: ['chicken thigh', 'rice', 'broccoli'], fa: ['chicken', 'rice', 'broccoli'], m: 25 }),
+    entry('Pancakes', { g: { meal: ['breakfast'], cuisine: [], main: [], diet: [] }, f: true }),
+  ]
+  it('finds by name, ingredient or tag, every word counting', () => {
+    expect(searchRecipes(book, 'broccoli').map((e) => e.t)).toEqual(['Teriyaki chicken, rice and broccoli'])
+    expect(searchRecipes(book, 'mexican chicken').map((e) => e.t)).toEqual(['Chicken burrito bowl'])
+    expect(searchRecipes(book, 'chicken rice').map((e) => e.t)).toHaveLength(2)
+    expect(searchRecipes(book, 'quick').map((e) => e.t)).toContain('Teriyaki chicken, rice and broccoli')
+  })
+  it('suggests what suits the meal before anything is typed', () => {
+    expect(searchRecipes(book, '', 'breakfast').map((e) => e.t)).toEqual(['Pancakes'])
+  })
+  it('picks a recipe from the list in the template editor', async () => {
+    const user = userEvent.setup()
+    render(<MealTemplates {...base} templates={[]} entries={book} />)
+    await user.click(screen.getByRole('button', { name: 'New week template' }))
+    await user.type(screen.getByLabelText('Monday dinner'), 'broc')
+    await user.click(screen.getByRole('option', { name: /Teriyaki chicken, rice and broccoli/ }))
+    expect(screen.getByLabelText('Monday dinner')).toHaveValue('Teriyaki chicken, rice and broccoli')
+  })
+})
+
+describe('the first starter templates', () => {
+  it('map their old meal names to the starter recipes now in their place', () => {
+    expect(STARTER_ALIASES['asian chicken bowl: rice, cucumber, carrot, edamame, sesame ginger']).toBe('Sesame ginger chicken bowl')
+    expect(STARTER_ALIASES['chicken, rice and broccoli with teriyaki']).toBe('Teriyaki chicken, rice and broccoli')
+    const titles = new Set(STARTER_RECIPES.map((r) => r.title))
+    for (const v of Object.values(STARTER_ALIASES)) expect(titles.has(v), v).toBe(true)
+    // Every old meal that wasn't leftovers or eating out now finds a recipe.
+    for (const t of FIRST_STARTER_TEMPLATES) for (const d of t.days) for (const k of ['breakfast', 'lunch', 'dinner'] as const) {
+      const meal = d[k]
+      if (/reheat|leftovers/i.test(meal)) continue
+      expect(titles.has(meal) || !!STARTER_ALIASES[meal.toLowerCase()], meal).toBe(true)
+    }
+  })
+  it('knows an unchanged first starter (to update it), but not one the household changed', () => {
+    const first = FIRST_STARTER_TEMPLATES[0]
+    expect(isFirstStarter(first)).toBe(STARTER_TEMPLATES[0])
+    expect(isFirstStarter({ ...first, days: first.days.map((d, i) => (i ? d : { ...d, dinner: 'Ours' })) })).toBeNull()
   })
 })

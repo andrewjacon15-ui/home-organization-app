@@ -51,9 +51,11 @@ export interface MealPlan {
   lunch: string
   dinner: string
   notes: string
+  /** How many the day's meals are for (from the template that planned them), when it's been set. */
+  people?: number | null
 }
 
-export type MealSlot = keyof MealPlan
+export type MealSlot = 'breakfast' | 'lunch' | 'dinner' | 'notes'
 
 export interface CalendarEvent {
   id: string

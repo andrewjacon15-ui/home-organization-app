@@ -26,13 +26,14 @@ export interface Shopping {
  * serves), the same ingredient combined across meals, staples and what's on the list left off,
  * and each line marked with the meals it's for (so clearing those meals can take it off again).
  */
-export function shoppingPlan(meals: { meal: Meal; recipe: Recipe | null }[], people: number | null, staples: string[], onList: string[]): Shopping {
+export function shoppingPlan(meals: { meal: Meal & { people?: number | null }; recipe: Recipe | null }[], people: number | null | 'plan', staples: string[], onList: string[]): Shopping {
   const labels: Record<string, string> = {}
   const inputs = meals.flatMap(({ meal, recipe }) => {
     if (!recipe) return []
     const key = mealKey(meal)
     labels[key] = mealSource(meal)
-    const factor = scaleFor(people, recipe.servings)
+    // "As planned": each meal for as many as its day was planned for (else as written).
+    const factor = scaleFor(people === 'plan' ? (meal.people ?? null) : people, recipe.servings)
     return lines(recipe.ingredients).map((l) => ({ text: scaleLine(l, factor), source: key }))
   })
   return { plan: groceryLines(inputs, staples, onList), labels }

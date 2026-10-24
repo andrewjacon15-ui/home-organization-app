@@ -185,7 +185,8 @@ service cloud.firestore {
       match /mealPlans/{date} {
         function validMeal() {
           let d = request.resource.data;
-          return onlyKeys(['breakfast', 'lunch', 'dinner', 'notes', 'updatedBy'])
+          return onlyKeys(['breakfast', 'lunch', 'dinner', 'notes', 'people', 'updatedBy'])
+            && (!('people' in d) || (d.people is int && d.people >= 1 && d.people <= 30))
             && d.breakfast is string && d.breakfast.size() <= 500
             && d.lunch is string && d.lunch.size() <= 500
             && d.dinner is string && d.dinner.size() <= 500
@@ -282,9 +283,11 @@ service cloud.firestore {
       match /mealTemplates/{templateId} {
         function validTemplate() {
           let d = request.resource.data;
-          return onlyKeys(['name', 'days', 'people', 'meals', 'createdBy', 'createdAt', 'updatedAt'])
+          // A week (seven days, Sunday first) or a single day ("Taco Tuesday").
+          return onlyKeys(['name', 'kind', 'days', 'people', 'meals', 'createdBy', 'createdAt', 'updatedAt'])
             && d.name is string && d.name.size() > 0 && d.name.size() <= 60
-            && d.days is list && d.days.size() == 7
+            && (!('kind' in d) || d.kind in ['week', 'day'])
+            && d.days is list && (d.days.size() == 7 || (d.get('kind', 'week') == 'day' && d.days.size() == 1))
             && (!('people' in d) || d.people == null || (d.people is int && d.people >= 1 && d.people <= 30))
             && (!('meals' in d) || (d.meals is list && d.meals.size() <= 3));
         }

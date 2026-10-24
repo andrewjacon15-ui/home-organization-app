@@ -77,12 +77,28 @@ Limits that aren't money:
   re-reads every event in it).
 - The photo library is read on the wall tablet (for the screensaver) and while a photo screen
   is open, never in the background on phones.
-- Grocery lists, pantry staples and meal templates load only while the sheet that uses them
-  is open.
+- The Meals tab, while it's open, keeps the lists, the grocery list's items and the kitchen
+  settings live (about 50–70 reads the first time, then only what changes), so adding up
+  groceries and clearing meals need no reads of their own. Meal templates, and this week and
+  next, load only while the templates sheet is open.
+- Recipes for a grocery list come in one read per 30 and are kept for the visit.
 - Home's daily summary reads what the panels did (the week's events, chores, countdowns) plus
   today's and tomorrow's meal plan, and only the grocery list's items, not every list.
 - Reminder emails read the household's quiet hours only when a reminder is about to go out.
 - The Admin tab measures storage (one file listing per household) only when it's opened or refreshed.
+
+## Meal planning (checked 2026-10-23)
+
+| Action | Firestore | How often |
+|---|---|---|
+| Starter recipes for a household | 27 existence checks + 27 writes, and 27 recipe-index trigger runs | Once per household, ever |
+| Open the Meals tab | ≈ 70 reads first time, then changes only | Per visit |
+| Plan a week from a template | ≤ 7 writes (+ 14 reads if the sheet's weeks weren't open yet) | Per use |
+| Add a week's groceries | ≈ 50–70 writes, ≤ 21 recipe reads (cached for the visit) | Per use |
+| Clear a day or a week | ≤ 7 writes + one delete per grocery item it takes off | Per use |
+
+A household that plans a week a day stays under 1k operations a day for meal planning, a
+few percent of the free daily allowance.
 
 ## Last checked (2026-10-03)
 

@@ -10,10 +10,11 @@ import { PEOPLE_OPTIONS, peopleValue, readPeopleValue } from './people'
 import type { Wanted } from './randomize'
 import { STARTER_TEMPLATES } from './starters'
 import { TemplateEditor } from './TemplateEditor'
-import { blankTemplate, isEmptyPlan, templateMealsOn, type ApplyMode, type MealTemplate, type TemplateDraft } from './templates'
+import type { CatalogEntry } from '../recipes/catalog'
+import { blankTemplate, isDay, isEmptyPlan, templateMealsOn, type ApplyMode, type MealTemplate, type TemplateDraft } from './templates'
 
 export interface ApplyOptions {
-  /** First day of the week it goes on. */
+  /** First day of the week it goes on (a day template: the day itself). */
   weekStart: string
   mode: ApplyMode
   people: number | null
@@ -39,8 +40,10 @@ interface Props {
   /** The week on screen as a template (to save it), or null when nothing's planned. */
   fromWeek: TemplateDraft | null
   templates: MealTemplate[]
-  /** Recipe titles to suggest while typing a meal. */
-  titles: string[]
+  /** The recipe book, to search while filling in a template. */
+  entries: CatalogEntry[]
+  /** Today, for the days a day template can go on. */
+  today: string
   /** How many the household usually cooks for (Settings → Kitchen). */
   defaultPeople: number | null
   pick: (wanted: Wanted[], taken: string[]) => Promise<Record<string, string>>
@@ -80,6 +83,12 @@ export function MealTemplates(p: Props) {
     ...(p.weekStart !== p.currentWeekStart && p.weekStart !== nextWeek ? [{ start: p.weekStart, label: weekRange(p.weekStart) }] : []),
   ]
   const [week, setWeek] = useState(p.weekStart)
+  // A day template goes on one of the next two weeks' days.
+  const [day, setDay] = useState(p.today)
+  const nextDays = Array.from({ length: 14 }, (_, i) => addDays(p.today, i))
+  const dayLabel = (d: string) => (d === p.today ? 'Today' : d === addDays(p.today, 1) ? 'Tomorrow' : fromDateKey(d).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }))
+  const weekTemplates = p.templates.filter((t) => !isDay(t))
+  const dayTemplates = p.templates.filter(isDay)
   const [mode, setMode] = useState<ApplyMode>('fill')
   const [people, setPeople] = useState<number | null>(p.defaultPeople)
   const [groceries, setGroceries] = useState(true)
@@ -132,7 +141,7 @@ export function MealTemplates(p: Props) {
     setError(null)
     setStatus(null)
     try {
-      const r = await p.onApply(t, { weekStart: week, mode, people, groceries })
+      const r = await p.onApply(t, { weekStart: isDay(t) ? day : week, mode, people, groceries })
       setUsing(null)
       if (r.groceries) setView({ kind: 'review', message: r.message, ...r.groceries })
       else setStatus(r.message)
@@ -154,7 +163,8 @@ export function MealTemplates(p: Props) {
           <TemplateEditor
             initial={view.draft}
             editing={!!view.id}
-            titles={p.titles}
+            entries={p.entries}
+            dayTemplates={dayTemplates}
             weekStartsOn={p.weekStartsOn}
             pick={p.pick}
             onSave={async (draft) => {
@@ -181,7 +191,10 @@ export function MealTemplates(p: Props) {
             <h2>Meal plan templates</h2>
             <div className="row meal-templates__new">
               <button type="button" className="button button--primary" onClick={() => setView({ kind: 'edit', draft: blankTemplate(['dinner'], p.defaultPeople) })}>
-                <AddIcon size={18} aria-hidden /> New template
+                <AddIcon size={18} aria-hidden /> New week template
+              </button>
+              <button type="button" className="button" onClick={() => setView({ kind: 'edit', draft: blankTemplate(['breakfast', 'lunch', 'dinner'], p.defaultPeople, 'day') })}>
+                <AddIcon size={18} aria-hidden /> New day template
               </button>
               <button
                 type="button"
@@ -194,16 +207,22 @@ export function MealTemplates(p: Props) {
               </button>
             </div>
 
-            {p.templates.length === 0 ? (
-              <p className="empty">No templates yet. Start one from scratch (the dice fill a week from your recipes), or plan a week you like and save it.</p>
-            ) : (
-              <ul className="meal-templates__list" aria-label="Templates">
-                {p.templates.map((t) => {
+            {p.templates.length === 0 && (
+              <p className="empty">No templates yet. Make a day (“Taco Tuesday”) or a week, search your recipes or let the dice pick, or plan a week you like and save it. Week templates can be built from day templates.</p>
+            )}
+            {[
+              { list: weekTemplates, title: 'Week templates' },
+              { list: dayTemplates, title: 'Day templates' },
+            ].filter((g) => g.list.length > 0).map((g) => (
+              <section key={g.title} className="meal-templates__group" aria-label={g.title}>
+              <h3>{g.title}</h3>
+              <ul className="meal-templates__list" aria-label={g.title === 'Week templates' ? 'Templates' : g.title}>
+                {g.list.map((t) => {
                   // On the week when at least half its meals are there as it planned them (templates that
                   // share a breakfast or two with the week don't count).
                   const matched = templateMealsOn(t, p.weekStart, p.weekPlans).keys.length
                   const total = t.days.reduce((n, d) => n + [d.breakfast, d.lunch, d.dinner].filter(Boolean).length, 0)
-                  const onWeek = matched > 0 && matched * 2 >= total ? matched : 0
+                  const onWeek = !isDay(t) && matched > 0 && matched * 2 >= total ? matched : 0
                   return (
                   <li key={t.id}>
                     <div className="meal-templates__row">
@@ -215,10 +234,10 @@ export function MealTemplates(p: Props) {
                         <button type="button" className={`button${using === t.id ? ' button--primary' : ''}`} aria-expanded={using === t.id} onClick={() => use(t)}>
                           Use
                         </button>
-                        <button type="button" className="icon-button" aria-label={`Edit template ${t.name}`} onClick={() => setView({ kind: 'edit', draft: { name: t.name, days: t.days, people: t.people, meals: t.meals }, id: t.id })}>
+                        <button type="button" className="icon-button" aria-label={`Edit template ${t.name}`} onClick={() => setView({ kind: 'edit', draft: { name: t.name, kind: t.kind, days: t.days, people: t.people, meals: t.meals }, id: t.id })}>
                           <PencilIcon size={18} />
                         </button>
-                        <button type="button" className="icon-button" aria-label={`Copy template ${t.name}`} onClick={() => setView({ kind: 'edit', draft: { name: `${t.name} copy`.slice(0, 60), days: t.days, people: t.people, meals: t.meals } })}>
+                        <button type="button" className="icon-button" aria-label={`Copy template ${t.name}`} onClick={() => setView({ kind: 'edit', draft: { name: `${t.name} copy`.slice(0, 60), kind: t.kind, days: t.days, people: t.people, meals: t.meals } })}>
                           <CopyIcon size={18} />
                         </button>
                         <button type="button" className="icon-button" aria-label={`Delete template ${t.name}`} onClick={() => p.onDelete(t)}>
@@ -259,6 +278,12 @@ export function MealTemplates(p: Props) {
                     )}
                     {using === t.id && (
                       <div className="meal-templates__use" role="group" aria-label={`Use ${t.name}`}>
+                        {isDay(t) ? (
+                          <label className="field meal-templates__people">
+                            Which day
+                            <Select value={day} options={nextDays.map((d) => ({ value: d, label: dayLabel(d) }))} onChange={setDay} aria-label="Which day" />
+                          </label>
+                        ) : (
                         <div className="segmented segmented--small" role="group" aria-label="Which week">
                           {weeks.map((w) => (
                             <button key={w.start} type="button" className={`segmented__item${week === w.start ? ' segmented__item--active' : ''}`} aria-pressed={week === w.start} onClick={() => setWeek(w.start)}>
@@ -266,11 +291,12 @@ export function MealTemplates(p: Props) {
                             </button>
                           ))}
                         </div>
+                        )}
                         <div className="segmented segmented--small" role="group" aria-label="How">
                           {(
                             [
                               ['fill', 'Fill empty meals'],
-                              ['replace', 'Replace the week'],
+                              ['replace', isDay(t) ? 'Replace the day' : 'Replace the week'],
                             ] as const
                           ).map(([m, label]) => (
                             <button key={m} type="button" className={`segmented__item${mode === m ? ' segmented__item--active' : ''}`} aria-pressed={mode === m} onClick={() => setMode(m)}>
@@ -287,7 +313,7 @@ export function MealTemplates(p: Props) {
                           Make a grocery list for it
                         </label>
                         <button type="button" className="button button--primary" disabled={busy} onClick={() => void apply(t)}>
-                          {busy ? 'Planning…' : `Plan ${weekRange(week)}`}
+                          {busy ? 'Planning…' : isDay(t) ? `Plan ${dayLabel(day)}` : `Plan ${weekRange(week)}`}
                         </button>
                       </div>
                     )}
@@ -295,7 +321,8 @@ export function MealTemplates(p: Props) {
                   )
                 })}
               </ul>
-            )}
+              </section>
+            ))}
             {status && (
               <p className="meal-groceries__result" role="status">
                 {status}
