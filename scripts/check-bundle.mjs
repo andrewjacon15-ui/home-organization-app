@@ -5,11 +5,12 @@
  *  - the production build must never point at the local emulators (a stray .env.local);
  *  - no source maps or stray large files are shipped.
  */
+import { fileURLToPath } from 'node:url'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { gzipSync } from 'node:zlib'
 
-const root = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
+const root = fileURLToPath(new URL('..', import.meta.url))
 const dist = join(root, 'dist')
 const kb = (n) => Math.round(n / 102.4) / 10
 

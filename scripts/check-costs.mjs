@@ -4,10 +4,11 @@
  * Each check names the Google Cloud / Firebase free tier it protects; docs/COSTS.md has
  * the full picture. Static checks only — no credentials, nothing is called.
  */
+import { fileURLToPath } from 'node:url'
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-const root = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
+const root = fileURLToPath(new URL('..', import.meta.url))
 const read = (p) => readFileSync(join(root, p), 'utf8')
 const problems = []
 const notes = []
