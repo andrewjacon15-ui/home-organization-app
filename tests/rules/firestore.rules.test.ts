@@ -235,6 +235,9 @@ describe('meal plans', () => {
     const db = dbFor(BOB)
     await assertSucceeds(setDoc(doc(db, `families/${FAM_A}/mealPlans/2026-10-01`), { breakfast: 'Eggs', lunch: '', dinner: 'Tacos', notes: '' }))
     await assertFails(setDoc(doc(db, `families/${FAM_A}/mealPlans/not-a-date`), { breakfast: 'Eggs', lunch: '', dinner: '', notes: '' }))
+    // How many a day is planned for (from its template).
+    await assertSucceeds(setDoc(doc(db, `families/${FAM_A}/mealPlans/2026-10-02`), { breakfast: '', lunch: '', dinner: 'Tacos', notes: '', people: 6 }))
+    await assertFails(setDoc(doc(db, `families/${FAM_A}/mealPlans/2026-10-03`), { breakfast: '', lunch: '', dinner: 'Tacos', notes: '', people: 0 }))
     await assertFails(setDoc(doc(db, `families/${FAM_A}/mealPlans/2026-10-02`), { breakfast: 5, lunch: '', dinner: '', notes: '' }))
   })
 
@@ -817,6 +820,10 @@ describe('meal plan templates', () => {
     await assertFails(setDoc(doc(col(ALICE), 't6'), { name: 'Mine now', days, createdBy: ALICE.uid }))
     await assertFails(setDoc(doc(col(BOB), 't7'), { name: 'Huge', days, people: 99, createdBy: BOB.uid }))
     await assertFails(setDoc(doc(col(MALLORY), 't6'), { name: 'Theirs', days, createdBy: BOB.uid }))
+    // Day templates: one day.
+    await assertSucceeds(setDoc(doc(col(BOB), 'd1'), { name: 'Taco Tuesday', kind: 'day', days: days.slice(0, 1), createdBy: BOB.uid }))
+    await assertFails(setDoc(doc(col(BOB), 'd2'), { name: 'Short week', kind: 'week', days: days.slice(0, 1), createdBy: BOB.uid }))
+    await assertFails(setDoc(doc(col(BOB), 'd3'), { name: 'Odd', kind: 'month', days, createdBy: BOB.uid }))
   })
 })
 

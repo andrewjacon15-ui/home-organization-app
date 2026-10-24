@@ -223,6 +223,14 @@ Every part opens its own tab. Settings → Home screen switches a kind of device
   brings back both.
 - **Starter recipes:** every household gets the recipes the starter templates use, once (Settings →
   Kitchen remembers); adapted ones say where from, with a link.
+- **Day and week templates:** a day template ("Taco Tuesday") goes on any day of the next two weeks;
+  a week template's days can be filled from day templates, one day at a time or Monday to Friday at
+  once. Meals are filled with a recipe search (title, ingredients, tags; with nothing typed, what suits
+  the meal, favorites first). "Cooking for" chosen when using a template is remembered by it and by
+  the days it plans; "Groceries for upcoming meals" defaults to "As planned for each day".
+- **Fast:** nothing waits on the server. Planning, clearing and adding groceries change the screen at
+  once and save behind it (one batch per change); the grocery list and this week and next stay live
+  while the sheets need them, and recipes for a grocery list are fetched ahead.
 - **Grocery review** before anything is added: the combined list, scaled to "Cooking for", each line
   with the meals it's for in `--ink-2`, every line ticked (a select-all box above); untick what you have, then "Add N to the
   grocery list". Pantry staples and what's already on the list are left off and counted.

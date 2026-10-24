@@ -16,7 +16,8 @@ interface Props {
   /** How many the household usually cooks for (Settings → Kitchen). */
   defaultPeople: number | null
   /** The combined grocery list for these meals, scaled to `people`, to look over. */
-  onReview: (meals: PlannedMeal[], people: number | null) => Promise<Shopping>
+  /** `people`: a number, null for as each recipe is written, or "plan" for as each day was planned. */
+  onReview: (meals: PlannedMeal[], people: number | null | 'plan') => Promise<Shopping>
   onAdd: (lines: NewItem[]) => Promise<void>
   onClose: () => void
 }
@@ -31,7 +32,8 @@ const dayLabel = (date: string, today: string) =>
 export function MealGroceries({ today, days, onDays, meals, defaultPeople, onReview, onAdd, onClose }: Props) {
   const withRecipe = (meals ?? []).filter((m) => m.recipeId)
   const [picked, setPicked] = useState<Set<string> | null>(null)
-  const [people, setPeople] = useState(defaultPeople)
+  // Each meal for as many as its day was planned for (from its template), unless changed here.
+  const [people, setPeople] = useState<number | null | 'plan'>('plan')
   const [busy, setBusy] = useState(false)
   const [review, setReview] = useState<Shopping | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -66,7 +68,7 @@ export function MealGroceries({ today, days, onDays, meals, defaultPeople, onRev
         </button>
         <h2>Groceries for upcoming meals</h2>
         {review ? (
-          <GroceryReview shopping={review} people={people} onAdd={onAdd} onDone={onClose} />
+          <GroceryReview shopping={review} people={people === 'plan' ? null : people} onAdd={onAdd} onDone={onClose} />
         ) : (
           <>
         <p className="muted">Pick the meals you’re shopping for. Their ingredients are added up across recipes; pantry staples and anything already on the list are left off. You’ll see the list before anything is added.</p>
@@ -130,7 +132,12 @@ export function MealGroceries({ today, days, onDays, meals, defaultPeople, onRev
 
         <label className="field meal-templates__people">
           Cooking for
-          <Select value={peopleValue(people)} options={PEOPLE_OPTIONS} onChange={(v) => setPeople(readPeopleValue(v))} aria-label="Cooking for" />
+          <Select
+            value={people === 'plan' ? 'plan' : peopleValue(people)}
+            options={[{ value: 'plan', label: `As planned for each day${defaultPeople ? ` (otherwise ${defaultPeople})` : ''}` }, ...PEOPLE_OPTIONS]}
+            onChange={(v) => setPeople(v === 'plan' ? 'plan' : readPeopleValue(v))}
+            aria-label="Cooking for"
+          />
         </label>
         <div className="row">
           <button type="button" className="button button--primary" disabled={busy || count === 0} onClick={() => void next()}>

@@ -6,14 +6,17 @@ import type { MealPlan } from '../../types'
 import type { PlannedMeal, PlannedSlot } from './upcomingMeals'
 
 /**
- * A meal-plan template: a named week of meals ("School week", "Taco Tuesday") kept by
- * weekday (0 = Sunday), so it lands on the right days whichever day the week starts on.
+ * A meal-plan template: a named week of meals ("School week") kept by weekday (0 = Sunday), so
+ * it lands on the right days whichever day the week starts on; or a single day ("Taco
+ * Tuesday", "Busy weeknight") to put on any day, or to build week templates from.
  * families/{f}/mealTemplates/{id}.
  */
 export interface MealTemplate {
   id: string
   name: string
-  /** Seven days, Sunday first. */
+  /** A week (the default) or a single day. */
+  kind?: 'week' | 'day'
+  /** A week: seven days, Sunday first. A day template: just the one. */
   days: MealPlan[]
   /** How many it's planned for (scales its groceries); null = as each recipe is written. */
   people: number | null
@@ -62,8 +65,23 @@ const readMeals = (v: unknown, days: MealPlan[]): PlannedSlot[] => {
 
 const readPeople = (v: unknown) => (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 30 ? v : null)
 
-/** An empty week of the given meals, for a new template. */
-export const blankTemplate = (meals: PlannedSlot[] = ['dinner'], people: number | null = null): TemplateDraft => ({ name: '', days: Array.from({ length: 7 }, () => ({ ...EMPTY })), people, meals })
+/** An empty week (or day) of the given meals, for a new template. */
+export const blankTemplate = (meals: PlannedSlot[] = ['dinner'], people: number | null = null, kind: 'week' | 'day' = 'week'): TemplateDraft => ({
+  name: '',
+  kind,
+  days: Array.from({ length: kind === 'day' ? 1 : 7 }, () => ({ ...EMPTY })),
+  people,
+  meals,
+})
+
+export const isDay = (t: Pick<MealTemplate, 'kind'>) => t.kind === 'day'
+
+/** A day template as a week with that one day on `date`'s weekday (to apply it like a week). */
+export function dayOnWeek(t: Pick<MealTemplate, 'days'>, date: string): Pick<MealTemplate, 'days'> {
+  const days = Array.from({ length: 7 }, () => ({ ...EMPTY }))
+  days[weekday(date)] = clean(t.days[0])
+  return { days }
+}
 
 /**
  * What applying a template to a week changes: each day's new plan (only days that change),
@@ -92,7 +110,8 @@ export function watchTemplates(familyId: string, onChange: (list: MealTemplate[]
     onChange(
       snap.docs.map((d) => {
         const days = ((d.get('days') ?? []) as Partial<MealPlan>[]).map(clean)
-        return { id: d.id, name: d.get('name'), days, people: readPeople(d.get('people')), meals: readMeals(d.get('meals'), days) }
+        const kind = d.get('kind') === 'day' ? ('day' as const) : ('week' as const)
+        return { id: d.id, name: d.get('name'), kind, days, people: readPeople(d.get('people')), meals: readMeals(d.get('meals'), days) }
       }),
     ),
   )
@@ -105,7 +124,7 @@ const fields = (t: TemplateDraft) => {
     for (const s of SLOTS) if (!t.meals.includes(s)) c[s] = ''
     return c
   })
-  return { name: t.name.trim().slice(0, 60), days, people: t.people, meals: SLOTS.filter((s) => t.meals.includes(s)) }
+  return { name: t.name.trim().slice(0, 60), kind: t.kind === 'day' ? 'day' : 'week', days: t.kind === 'day' ? days.slice(0, 1) : days, people: t.people, meals: SLOTS.filter((s) => t.meals.includes(s)) }
 }
 
 export function saveTemplate(familyId: string, userId: string, t: TemplateDraft) {

@@ -37,6 +37,8 @@ export interface ListItem {
   createdBy?: string
   /** Which category it's filed under; null = the list's top. */
   categoryId?: string | null
+  /** Grocery items from the meal plan: the meals they're for ("YYYY-MM-DD:slot"). */
+  meals?: string[]
 }
 
 const listsCol = (familyId: string) => collection(db, 'families', familyId, 'lists')
@@ -63,7 +65,7 @@ export function watchItems(familyId: string, listId: string, onChange: (items: L
     onChange(
       snap.docs.map((d) => {
         const x = d.data()
-        return { id: d.id, text: x.text, done: !!x.done, memberId: x.memberId ?? null, order: x.order ?? 0, createdBy: x.createdBy, categoryId: x.categoryId ?? null }
+        return { id: d.id, text: x.text, done: !!x.done, memberId: x.memberId ?? null, order: x.order ?? 0, createdBy: x.createdBy, categoryId: x.categoryId ?? null, ...(Array.isArray(x.meals) ? { meals: x.meals.map(String) } : {}) }
       }),
     )
   })
@@ -134,15 +136,32 @@ export async function addItems(familyId: string, listId: string, userId: string,
   await batch.commit()
 }
 
-/** The grocery items not bought yet (not checked off) that were added for any of these meals. */
-export async function itemsForMeals(familyId: string, listId: string, mealKeys: string[]) {
-  const keys = new Set(mealKeys)
-  const snap = await getDocs(itemsCol(familyId, listId))
-  return snap.docs.flatMap((d) => {
-    const raw = d.get('meals') as unknown
-    const meals = Array.isArray(raw) ? raw.map(String) : []
-    return !d.get('done') && meals.some((k) => keys.has(k)) ? [{ doc: d, meals }] : []
-  })
+/**
+ * Takes items off a list at once (no reads first: the caller already has them, live) and
+ * returns how to put them back as they were.
+ */
+export function removeItems(familyId: string, listId: string, items: ListItem[]): { done: Promise<void>; restore: Restore } {
+  const batch = writeBatch(db)
+  for (const i of items) batch.delete(doc(itemsCol(familyId, listId), i.id))
+  return {
+    done: batch.commit(),
+    restore: async () => {
+      const back = writeBatch(db)
+      for (const { id, ...i } of items) {
+        back.set(doc(itemsCol(familyId, listId), id), {
+          text: i.text,
+          done: i.done,
+          memberId: i.memberId,
+          order: i.order,
+          categoryId: i.categoryId ?? null,
+          ...(i.meals?.length ? { meals: i.meals } : {}),
+          ...(i.createdBy ? { createdBy: i.createdBy } : {}),
+          createdAt: serverTimestamp(),
+        })
+      }
+      await back.commit()
+    },
+  }
 }
 
 /** How items compare for repeats: grocery items by the thing itself ("2 bags Bananas" = "banana"), others by their words. */

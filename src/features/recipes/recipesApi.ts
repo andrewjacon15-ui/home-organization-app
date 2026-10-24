@@ -1,5 +1,5 @@
 import { removeDocs } from '../../lib/undo'
-import { addDoc, collection, doc, getDoc, onSnapshot, serverTimestamp, setDoc, updateDoc, type DocumentData } from 'firebase/firestore'
+import { addDoc, collection, doc, documentId, getDoc, getDocs, onSnapshot, query, serverTimestamp, setDoc, updateDoc, where, type DocumentData } from 'firebase/firestore'
 import { parseIngredient } from '@shared/recipes/ingredient.js'
 import { autoTag, cleanTags, type RecipeTags } from '@shared/recipes/tagger.js'
 import { db } from '../../firebase'
@@ -96,6 +96,17 @@ export function watchRecipe(familyId: string, id: string, onChange: (recipe: Rec
 export async function getRecipe(familyId: string, id: string): Promise<Recipe | null> {
   const snap = await getDoc(doc(recipesCol(familyId), id))
   return snap.exists() ? fromDoc(snap.id, snap.data()) : null
+}
+
+/** Several recipes in one round trip per 30 (a meal plan's worth), instead of one read each. */
+export async function getRecipes(familyId: string, ids: string[]): Promise<Recipe[]> {
+  const unique = [...new Set(ids)]
+  const out: Recipe[] = []
+  for (let i = 0; i < unique.length; i += 30) {
+    const snap = await getDocs(query(recipesCol(familyId), where(documentId(), 'in', unique.slice(i, i + 30))))
+    for (const d of snap.docs) out.push(fromDoc(d.id, d.data()))
+  }
+  return out
 }
 
 function clean(draft: RecipeDraft) {

@@ -2159,7 +2159,7 @@ letter-spacing: -0.015em;
 }
 .template-editor__day {
   display: grid;
-  grid-template-columns: 112px repeat(var(--meals, 1), minmax(0, 1fr));
+  grid-template-columns: repeat(var(--meals, 1), minmax(0, 1fr));
   align-items: end;
   gap: 8px 12px;
   padding-bottom: 8px;
@@ -2216,6 +2216,71 @@ letter-spacing: -0.015em;
   margin-top: 4px;
   font-size: var(--fs-small);
   color: var(--ink-2);
+}
+.meal-templates__group {
+  display: grid;
+  gap: 8px;
+}
+.meal-templates__group h3 {
+  margin: 8px 0 0;
+}
+/* Search the recipe book from a meal field. */
+.recipe-picker {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+.recipe-picker input {
+  width: 100%;
+}
+.recipe-picker__list {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  max-height: 280px;
+  overflow: auto;
+  background: var(--surface);
+  border-radius: var(--r);
+  box-shadow: var(--shadow-lg);
+}
+.recipe-picker__option {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: var(--r);
+  cursor: pointer;
+}
+.recipe-picker__option--active,
+.recipe-picker__option:hover {
+  background: var(--accent-soft);
+}
+.recipe-picker__meta {
+  font-size: var(--fs-small);
+  color: var(--ink-2);
+}
+/* The weekday (and its day-template menu) on a line of its own, the meals below it. */
+.template-editor__weekday {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.template-editor__from {
+  max-width: 240px;
+}
+/* The editor gets more room than the template list. */
+.meal-templates:has(.template-editor) {
+  width: min(960px, 100%);
+}
+.template-editor__from {
+  font-size: var(--fs-small);
+  font-weight: 400;
 }
 .meal-templates__people {
   max-width: 280px;

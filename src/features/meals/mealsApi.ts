@@ -1,4 +1,4 @@
-import { collection, deleteDoc, doc, documentId, getDocs, onSnapshot, query, setDoc, where, type QuerySnapshot } from 'firebase/firestore'
+import { collection, deleteDoc, doc, documentId, getDocs, onSnapshot, query, setDoc, where, writeBatch, type QuerySnapshot } from 'firebase/firestore'
 import { db } from '../../firebase'
 import type { MealPlan } from '../../types'
 
@@ -15,6 +15,7 @@ function readPlans(snap: QuerySnapshot): Record<string, MealPlan> {
       lunch: data.lunch ?? '',
       dinner: data.dinner ?? '',
       notes: data.notes ?? '',
+      ...(typeof data.people === 'number' ? { people: data.people } : {}),
     }
   }
   return plans
@@ -30,9 +31,22 @@ export async function getMealPlans(familyId: string, from: string, to: string): 
   return readPlans(await getDocs(range(familyId, from, to)))
 }
 
+export const isBlankPlan = (plan: MealPlan) => [plan.breakfast, plan.lunch, plan.dinner, plan.notes].every((v) => !v.trim())
+const planFields = ({ people, ...meals }: MealPlan, updatedBy: string) => ({ ...meals, ...(people ? { people } : {}), updatedBy })
+
 /** Saves a day's plan, or deletes the doc when every field is blank. */
 export function saveMealPlan(familyId: string, date: string, plan: MealPlan, updatedBy: string) {
   const ref = doc(plansCol(familyId), date)
-  const isEmpty = Object.values(plan).every((v) => v.trim() === '')
-  return isEmpty ? deleteDoc(ref) : setDoc(ref, { ...plan, updatedBy })
+  return isBlankPlan(plan) ? deleteDoc(ref) : setDoc(ref, planFields(plan, updatedBy))
+}
+
+/** Saves several days at once: one write to the device's copy, one update on screen, one trip. */
+export function saveMealPlans(familyId: string, plans: Record<string, MealPlan>, updatedBy: string) {
+  const batch = writeBatch(db)
+  for (const [date, plan] of Object.entries(plans)) {
+    const ref = doc(plansCol(familyId), date)
+    if (isBlankPlan(plan)) batch.delete(ref)
+    else batch.set(ref, planFields(plan, updatedBy))
+  }
+  return batch.commit()
 }

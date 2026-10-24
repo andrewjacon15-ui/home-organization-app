@@ -9,6 +9,8 @@ export interface PlannedMeal {
   slot: PlannedSlot
   text: string
   recipeId: string | null
+  /** How many the day was planned for (from its template), if set. */
+  people?: number | null
 }
 
 export interface GroceryResult {
@@ -36,7 +38,7 @@ export function plannedMeals(plans: Record<string, MealPlan>, from: string, days
     const date = addDays(from, i)
     for (const slot of SLOT_ORDER) {
       const text = plans[date]?.[slot]?.trim()
-      if (text) out.push({ date, slot, text, recipeId: recipeFor(text) })
+      if (text) out.push({ date, slot, text, recipeId: recipeFor(text), ...(plans[date]?.people ? { people: plans[date].people } : {}) })
     }
   }
   return out
