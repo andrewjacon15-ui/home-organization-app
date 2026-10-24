@@ -1,10 +1,11 @@
-# Weekly, grouped dependency updates; CI checks each PR before anything merges.
+# Monthly, grouped dependency updates (each update run uses Actions minutes).
+# GitHub runs no other checks: run `npm run verify` locally before merging.
 version: 2
 updates:
   - package-ecosystem: npm
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
     groups:
       web:
         patterns: ['*']
@@ -14,14 +15,10 @@ updates:
   - package-ecosystem: npm
     directory: /functions
     schedule:
-      interval: weekly
+      interval: monthly
     groups:
       functions:
         patterns: ['*']
         update-types: [minor, patch]
     open-pull-requests-limit: 5
 
-  - package-ecosystem: github-actions
-    directory: /
-    schedule:
-      interval: monthly
