@@ -6,11 +6,12 @@
  *  - no media or archives outside the app's own icons;
  *  - secrets and local settings stay out (.env.local, service-account keys).
  */
+import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
 import { readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 
-const root = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
+const root = fileURLToPath(new URL('..', import.meta.url))
 const MAX_FILE = 400 * 1024
 const MAX_TOTAL = 8 * 1024 * 1024
 /** Lock files are generated and large by nature. */

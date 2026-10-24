@@ -10,11 +10,12 @@
  *     against its SHA-256, so a changed or broken download never ships.
  * Neither file is committed. Phones and computers never load them (they have speech built in).
  */
+import { fileURLToPath } from 'node:url'
 import { createHash } from 'node:crypto'
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-const root = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
+const root = fileURLToPath(new URL('..', import.meta.url))
 const VOSK_VERSION = JSON.parse(readFileSync(join(root, 'node_modules/vosk-browser/package.json'), 'utf8')).version
 export const MODEL = {
   name: 'vosk-model-small-en-us-0.15',
