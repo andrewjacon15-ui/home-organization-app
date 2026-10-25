@@ -1,4 +1,4 @@
-// Draws the app icons in the current style: the accent (cobalt) tile with the app's
+// Draws the app icons in the current style: the household's accent (Green) tile with the app's
 // calendar mark (Lucide's calendar-days geometry, rounded strokes) in paper white.
 // Run: node scripts/make-icons.mjs  (uses @napi-rs/canvas from functions/node_modules)
 import { writeFileSync } from 'node:fs'
@@ -7,7 +7,8 @@ import { createRequire } from 'node:module'
 const require = createRequire(new URL('../functions/package.json', import.meta.url))
 const { createCanvas } = require('@napi-rs/canvas')
 
-const ACCENT = '#1D4ED8'
+// The Green preset in src/lib/colors.ts (PERSON_COLORS), the accent the household uses.
+const ACCENT = '#15803D'
 const PAPER = '#FAF8F2'
 
 /**
