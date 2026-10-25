@@ -33,10 +33,13 @@ export function RecipesPage({ familyId, userId }: { familyId: string; userId: st
   const [lists, setLists] = useState<FamilyList[]>([])
   const rebuilding = useRef(false)
   const [kitchen, setKitchen] = useState(DEFAULT_KITCHEN)
+  // "Write a recipe" opens Our recipes straight onto a blank recipe.
+  const [writing, setWriting] = useState(false)
 
   const report = (e: unknown) => setError(e instanceof Error ? e.message : String(e))
   const go = (v: RecipeView) => {
     setView(v)
+    setWriting(false)
     document.querySelector('.app')?.scrollTo?.(0, 0)
   }
   const open = (id: string) => {
@@ -81,12 +84,22 @@ export function RecipesPage({ familyId, userId }: { familyId: string; userId: st
         </p>
       )}
       {view === 'home' ? (
-        <RecipeHome entries={entries} onlineReady={ONLINE_SEARCH} onPick={go} onOpen={open} />
+        <RecipeHome
+          entries={entries}
+          onlineReady={ONLINE_SEARCH}
+          onPick={go}
+          onOpen={open}
+          onNew={() => {
+            go('book')
+            setWriting(true)
+          }}
+        />
       ) : (
         <RecipeTrail view={view} onHome={() => go('home')} />
       )}
       {view === 'book' && (
         <RecipeBook
+          startNew={writing}
           entries={entries}
           selected={selected}
           current={current}

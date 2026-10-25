@@ -45,9 +45,12 @@ describe('Recipes start', () => {
   it('offers the three ways in, and favorites one tap away', async () => {
     const onPick = vi.fn()
     const onOpen = vi.fn()
+    const onNew = vi.fn()
     const user = userEvent.setup()
-    render(<RecipeHome entries={entries} onlineReady={false} onPick={onPick} onOpen={onOpen} />)
+    render(<RecipeHome entries={entries} onlineReady={false} onPick={onPick} onOpen={onOpen} onNew={onNew} />)
     expect(screen.getByRole('button', { name: /Our recipes.*4 recipes/ })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Write a recipe/ }))
+    expect(onNew).toHaveBeenCalled()
     expect(screen.getByRole('button', { name: /Search the web.*Paste a link/ })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /What's in my kitchen/ }))
     expect(onPick).toHaveBeenCalledWith('kitchen')

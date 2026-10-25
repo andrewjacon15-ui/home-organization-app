@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { BookIcon, CloseIcon, RandomIcon } from '../../components/Icons'
+import { useId, useRef, useState } from 'react'
+import { AutoText } from '../../components/AutoText'
+import { BookIcon, CartIcon, CloseIcon, RandomIcon } from '../../components/Icons'
 import { WeekNav } from '../../components/WeekNav'
 import { addDays, fromDateKey } from '../../lib/dates'
 import type { MealPlan, MealSlot } from '../../types'
@@ -33,9 +34,11 @@ interface Props {
   onClearMeal?: (date: string, slot: MealSlot) => void
   onClearDay?: (date: string) => void
   onClearWeek?: () => void
+  /** Checks the grocery list against the week's meals: adds what's missing, takes off what's not needed. */
+  onSyncGroceries?: () => void
 }
 
-export function MealPlanner({ weekStart, today, plans, onSave, onWeekChange, currentWeekStart, recipeTitles = [], onOpenRecipe, hasRecipe, onRandomize, onClearMeal, onClearDay, onClearWeek }: Props) {
+export function MealPlanner({ weekStart, today, plans, onSave, onWeekChange, currentWeekStart, recipeTitles = [], onOpenRecipe, hasRecipe, onRandomize, onClearMeal, onClearDay, onClearWeek, onSyncGroceries }: Props) {
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
   const planned = (d: string) => !!plans[d] && SLOTS.some(({ slot }) => plans[d][slot].trim())
   const weekPlanned = days.some(planned)
@@ -44,20 +47,17 @@ export function MealPlanner({ weekStart, today, plans, onSave, onWeekChange, cur
     <section className="meals" aria-labelledby="meals-heading">
       <div className="meals__nav">
         <WeekNav weekStart={weekStart} currentWeekStart={currentWeekStart} onWeekChange={onWeekChange} headingId="meals-heading" />
+        {onSyncGroceries && weekPlanned && (
+          <button type="button" className="link meals__sync" onClick={onSyncGroceries} title="Add groceries for meals that are missing them, and take off ones no meal needs">
+            <CartIcon size={16} aria-hidden /> Sync groceries
+          </button>
+        )}
         {onClearWeek && weekPlanned && (
           <button type="button" className="link meals__clear-week" onClick={onClearWeek}>
             Clear this week
           </button>
         )}
       </div>
-
-      {recipeTitles.length > 0 && (
-        <datalist id="recipe-titles">
-          {recipeTitles.map((t) => (
-            <option key={t} value={t} />
-          ))}
-        </datalist>
-      )}
 
       <ol className="week">
         {days.map((date) => {
@@ -82,7 +82,7 @@ export function MealPlanner({ weekStart, today, plans, onSave, onWeekChange, cur
                   dayLabel={fmt(date, { weekday: 'long' })}
                   value={plan[slot]}
                   multiline={slot === 'notes'}
-                  suggest={slot !== 'notes' && recipeTitles.length > 0}
+                  suggestions={slot !== 'notes' ? recipeTitles : undefined}
                   onOpenRecipe={slot !== 'notes' && onOpenRecipe && hasRecipe?.(plan[slot]) ? () => onOpenRecipe(plan[slot]) : undefined}
                   onRandomize={slot !== 'notes' && onRandomize && date >= today ? () => onRandomize(date, slot) : undefined}
                   onClear={slot !== 'notes' && onClearMeal && plan[slot].trim() ? () => onClearMeal(date, slot) : undefined}
@@ -106,17 +106,26 @@ interface FieldProps {
   dayLabel: string
   value: string
   multiline: boolean
-  suggest?: boolean
+  /** Recipe titles to offer while typing. */
+  suggestions?: string[]
   onOpenRecipe?: () => void
   onRandomize?: () => void
   onClear?: () => void
   onCommit: (value: string) => void
 }
 
-/** Edits locally and commits on blur (or Enter), so typing doesn't write to Firestore on every keystroke. */
-function MealField({ label, dayLabel, value, multiline, suggest, onOpenRecipe, onRandomize, onClear, onCommit }: FieldProps) {
+const MAX_SUGGESTIONS = 6
+
+/**
+ * Edits locally and commits on blur (or Enter), so typing doesn't write to Firestore on every
+ * keystroke. The box grows to show the whole meal or note; while typing a meal, recipe titles
+ * that match are offered underneath.
+ */
+function MealField({ label, dayLabel, value, multiline, suggestions = [], onOpenRecipe, onRandomize, onClear, onCommit }: FieldProps) {
   const [draft, setDraft] = useState(value)
   const [editing, setEditing] = useState(false)
+  const [active, setActive] = useState(-1)
+  const listId = useId()
 
   // Take remote updates (another device edited this day) unless we're mid-edit.
   const [seenValue, setSeenValue] = useState(value)
@@ -125,20 +134,27 @@ function MealField({ label, dayLabel, value, multiline, suggest, onOpenRecipe, o
     setDraft(value)
   }
 
-  function commit() {
+  // Set when a suggestion was just picked, so the blur that follows doesn't commit the half-typed text.
+  const picked = useRef(false)
+
+  function commit(text = draft) {
     setEditing(false)
-    const next = draft.trim()
+    setActive(-1)
+    const next = text.trim()
     if (next !== value) onCommit(next)
     setDraft(next)
   }
 
-  const common = {
-    value: draft,
-    'aria-label': `${dayLabel} ${label.toLowerCase()}`,
-    onFocus: () => setEditing(true),
-    onBlur: commit,
-    maxLength: multiline ? 2000 : 500,
+  /** Puts a suggested recipe in, saves it, and leaves the box. */
+  function pick(title: string, el: HTMLElement | null) {
+    picked.current = true
+    commit(title)
+    el?.blur()
+    picked.current = false
   }
+
+  const typed = draft.trim().toLowerCase()
+  const matches = editing && typed ? suggestions.filter((t) => t.toLowerCase().includes(typed) && t.toLowerCase() !== typed).slice(0, MAX_SUGGESTIONS) : []
 
   return (
     <div className="meal">
@@ -165,17 +181,59 @@ function MealField({ label, dayLabel, value, multiline, suggest, onOpenRecipe, o
           </span>
         )}
       </span>
-      {multiline ? (
-        <textarea {...common} rows={2} onChange={(e) => setDraft(e.target.value)} />
-      ) : (
-        <input
-          {...common}
-          list={suggest ? 'recipe-titles' : undefined}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') e.currentTarget.blur()
-          }}
-        />
+      <AutoText
+        value={draft}
+        aria-label={`${dayLabel} ${label.toLowerCase()}`}
+        maxLength={multiline ? 2000 : 500}
+        onFocus={() => setEditing(true)}
+        onBlur={() => {
+          if (!picked.current) commit()
+        }}
+        onChange={(e) => {
+          // A meal is one line (a pasted line break becomes a space); a note can have several.
+          setDraft(multiline ? e.target.value : e.target.value.replace(/\r?\n/g, ' '))
+          setActive(-1)
+        }}
+        role={matches.length ? 'combobox' : undefined}
+        aria-expanded={matches.length ? true : undefined}
+        aria-controls={matches.length ? listId : undefined}
+        aria-autocomplete={suggestions.length ? 'list' : undefined}
+        aria-activedescendant={active >= 0 && matches[active] ? `${listId}-${active}` : undefined}
+        onKeyDown={(e) => {
+          if (multiline) return
+          if (matches.length && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+            e.preventDefault()
+            setActive((i) => (e.key === 'ArrowDown' ? (i + 1) % matches.length : (i <= 0 ? matches.length : i) - 1))
+          } else if (e.key === 'Escape' && matches.length) {
+            setActive(-1)
+            setDraft(value)
+          } else if (e.key === 'Enter') {
+            e.preventDefault()
+            // Blur commits what's typed; a highlighted suggestion goes in instead.
+            if (active >= 0 && matches[active]) pick(matches[active], e.currentTarget)
+            else e.currentTarget.blur()
+          }
+        }}
+      />
+      {matches.length > 0 && (
+        <ul className="meal__suggest" id={listId} role="listbox" aria-label={`Recipes for ${dayLabel} ${label.toLowerCase()}`}>
+          {matches.map((t, i) => (
+            <li
+              key={t}
+              id={`${listId}-${i}`}
+              role="option"
+              aria-selected={i === active}
+              className={`meal__suggestion${i === active ? ' meal__suggestion--active' : ''}`}
+              // On press, before the box loses focus (a tap would blur it first).
+              onMouseDown={(e) => {
+                e.preventDefault()
+                pick(t, document.activeElement as HTMLElement | null)
+              }}
+            >
+              {t}
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   )

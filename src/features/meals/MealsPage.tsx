@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { DEFAULT_KITCHEN } from '@shared/recipes/kitchen.js'
 import { CartIcon, CloseIcon, MealsIcon, RandomIcon } from '../../components/Icons'
-import { addItems, groceryListId, removeItems, watchItems, watchLists, type FamilyList, type ListItem, type NewItem } from '../lists/listsApi'
+import { addItems, applyGroceries, groceryListId, removeItems, watchItems, watchLists, type FamilyList, type ListItem, type NewItem } from '../lists/listsApi'
 import { seedStarterRecipes } from './starterSeed'
 import { isFirstStarter, STARTER_ALIASES } from './starterAliases'
 import { watchKitchen } from '../recipes/kitchenApi'
 import { MealGroceries } from './MealGroceries'
 import { MealTemplates, type ApplyOptions, type ApplyResult } from './MealTemplates'
 import { pickMeals, type Wanted } from './randomize'
-import { shoppingPlan } from './shopping'
+import { mealGroceryChanges, mealsWithoutGroceries, shoppingPlan, staleGroceries } from './shopping'
 import { applyTemplate, dayOnWeek, isDay, deleteTemplate, isEmptyPlan, mealsUsed, saveTemplate, templateFromWeek, templateMealsOn, updateTemplate, watchTemplates, type MealTemplate, type TemplateDraft } from './templates'
 import { plannedMeals, type PlannedMeal, type PlannedSlot } from './upcomingMeals'
 import { addDays, daysBetween, fromDateKey, startOfWeek } from '../../lib/dates'
@@ -16,11 +16,11 @@ import { useToday } from '../../lib/hooks'
 import { useSettings } from '../settings/SettingsContext'
 import type { MealPlan } from '../../types'
 import { MealPlanner } from './MealPlanner'
-import { getMealPlans, isBlankPlan, saveMealPlan, saveMealPlans, watchMealPlans } from './mealsApi'
+import { getMealPlans, isBlankPlan, saveMealPlans, watchMealPlans } from './mealsApi'
 import { findEntry, watchCatalog, type CatalogEntry } from '../recipes/catalog'
 import { getRecipe, getRecipes, type Recipe } from '../recipes/recipesApi'
 import { RecipeView } from '../recipes/RecipeBook'
-import { useUndo } from '../../lib/undo'
+import { useUndo, type Restore } from '../../lib/undo'
 
 interface Props {
   familyId: string
@@ -42,6 +42,8 @@ export function MealsPage({ familyId, userId }: Props) {
   const weekStart = addDays(currentWeekStart, weekOffset * 7)
   const [plans, setPlans] = useState<Record<string, MealPlan>>({})
   const [error, setError] = useState<string | null>(null)
+  // A short note after syncing groceries when there was nothing to change.
+  const [notice, setNotice] = useState<string | null>(null)
   const report = (e: unknown) => setError(e instanceof Error ? e.message : String(e))
   // Recipe titles come from the catalog index (a few documents); a recipe is read only when opened.
   const [recipes, setRecipes] = useState<CatalogEntry[]>([])
@@ -74,6 +76,9 @@ export function MealsPage({ familyId, userId }: Props) {
   const [groceryItems, setGroceryItems] = useState<ListItem[]>([])
   const groceryId = grocery?.id
   useEffect(() => (groceryId ? watchItems(familyId, groceryId, setGroceryItems) : undefined), [familyId, groceryId])
+  // The newest copy, for work that finishes after a recipe read.
+  const groceryNow = useRef(groceryItems)
+  groceryNow.current = groceryItems
   // While the templates sheet is open, this week and next are live too (a template goes on either).
   const [sheetPlans, setSheetPlans] = useState<Record<string, MealPlan>>({})
   useEffect(() => (templating ? watchMealPlans(familyId, currentWeekStart, addDays(currentWeekStart, 13), setSheetPlans) : undefined), [familyId, templating, currentWeekStart])
@@ -129,6 +134,29 @@ export function MealsPage({ familyId, userId }: Props) {
   }
 
   /**
+   * Puts these meals' groceries straight on the list (a meal typed in or picked at random, with
+   * no list to look over): each saved recipe scaled for its day, pantry staples and what's on the
+   * list by hand left off, and a line another meal already put there added into that item.
+   * Items in `skip` are on their way off the list. Meals without a saved recipe add nothing.
+   */
+  async function addMealGroceries(meals: Pick<PlannedMeal, 'date' | 'slot' | 'text' | 'people'>[], skip: Set<string> = new Set()): Promise<{ count: number; restore: Restore } | null> {
+    const withRecipes = meals.map((m) => ({ ...m, recipeId: recipeFor(m.text)?.id ?? null })).filter((m) => m.recipeId)
+    if (!withRecipes.length) return null
+    await loadRecipes(withRecipes.map((m) => m.recipeId))
+    const cache = recipeCache.current
+    const found = withRecipes.map((meal) => ({ meal: { ...meal, people: meal.people ?? kitchen.people }, recipe: cache.get(meal.recipeId!) ?? null }))
+    const items = groceryNow.current.filter((i) => !skip.has(i.id))
+    const byHand = items.filter((i) => !i.done && !i.meals?.length).map((i) => i.text)
+    const { add, merge } = mealGroceryChanges(shoppingPlan(found, 'plan', kitchen.staples, byHand).plan.details, items)
+    if (!add.length && !merge.length) return null
+    const listId = grocery?.id ?? (await groceryListId(familyId, userId, lists))
+    const list = lists.find((l) => l.id === listId) ?? { id: listId, title: 'Grocery List', kind: 'grocery' as const, sections: false, order: -1 }
+    const { done, restore } = applyGroceries(familyId, list, userId, add, merge)
+    done.catch(report)
+    return { count: add.length + merge.length, restore }
+  }
+
+  /**
    * Picks recipes for these meals at random from the recipe book: never one already in `taken`,
    * nothing on the avoid list, and (while there's anything else) nothing from the last two weeks.
    */
@@ -174,20 +202,64 @@ export function MealsPage({ familyId, userId }: Props) {
    * not bought yet. Undo brings back both. Nothing waits for the server: the device shows the
    * change at once and the writes go out behind it. Returns how many grocery items went.
    */
-  function saveDays(changes: Record<string, MealPlan>, current: Record<string, MealPlan>, message: string): number {
+  function saveDays(changes: Record<string, MealPlan>, current: Record<string, MealPlan>, message: string, opts: { groceries?: boolean; quiet?: boolean } = {}): number {
     const was = Object.fromEntries(Object.keys(changes).map((date) => [date, current[date] ?? EMPTY]))
     const gone = Object.entries(changes).flatMap(([date, plan]) => SLOTS.filter((s) => was[date][s] && plan[s] !== was[date][s]).map((s) => `${date}:${s}`))
     const items = grocery && gone.length ? groceriesOnlyFor(gone, { ...sheetPlans, ...plans, ...current, ...changes }) : []
     const removed = grocery && items.length ? removeItems(familyId, grocery.id, items) : null
     removed?.done.catch(report)
+    // `groceries`: meals put in here (typed, or picked at random) bring their recipe's groceries.
+    const fresh = opts.groceries
+      ? Object.entries(changes).flatMap(([date, plan]) => SLOTS.filter((s) => plan[s].trim() && plan[s] !== was[date][s]).map((slot) => ({ date, slot, text: plan[slot].trim(), people: plan.people ?? null })))
+      : []
+    const adding = fresh.some((m) => recipeFor(m.text))
+      ? addMealGroceries(fresh, new Set(items.map((i) => i.id))).catch((e) => {
+          report(e)
+          return null
+        })
+      : null
     // On screen at once (the saved copy follows and agrees), then saved in one batch.
     showPlans(changes)
     saveMealPlans(familyId, changes, userId).catch(report)
-    offer(items.length ? `${message}, and ${plural(items.length, 'grocery item')} for them` : message, async () => {
+    // A plain edit (no groceries touched) needs no Undo: typing it back is as quick.
+    if (opts.quiet && !items.length && !adding) return items.length
+    const its = fresh.length > 1 ? 'their' : 'its'
+    const text = adding
+      ? `${message}, and ${items.length ? 'swapped' : 'added'} ${its} groceries on the list`
+      : items.length
+        ? `${message}, and took ${plural(items.length, 'grocery item')} off the list`
+        : message
+    offer(text, async () => {
       showPlans(was)
-      await Promise.all([saveMealPlans(familyId, was, userId), removed?.restore()])
+      const added = await adding
+      await Promise.all([saveMealPlans(familyId, was, userId), removed?.restore(), added?.restore()])
     })
     return items.length
+  }
+
+  /**
+   * Checks the grocery list against this week's meals: groceries added for meals that are gone
+   * come off, and meals from today on with a saved recipe and nothing on the list get theirs.
+   */
+  async function syncGroceries() {
+    const stale = staleGroceries(groceryItems, plans, days)
+    const missing = mealsWithoutGroceries(groceryItems, plans, days, today)
+    const removed = grocery && stale.length ? removeItems(familyId, grocery.id, stale) : null
+    removed?.done.catch(report)
+    try {
+      const added = await addMealGroceries(missing, new Set(stale.map((i) => i.id)))
+      if (!removed && !added) {
+        setNotice('The grocery list already matches this week’s meals.')
+        return
+      }
+      setNotice(null)
+      const parts = [added && `added ${plural(added.count, 'grocery line')}`, removed && `took off ${plural(stale.length, 'item')} no meal needs`].filter(Boolean)
+      offer(`Synced groceries: ${parts.join(' and ')}`, async () => {
+        await Promise.all([removed?.restore(), added?.restore()])
+      })
+    } catch (e) {
+      report(e)
+    }
   }
 
   /** Clears these meals (all of a day's, notes too, when `notes` names the day). */
@@ -220,7 +292,7 @@ export function MealsPage({ familyId, userId }: Props) {
         return [day, { ...(plans[day] ?? EMPTY), dinner: title }]
       }))
       if (!Object.keys(changes).length) return setError(recipes.length ? 'Every recipe that suits dinner is already planned.' : 'Add some recipes in Recipes first, then the randomizer can choose from them.')
-      saveDays(changes, plans, `Planned ${plural(Object.keys(changes).length, 'dinner')} at random`)
+      saveDays(changes, plans, `Planned ${plural(Object.keys(changes).length, 'dinner')} at random`, { groceries: true })
     } catch (e) {
       report(e)
     }
@@ -233,7 +305,7 @@ export function MealsPage({ familyId, userId }: Props) {
       const title = picked[`${date}:${slot}`]
       if (!title) return setError('No other recipe suits that meal yet.')
       const plan = plans[date] ?? EMPTY
-      saveDays({ [date]: { ...plan, [slot]: title } }, plans, `${title} for ${fromDateKey(date).toLocaleDateString(undefined, { weekday: 'long' })}`)
+      saveDays({ [date]: { ...plan, [slot]: title } }, plans, `${title} for ${dayName(date)}`, { groceries: true })
     } catch (e) {
       report(e)
     }
@@ -288,6 +360,11 @@ export function MealsPage({ familyId, userId }: Props) {
           {error} <button className="link" onClick={() => setError(null)}>Dismiss</button>
         </p>
       )}
+      {notice && (
+        <p className="muted" role="status">
+          {notice} <button className="link" onClick={() => setNotice(null)}>Dismiss</button>
+        </p>
+      )}
       <div className="meals__tools">
         <button type="button" className="button" onClick={() => setTemplating(true)}>
           <MealsIcon size={18} /> Templates
@@ -321,7 +398,13 @@ export function MealsPage({ familyId, userId }: Props) {
           )
         }
         onWeekChange={(start) => setWeekOffset(Math.round(daysBetween(currentWeekStart, start) / 7))}
-        onSave={(date, plan) => saveMealPlan(familyId, date, plan, userId).catch(report)}
+        onSave={(date, plan) => {
+          // "Tacos for Tuesday dinner" / "Cleared Tuesday dinner" (a meal typed in or erased).
+          const slot = SLOTS.find((s) => plan[s] !== (plans[date]?.[s] ?? ''))
+          const message = !slot ? `Updated ${dayName(date)}` : plan[slot] ? `${plan[slot]} for ${dayName(date)} ${slot}` : `Cleared ${dayName(date)} ${slot}`
+          saveDays({ [date]: plan }, plans, message, { groceries: true, quiet: true })
+        }}
+        onSyncGroceries={() => void syncGroceries()}
       />
       {templating && (
         <MealTemplates

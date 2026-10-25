@@ -76,7 +76,11 @@ export function ListsPage({ familyId, userId, members }: { familyId: string; use
         onRenameCategory={(l, id, name) => renameCategory(familyId, l, id, name).catch(report)}
         onMoveCategory={(l, id, by) => moveCategory(familyId, l, id, by).catch(report)}
         onDeleteCategory={(l, id) => deleteCategory(familyId, l, id, items[l.id] ?? []).then((r) => offer(`Removed “${l.categories?.find((c) => c.id === id)?.name ?? 'category'}”`, r), report)}
-        onDelete={(l, i) => deleteItem(familyId, l.id, i.id).then((r) => offer(`Removed “${i.text}”`, r), report)}
+        onDelete={(l, i) => {
+          const { done, restore } = deleteItem(familyId, l.id, i)
+          done.catch(report)
+          offer(`Removed “${i.text}”`, restore)
+        }}
         onClearDone={(l) => clearCompleted(familyId, l.id, items[l.id] ?? []).catch(report)}
         onRename={(l, title) => updateList(familyId, l.id, { title }).catch(report)}
         onToggleSections={(l) => updateList(familyId, l.id, { sections: !l.sections }).catch(report)}
