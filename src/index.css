@@ -2190,13 +2190,13 @@ letter-spacing: -0.015em;
 /* A meal's label row: its name, then small icon buttons (open the recipe, pick at random,
    clear), sized to fit a day column on the wall tablet. */
 .meal__label {
-  gap: 4px;
+  flex-wrap: wrap;
+  gap: 0 4px;
   min-width: 0;
 }
+/* The meal's name always shows in full; in a narrow day column its buttons drop below it. */
 .meal__name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  flex: 1 0 auto;
   white-space: nowrap;
 }
 .meal__actions {
