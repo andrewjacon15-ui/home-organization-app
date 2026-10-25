@@ -28,7 +28,7 @@ initializeApp()
 
 // Cost guard: a household needs one or two instances of anything, so no function may scale
 // past three (unless it sets its own, smaller-or-similar cap), and none keeps an instance warm
-// (minInstances stays unset: idle costs nothing). scripts/check-costs.mjs enforces this in CI.
+// (minInstances stays unset: idle costs nothing). scripts/check-costs.mjs enforces this (npm run verify).
 setGlobalOptions({ maxInstances: 3 })
 
 /** The "Calendar connect" OAuth client. The ID is public; the secret lives in Secret Manager. */

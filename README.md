@@ -16,7 +16,7 @@ React + Vite PWA on Firebase (Hosting, Firestore, Auth, Functions, Storage).
 | `npm test` | Component tests, Cloud Functions tests (Google and Admin SDK mocked), then security-rules tests against the Firestore and Storage emulators. |
 | `npm run lint` | oxlint, plus a typecheck of `functions/`. |
 | `npm run build` | Typecheck + production build (with service worker). |
-| `npm run deploy` | lint, test, build, then deploy Hosting, rules, and Functions. CI deploys hosting + rules automatically; see [docs/DEPLOY.md](docs/DEPLOY.md). |
+| `npm run deploy` | Deploy from an up-to-date, clean `main`: builds, checks the bundle, deploys Hosting + rules (add `functions` to deploy those), then checks the live site. Nothing deploys automatically; see [docs/DEPLOY.md](docs/DEPLOY.md). |
 
 Security rules tests (`tests/rules/`) are written before rule changes. Change
 the test first, watch it fail, then edit `firestore.rules`.

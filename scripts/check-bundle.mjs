@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Bundle check (runs in CI after `npm run build`, and before every deploy):
+ * Bundle check (part of `npm run verify`, and run by `npm run deploy` after its build):
  *  - size budgets, gzipped, so the wall tablet keeps loading fast and hosting stays small;
  *  - the production build must never point at the local emulators (a stray .env.local);
  *  - no source maps or stray large files are shipped.
@@ -59,8 +59,8 @@ for (const f of all) {
   if (name.endsWith('.map')) problems.push(`${name}: source maps shouldn't be deployed.`)
   if (/\.(js|css|html)$/.test(name)) {
     const text = raw.toString('utf8')
-    // The emulator ports (auth 9099, Firestore 8080 with 127.0.0.1) only appear when built with VITE_USE_EMULATORS.
-    if (/(127\.0\.0\.1|localhost):(9099|8080|9199|5001)/.test(text) || /connectAuthEmulator\([^)]*9099/.test(text)) {
+    // The emulator ports (firebase.json, and the old defaults) only appear when built with VITE_USE_EMULATORS.
+    if (/(127\.0\.0\.1|localhost):(9109|8180|9209|5011|9099|8080|9199|5001)/.test(text) || /connectAuthEmulator\([^)]*(9109|9099)/.test(text)) {
       problems.push(`${name}: points at the local emulators. Remove .env.local (VITE_USE_EMULATORS) and build again.`)
     }
   }

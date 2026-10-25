@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Cost guard (runs in CI): fails when the code or config could start costing money.
+ * Cost guard (part of `npm run verify`): fails when the code or config could start costing money.
  * Each check names the Google Cloud / Firebase free tier it protects; docs/COSTS.md has
  * the full picture. Static checks only — no credentials, nothing is called.
  */

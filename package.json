@@ -14,7 +14,7 @@
     "test:web": "vitest run",
     "test:rules": "firebase emulators:exec --only firestore,storage --project demo-family-rules \"vitest run --config vitest.rules.config.ts\"",
     "verify": "npm run lint && npm run check:costs && npm run check:repo && npm test && npm run build && npm run check:bundle && npm run build --prefix functions && npm audit --omit=dev --audit-level=moderate && npm audit --omit=dev --audit-level=moderate --prefix functions",
-    "deploy": "npm run verify && firebase deploy --only hosting,firestore,functions,storage",
+    "deploy": "node scripts/deploy.mjs",
     "test:functions": "npm --prefix functions test",
     "check:costs": "node scripts/check-costs.mjs",
     "check:repo": "node scripts/check-repo.mjs",
