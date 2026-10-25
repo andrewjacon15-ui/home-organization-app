@@ -117,12 +117,15 @@ describe('RecipeBook', () => {
     await user.click(screen.getByRole('button', { name: 'New recipe' }))
     await user.type(screen.getByLabelText('Title'), 'Pancakes')
     await user.type(screen.getByLabelText('Serves'), '3')
-    await user.type(screen.getByLabelText(/^Ingredients/), 'flour{Enter}milk')
+    // A row each: Enter starts the next one, empty rows are dropped on save.
+    await user.type(screen.getByLabelText('Ingredient 1'), 'flour{Enter}milk{Enter}')
+    expect(screen.getByLabelText('Ingredient 3')).toHaveFocus()
+    await user.type(screen.getByLabelText('Step 1'), 'Whisk{Enter}Fry')
     await user.type(screen.getByLabelText('Source link'), 'ftp://x')
     expect(screen.getByRole('button', { name: 'Save recipe' })).toBeDisabled()
     await user.clear(screen.getByLabelText('Source link'))
     await user.click(screen.getByRole('button', { name: 'Save recipe' }))
-    expect(props.onSave).toHaveBeenCalledWith({ title: 'Pancakes', ingredients: 'flour\nmilk', steps: '', servings: 3, minutes: null, url: null, tagsEdited: false }, undefined)
+    expect(props.onSave).toHaveBeenCalledWith({ title: 'Pancakes', ingredients: 'flour\nmilk', steps: 'Whisk\nFry', servings: 3, minutes: null, url: null, tagsEdited: false }, undefined)
   })
 
   it('edits and deletes (with confirm)', async () => {
@@ -145,22 +148,29 @@ describe('RecipeBook', () => {
 describe('meal planner recipe links', () => {
   it('suggests recipe titles and links meals that name a recipe', async () => {
     const onOpenRecipe = vi.fn()
+    const onSave = vi.fn()
     render(
       <MealPlanner
         weekStart="2026-09-27"
         currentWeekStart="2026-09-27"
         today={TODAY}
         plans={{ [TODAY]: { breakfast: '', lunch: '', dinner: 'Chicken tacos', notes: '' } }}
-        onSave={vi.fn()}
+        onSave={onSave}
         onWeekChange={vi.fn()}
         recipeTitles={['Chicken tacos', 'Tomato soup']}
         hasRecipe={(t) => !!findRecipe([tacos, soup], t)}
         onOpenRecipe={onOpenRecipe}
       />,
     )
-    expect(screen.getByLabelText('Tuesday dinner')).toHaveAttribute('list', 'recipe-titles')
-    expect(screen.getByLabelText('Tuesday notes')).not.toHaveAttribute('list')
-    expect(document.querySelectorAll('#recipe-titles option')).toHaveLength(2)
+    // Typing a meal offers matching recipes; picking one saves it.
+    await userEvent.type(screen.getByLabelText('Tuesday lunch'), 'sou')
+    await userEvent.click(within(screen.getByRole('listbox', { name: 'Recipes for Tuesday lunch' })).getByRole('option', { name: 'Tomato soup' }))
+    expect(onSave).toHaveBeenCalledTimes(1)
+    expect(onSave).toHaveBeenCalledWith(TODAY, { breakfast: '', lunch: 'Tomato soup', dinner: 'Chicken tacos', notes: '' })
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+    // Notes aren't meals: no suggestions.
+    await userEvent.type(screen.getByLabelText('Tuesday notes'), 'sou')
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Open recipe for Tuesday dinner' }))
     expect(onOpenRecipe).toHaveBeenCalledWith('Chicken tacos')
     expect(screen.getAllByRole('button', { name: /Open recipe/ })).toHaveLength(1)

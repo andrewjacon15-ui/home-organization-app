@@ -7,6 +7,7 @@ import { addDays, fromDateKey } from '../../lib/dates'
 import type { MealSlot } from '../../types'
 import { amountText, stepText, useMetric } from './amounts'
 import { ScaleBar } from './ScaleBar'
+import { LinesEditor } from './LinesEditor'
 import {
   activeFilterCount,
   facetOptions,
@@ -33,6 +34,8 @@ export interface BookProps {
   selected: string | null
   current: Recipe | null
   onSelect: (id: string | null) => void
+  /** Opens on a blank recipe to write (from "Write a recipe"). */
+  startNew?: boolean
   today: string
   onSave: (draft: RecipeDraft, id?: string) => Promise<string | void> | void
   onDelete: (recipe: Recipe) => void
@@ -63,7 +66,7 @@ export function RecipeBook(p: BookProps) {
   const [showFilters, setShowFilters] = useState(false)
   const [limit, setLimit] = useState(PAGE)
   const [sort, setSort] = useState<CatalogSort>('az')
-  const [editing, setEditing] = useState<Recipe | 'new' | null>(null)
+  const [editing, setEditing] = useState<Recipe | 'new' | null>(p.startNew ? 'new' : null)
   const all = entries ?? []
   const reviewCount = all.filter((e) => e.r).length
   const shown = sortCatalog(filterCatalog(all, filters), sort)
@@ -544,6 +547,9 @@ function TagEditor({ initial, onSave, onCancel }: { initial?: RecipeTags; onSave
   )
 }
 
+/** Saved lines: each trimmed, empty ones dropped. */
+const tidy = (text: string) => text.split('\n').map((l) => l.trim()).filter(Boolean).join('\n')
+
 function RecipeForm({ initial, onSubmit, onCancel }: { initial: Recipe | null; onSubmit: (d: RecipeDraft) => void; onCancel: () => void }) {
   const [title, setTitle] = useState(initial?.title ?? '')
   const [servings, setServings] = useState(initial?.servings ? String(initial.servings) : '')
@@ -558,8 +564,8 @@ function RecipeForm({ initial, onSubmit, onCancel }: { initial: Recipe | null; o
     if (!title.trim() || !urlOk) return
     onSubmit({
       title,
-      ingredients,
-      steps,
+      ingredients: tidy(ingredients),
+      steps: tidy(steps),
       servings: servings ? Math.max(1, Math.floor(Number(servings))) : null,
       minutes: minutes ? Math.max(0, Math.floor(Number(minutes))) : null,
       url: url.trim() || null,
@@ -584,14 +590,18 @@ function RecipeForm({ initial, onSubmit, onCancel }: { initial: Recipe | null; o
           <input type="number" min={0} max={10000} value={minutes} onChange={(e) => setMinutes(e.target.value)} />
         </label>
       </div>
-      <label className="field">
-        Ingredients <span className="setting-row__hint">One per line</span>
-        <textarea rows={8} value={ingredients} onChange={(e) => setIngredients(e.target.value)} maxLength={5000} />
-      </label>
-      <label className="field">
-        Steps <span className="setting-row__hint">One per line</span>
-        <textarea rows={8} value={steps} onChange={(e) => setSteps(e.target.value)} maxLength={10000} />
-      </label>
+      <div className="field">
+        <span>
+          Ingredients <span className="setting-row__hint">Enter for the next one, or paste a whole list</span>
+        </span>
+        <LinesEditor noun="Ingredient" value={ingredients} onChange={setIngredients} placeholder="2 cups flour" maxLength={5000} />
+      </div>
+      <div className="field">
+        <span>
+          Steps <span className="setting-row__hint">Enter for the next step</span>
+        </span>
+        <LinesEditor noun="Step" value={steps} onChange={setSteps} placeholder="Heat the oven to 400°F." numbered maxLength={10000} />
+      </div>
       <div className="field">
         <label htmlFor="recipe-url">Source link</label>
         <input

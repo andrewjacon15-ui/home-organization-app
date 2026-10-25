@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { BackIcon, BookIcon, ChefHatIcon, GlobeIcon, NextIcon, StarIcon } from '../../components/Icons'
+import { BackIcon, BookIcon, ChefHatIcon, GlobeIcon, NextIcon, PencilIcon, StarIcon } from '../../components/Icons'
 import type { CatalogEntry } from './catalog'
 
 export type RecipeView = 'home' | 'book' | 'kitchen' | 'web'
@@ -37,8 +37,8 @@ function Choice({ icon, title, text, onClick }: { icon: ReactNode; title: string
   )
 }
 
-/** The Recipes start: three clear ways in, and favorites one tap away. */
-export function RecipeHome({ entries, onlineReady, onPick, onOpen }: { entries: CatalogEntry[] | null; onlineReady: boolean; onPick: (v: Exclude<RecipeView, 'home'>) => void; onOpen: (id: string) => void }) {
+/** The Recipes start: clear ways in (or write your own), and favorites one tap away. */
+export function RecipeHome({ entries, onlineReady, onPick, onOpen, onNew }: { entries: CatalogEntry[] | null; onlineReady: boolean; onPick: (v: Exclude<RecipeView, 'home'>) => void; onOpen: (id: string) => void; onNew: () => void }) {
   const count = entries?.length ?? 0
   const favorites = (entries ?? []).filter((e) => e.f).slice(0, 8)
   return (
@@ -59,6 +59,7 @@ export function RecipeHome({ entries, onlineReady, onPick, onOpen }: { entries: 
           text={onlineReady ? 'Find a new recipe by name, or paste a link' : 'Paste a link to any recipe page'}
           onClick={() => onPick('web')}
         />
+        <Choice icon={<PencilIcon size={28} />} title="Write a recipe" text="Add your own, one ingredient and one step at a time" onClick={onNew} />
       </div>
       {favorites.length > 0 && (
         <div className="recipe-home__favorites">

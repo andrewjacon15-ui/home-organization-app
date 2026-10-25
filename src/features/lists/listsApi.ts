@@ -164,6 +164,47 @@ export function removeItems(familyId: string, listId: string, items: ListItem[])
   }
 }
 
+/** An item already on the list that more meals need: its new wording (amounts added up) and meals. */
+export interface ItemMerge {
+  item: ListItem
+  text: string
+  meals: string[]
+}
+
+/**
+ * Adds meal-plan groceries in one batch: new lines go on the list (filed under their aisle), and
+ * lines the list already has for other meals are added into those items. The device shows it at
+ * once; returns how to take it all back off.
+ */
+export function applyGroceries(familyId: string, list: FamilyList, userId: string, add: { text: string; meals: string[] }[], merge: ItemMerge[]): { done: Promise<void>; restore: Restore } {
+  const batch = writeBatch(db)
+  const base = Date.now()
+  const added = add.map(({ text, meals }, i) => {
+    const ref = doc(itemsCol(familyId, list.id))
+    batch.set(ref, {
+      text: text.slice(0, 300),
+      done: false,
+      memberId: null,
+      categoryId: (sortsItself(list) ? groceryCategory(text, list.categories ?? [], list.learned) : null) ?? null,
+      order: base + i,
+      ...(meals.length ? { meals: meals.slice(0, 60) } : {}),
+      createdBy: userId,
+      createdAt: serverTimestamp(),
+    })
+    return ref
+  })
+  for (const m of merge) batch.update(doc(itemsCol(familyId, list.id), m.item.id), { text: m.text.slice(0, 300), meals: m.meals.slice(0, 60), updatedAt: serverTimestamp() })
+  return {
+    done: batch.commit(),
+    restore: async () => {
+      const back = writeBatch(db)
+      for (const ref of added) back.delete(ref)
+      for (const { item } of merge) back.update(doc(itemsCol(familyId, list.id), item.id), { text: item.text, meals: item.meals?.length ? item.meals : deleteField() })
+      await back.commit()
+    },
+  }
+}
+
 /** How items compare for repeats: grocery items by the thing itself ("2 bags Bananas" = "banana"), others by their words. */
 export function itemMatchKey(list: Pick<FamilyList, 'kind'>, text: string): string {
   const words = text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
@@ -303,8 +344,12 @@ export async function deleteCategory(familyId: string, list: FamilyList, categor
   }
 }
 
-export function deleteItem(familyId: string, listId: string, itemId: string) {
-  return removeDocs([doc(itemsCol(familyId, listId), itemId)])
+/**
+ * Takes one item off a list. It's already on screen, so nothing is read first: the delete shows
+ * at once and goes to the server behind it (reading first made every delete wait on the network).
+ */
+export function deleteItem(familyId: string, listId: string, item: ListItem) {
+  return removeItems(familyId, listId, [item])
 }
 
 export async function clearCompleted(familyId: string, listId: string, items: ListItem[]) {
