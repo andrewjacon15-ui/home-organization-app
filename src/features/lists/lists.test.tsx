@@ -215,6 +215,28 @@ describe('ListsBoard', () => {
         vi.useRealTimers()
       }
     })
+
+    it('dragging the grip lifts the item at once, and putting it straight back saves nothing', () => {
+      const { actions } = setup([shop], data)
+      const produce = screen.getByRole('region', { name: 'Produce' })
+      Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => produce })
+      const napkins = screen.getByText('Napkins').closest('li')!
+      const grip = napkins.querySelector('.list-item__grip')!
+      pointer('pointerdown', grip, 10, 10)
+      expect(napkins).toHaveClass('list-item--lifted')
+      pointer('pointerup', window, 10, 10)
+      expect(actions.onMoveItem).not.toHaveBeenCalled()
+      pointer('pointerdown', grip, 10, 10)
+      pointer('pointermove', window, 12, 200)
+      pointer('pointerup', window, 12, 200)
+      expect(actions.onMoveItem).toHaveBeenCalledWith(shop, data.grocery[3], { order: 4, categoryId: 'p', memberId: null })
+    })
+
+    it('shows a grip only on items that can move', () => {
+      setup([shop], { grocery: [...data.grocery, item('g5', 'Bread', { done: true })] })
+      expect(screen.getByText('Napkins').closest('li')!.querySelector('.list-item__grip')).toBeInTheDocument()
+      expect(screen.getByText('Bread').closest('li')!.querySelector('.list-item__grip')).not.toBeInTheDocument()
+    })
   })
 
   it('works out the order that puts a dropped item in its place', () => {

@@ -8573,6 +8573,29 @@ button.summary-row__body {
   -webkit-user-select: none;
   user-select: none;
 }
+/* The grip: shows the item can move, and dragging it lifts the item straight away. The row's
+   12px gap is pulled in so it sits close to the box, and it fills the row's height to be easy to hit. */
+.list-item__grip {
+  display: grid;
+  place-items: center;
+  align-self: stretch;
+  width: 24px;
+  margin-right: -6px;
+  margin-left: -4px;
+  color: var(--ink-2);
+  opacity: 0.45;
+  cursor: grab;
+  touch-action: none;
+}
+@media (hover: hover) {
+  .list-item:hover .list-item__grip {
+    opacity: 1;
+  }
+}
+.list-item--lifted .list-item__grip {
+  opacity: 1;
+  color: var(--accent);
+}
 .list-item--lifted {
   position: relative;
   z-index: 30;
