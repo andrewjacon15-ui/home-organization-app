@@ -18,6 +18,7 @@ import {
   Droplets,
   ExternalLink,
   Globe,
+  GripVertical,
   House,
   Images,
   LayoutGrid,
@@ -105,6 +106,7 @@ export const ExpandIcon = icon(Maximize2)
 export const ExternalLinkIcon = icon(ExternalLink)
 export const FiltersIcon = icon(SlidersHorizontal)
 export const GlobeIcon = icon(Globe)
+export const GripIcon = icon(GripVertical)
 export const MapPinIcon = icon(MapPin)
 export const MicIcon = icon(Mic)
 export const MicOffIcon = icon(MicOff)

@@ -122,8 +122,10 @@ export function useItemDrag(onDrop: (id: string, target: DropTarget) => void) {
       }
       window.addEventListener('click', swallow, { capture: true, once: true })
       setTimeout(() => window.removeEventListener('click', swallow, { capture: true }), 400)
+      // Picked up and put back down where it was: nothing to save.
+      const moved = Math.hypot(a.lastX - a.startX, a.lastY - a.startY) > SLOP_PX || (a.scroller?.scrollTop ?? 0) !== a.startScroll
       cleanup()
-      if (t) drop.current(id, t)
+      if (t && moved) drop.current(id, t)
     }
     const cancel = (e: PointerEvent) => {
       if (pending.current?.pointerId === e.pointerId || active.current?.pointerId === e.pointerId) cleanup()
@@ -146,14 +148,18 @@ export function useItemDrag(onDrop: (id: string, target: DropTarget) => void) {
     }
   }, [cleanup])
 
-  /** Spread onto an item row: starts the hold. Pressing the checkbox or a button inside doesn't. */
+  /**
+   * Spread onto an item row: starts the hold. Pressing the checkbox or a button inside doesn't.
+   * Its grip (`.list-item__grip`) lifts the item straight away, with no hold.
+   */
   const bind = (id: string) => ({
     onPointerDown: (e: ReactPointerEvent<HTMLElement>) => {
       if ((e.pointerType === 'mouse' && e.button !== 0) || active.current) return
-      if ((e.target as HTMLElement).closest('input, .list-item__delete')) return
+      const pressed = e.target as HTMLElement
+      if (pressed.closest('input, .list-item__delete')) return
       const row = e.currentTarget
       const { clientX: x, clientY: y, pointerId } = e
-      const timer = setTimeout(() => {
+      const lift = () => {
         pending.current = null
         const scroller = scrollParent(row)
         active.current = { id, pointerId, row, startX: x, startY: y, target: null, scroller, startScroll: scroller?.scrollTop ?? 0, lastX: x, lastY: y, raf: setInterval(() => undefined, 1e9) }
@@ -177,8 +183,14 @@ export function useItemDrag(onDrop: (id: string, target: DropTarget) => void) {
           a.scroller.scrollTop += by
           follow(a, setTarget)
         }, 16)
-      }, HOLD_MS)
-      pending.current = { id, pointerId, x, y, row, timer }
+      }
+      if (pressed.closest('.list-item__grip')) {
+        // Stops a mouse press from selecting text on the way.
+        e.preventDefault()
+        lift()
+        return
+      }
+      pending.current = { id, pointerId, x, y, row, timer: setTimeout(lift, HOLD_MS) }
     },
     // A long press would otherwise open the browser's menu or select the text.
     onContextMenu: (e: React.MouseEvent) => e.preventDefault(),

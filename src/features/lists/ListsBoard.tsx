@@ -3,7 +3,7 @@ import { useState, type CSSProperties, type FormEvent } from 'react'
 import { placeFor, useItemDrag } from './useItemDrag'
 import type { Member } from '../../types'
 import type { FamilyList, ListCategory, ListItem } from './listsApi'
-import { AddIcon, ArrowDownIcon, ArrowUpIcon, CloseIcon, DoneIcon, PencilIcon } from '../../components/Icons'
+import { AddIcon, ArrowDownIcon, ArrowUpIcon, CloseIcon, DoneIcon, GripIcon, PencilIcon } from '../../components/Icons'
 
 export interface ListActions {
   /** categoryId undefined = let the list file it (store aisles); null = the list's top. */
@@ -313,7 +313,7 @@ function Items({ items, group, ...p }: RowProps & { items: ListItem[]; group?: s
 
 /**
  * Tap the circle to check off; tap the words to edit them or move the item to another category;
- * press and hold anywhere on it to drag it to a new place (in its category or another one).
+ * drag the grip, or press and hold anywhere on it, to move it to a new place (in its category or another one).
  */
 function ItemRow({ item: i, list, categories, onToggle, onDelete, onEditItem, drag, draggable = false }: RowProps & { item: ListItem; draggable?: boolean }) {
   const [editing, setEditing] = useState(false)
@@ -366,6 +366,11 @@ function ItemRow({ item: i, list, categories, onToggle, onDelete, onEditItem, dr
 
   return (
     <li className={`list-item${i.done ? ' list-item--done' : ''}${draggable ? ' list-item--draggable' : ''}${drag?.dragId === i.id ? ' list-item--lifted' : ''}`} {...(draggable && drag ? drag.bind(i.id) : {})}>
+      {draggable && drag && (
+        <span className="list-item__grip" title="Drag to move" aria-hidden>
+          <GripIcon size={16} />
+        </span>
+      )}
       <input type="checkbox" className="list-item__box" checked={i.done} onChange={() => onToggle(list, i)} aria-label={`${i.done ? 'Uncheck' : 'Check off'} ${i.text}`} />
       <button
         type="button"
