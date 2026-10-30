@@ -297,6 +297,10 @@ slideshow is the one slow place: a 1.6s cross-fade and a gentle drift (zoom plus
 pan, a different way each photo) that lasts the photo's whole time on screen. Its clock
 and date never move. Respect `prefers-reduced-motion`.
 
+The one small celebration: checking off a list item (`useTickOff.ts`). The box pops with a ring, the
+tick springs in, a line sweeps through the words, and the row folds shut (about half a second in
+all) before it moves to Done. Unchecking is instant, and so is everything with reduced motion.
+
 ## Don't
 
 - Add a second font, italics, or uppercase-with-tracking labels.
