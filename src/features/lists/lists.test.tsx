@@ -230,6 +230,8 @@ describe('ListsBoard', () => {
       pointer('pointermove', window, 12, 200)
       pointer('pointerup', window, 12, 200)
       expect(actions.onMoveItem).toHaveBeenCalledWith(shop, data.grocery[3], { order: 4, categoryId: 'p', memberId: null })
+      // The click that follows letting go is swallowed; use it up so the next test's clicks land.
+      fireEvent.click(document.body)
     })
 
     it('shows a grip only on items that can move', () => {
@@ -237,6 +239,32 @@ describe('ListsBoard', () => {
       expect(screen.getByText('Napkins').closest('li')!.querySelector('.list-item__grip')).toBeInTheDocument()
       expect(screen.getByText('Bread').closest('li')!.querySelector('.list-item__grip')).not.toBeInTheDocument()
     })
+  })
+
+  it('plays the tick-off before saving a checked item, and unchecks straight away', () => {
+    vi.useFakeTimers()
+    const animate = vi.fn(() => {
+      const a = { onfinish: null as null | (() => void), cancel: vi.fn() }
+      setTimeout(() => a.onfinish?.(), 180)
+      return a
+    })
+    Object.defineProperty(HTMLElement.prototype, 'animate', { configurable: true, value: animate })
+    try {
+      const { actions } = setup()
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Check off Milk' }))
+      const row = screen.getByText('Milk').closest('li')!
+      expect(row).toHaveClass('list-item--ticking')
+      expect(screen.getByRole('checkbox', { name: 'Check off Milk' })).toBeChecked()
+      expect(actions.onToggle).not.toHaveBeenCalled()
+      act(() => vi.advanceTimersByTime(600))
+      expect(animate).toHaveBeenCalledTimes(1)
+      expect(actions.onToggle).toHaveBeenCalledWith(grocery, items.grocery[0])
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Uncheck Eggs' }))
+      expect(actions.onToggle).toHaveBeenLastCalledWith(grocery, items.grocery[2])
+    } finally {
+      delete (HTMLElement.prototype as { animate?: unknown }).animate
+      vi.useRealTimers()
+    }
   })
 
   it('works out the order that puts a dropped item in its place', () => {

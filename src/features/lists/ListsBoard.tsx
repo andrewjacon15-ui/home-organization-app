@@ -1,6 +1,7 @@
 import { Select } from '../../components/Select'
 import { useState, type CSSProperties, type FormEvent } from 'react'
 import { placeFor, useItemDrag } from './useItemDrag'
+import { useTickOff } from './useTickOff'
 import type { Member } from '../../types'
 import type { FamilyList, ListCategory, ListItem } from './listsApi'
 import { AddIcon, ArrowDownIcon, ArrowUpIcon, CloseIcon, DoneIcon, GripIcon, PencilIcon } from '../../components/Icons'
@@ -317,6 +318,8 @@ function Items({ items, group, ...p }: RowProps & { items: ListItem[]; group?: s
  */
 function ItemRow({ item: i, list, categories, onToggle, onDelete, onEditItem, drag, draggable = false }: RowProps & { item: ListItem; draggable?: boolean }) {
   const [editing, setEditing] = useState(false)
+  const { ticking, tick } = useTickOff()
+  const leaving = ticking.has(i.id)
   const [text, setText] = useState(i.text)
   const [cat, setCat] = useState(i.categoryId ?? '')
 
@@ -365,24 +368,34 @@ function ItemRow({ item: i, list, categories, onToggle, onDelete, onEditItem, dr
   }
 
   return (
-    <li className={`list-item${i.done ? ' list-item--done' : ''}${draggable ? ' list-item--draggable' : ''}${drag?.dragId === i.id ? ' list-item--lifted' : ''}`} {...(draggable && drag ? drag.bind(i.id) : {})}>
+    <li
+      className={`list-item${i.done ? ' list-item--done' : ''}${leaving ? ' list-item--ticking' : ''}${draggable ? ' list-item--draggable' : ''}${drag?.dragId === i.id ? ' list-item--lifted' : ''}`}
+      {...(draggable && drag && !leaving ? drag.bind(i.id) : {})}
+    >
       {draggable && drag && (
         <span className="list-item__grip" title="Drag to move" aria-hidden>
           <GripIcon size={16} />
         </span>
       )}
-      <input type="checkbox" className="list-item__box" checked={i.done} onChange={() => onToggle(list, i)} aria-label={`${i.done ? 'Uncheck' : 'Check off'} ${i.text}`} />
+      <input
+        type="checkbox"
+        className="list-item__box"
+        checked={i.done || leaving}
+        onChange={(e) => (i.done ? onToggle(list, i) : tick(i.id, e.currentTarget.closest('li'), () => onToggle(list, i)))}
+        aria-label={`${i.done ? 'Uncheck' : 'Check off'} ${i.text}`}
+      />
       <button
         type="button"
         className="list-item__text list-item__edit"
         aria-label={`Edit ${i.text}`}
+        disabled={leaving}
         onClick={() => {
           setText(i.text)
           setCat(i.categoryId ?? '')
           setEditing(true)
         }}
       >
-        {i.text}
+        <span className="list-item__words">{i.text}</span>
       </button>
       <button type="button" className="icon-button list-item__delete" onClick={() => onDelete(list, i)} aria-label={`Delete ${i.text}`}>
         <CloseIcon size={16} />

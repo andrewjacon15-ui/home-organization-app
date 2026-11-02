@@ -3215,6 +3215,72 @@ letter-spacing: -0.015em;
   }
 }
 
+/* Checking an item off (useTickOff.ts): the box squeezes and pops with a ring, the tick springs
+   in, and a line sweeps through the words. Then the script folds the row away. */
+.list-item--ticking {
+  overflow: hidden;
+}
+.list-item--ticking .list-item__box,
+.list-item--ticking .list-item__check input {
+  animation:
+    tick-pop 260ms cubic-bezier(0.3, 1.6, 0.5, 1),
+    tick-ring 420ms ease-out;
+}
+.list-item--ticking .list-item__box::after,
+.list-item--ticking .list-item__check input::after {
+  animation: tick-mark 220ms 40ms cubic-bezier(0.3, 1.8, 0.5, 1) both;
+}
+.list-item__words {
+  background: linear-gradient(currentColor, currentColor) no-repeat 0 55% / 0 1.5px;
+}
+.list-item--ticking .list-item__words {
+  color: var(--ink-2);
+  background-size: 100% 1.5px;
+  transition:
+    background-size 220ms 60ms ease-out,
+    color 220ms 60ms ease-out;
+}
+@keyframes tick-pop {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(0.82);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes tick-ring {
+  from {
+    box-shadow: 0 0 0 0 var(--accent);
+  }
+  to {
+    box-shadow: 0 0 0 10px transparent;
+  }
+}
+@keyframes tick-mark {
+  from {
+    opacity: 0;
+    transform: translateY(-1px) rotate(45deg) scale(0.2);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-1px) rotate(45deg) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .list-item--ticking .list-item__box,
+  .list-item--ticking .list-item__check input,
+  .list-item--ticking .list-item__box::after,
+  .list-item--ticking .list-item__check input::after {
+    animation: none;
+  }
+  .list-item--ticking .list-item__words {
+    transition: none;
+  }
+}
+
 .list-section {
   margin-top: 18px;
 }

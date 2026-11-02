@@ -7,6 +7,7 @@ import { isWeekend, withOwners, type OwnedEvent } from '../calendar/views'
 import { ChoreCard } from '../chores/ChoreBoard'
 import { occurrencesOn, type Occurrence } from '../chores/schedule'
 import type { FamilyList, ListItem } from '../lists/listsApi'
+import { useTickOff } from '../lists/useTickOff'
 import { useSettings } from '../settings/SettingsContext'
 import { DayWeather, WeatherStrip } from '../weather/WeatherBadges'
 import { CountdownPanel } from '../countdowns/Countdowns'
@@ -208,6 +209,7 @@ function PanelHead({ title, onOpen, children }: { title: string; onOpen: () => v
 
 function HomeList({ list, items, onAdd, onToggle }: { list: FamilyList; items: ListItem[]; onAdd: Props['onAddItem']; onToggle: Props['onToggleItem'] }) {
   const [text, setText] = useState('')
+  const { ticking, tick } = useTickOff()
   const open = items.filter((i) => !i.done).sort((a, b) => a.order - b.order)
   function submit(e: FormEvent) {
     e.preventDefault()
@@ -228,10 +230,12 @@ function HomeList({ list, items, onAdd, onToggle }: { list: FamilyList; items: L
       </form>
       <ul className="list-items">
         {open.map((i) => (
-          <li key={i.id} className="list-item">
+          <li key={i.id} className={`list-item${ticking.has(i.id) ? ' list-item--ticking' : ''}`}>
             <label className="list-item__check">
-              <input type="checkbox" checked={false} onChange={() => onToggle(list, i)} aria-label={`Check off ${i.text}`} />
-              <span className="list-item__text">{i.text}</span>
+              <input type="checkbox" checked={ticking.has(i.id)} onChange={(e) => tick(i.id, e.currentTarget.closest('li'), () => onToggle(list, i))} aria-label={`Check off ${i.text}`} />
+              <span className="list-item__text">
+                <span className="list-item__words">{i.text}</span>
+              </span>
             </label>
           </li>
         ))}
