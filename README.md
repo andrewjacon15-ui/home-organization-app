@@ -31,6 +31,12 @@ See [docs/TABLET-SETUP.md](docs/TABLET-SETUP.md) to turn an Android tablet
 (a Skylight Calendar 15" or an ordinary one like a Galaxy Tab A9+) into the
 kitchen display (no rooting needed).
 
+## Claude
+
+[tools/claude-mcp](tools/claude-mcp/README.md) is a small MCP server that runs on your computer, so
+Claude (desktop app chats and Claude Code) can summarize the week and add list items, events, chores,
+meals and countdowns. It never deletes. The app itself has no AI features.
+
 ## How families work
 
 Only accounts on the `config/access` allowlist can create a family (so a stranger's

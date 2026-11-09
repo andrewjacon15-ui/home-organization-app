@@ -100,7 +100,7 @@ export default defineConfig({
   ],
   test: {
     environment: 'jsdom',
-    include: ['src/**/*.test.{ts,tsx}'],
+    include: ['src/**/*.test.{ts,tsx}', 'tools/claude-mcp/src/**/*.test.ts'],
     setupFiles: ['src/test-setup.ts'],
   },
 })
