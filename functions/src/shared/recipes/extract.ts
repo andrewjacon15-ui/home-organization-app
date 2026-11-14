@@ -12,6 +12,8 @@ export interface Block {
   level?: number
   /** Where it came from ("p. 112", "Chapter 4"), for review. */
   loc?: string
+  /** The size the text is set in, where the source says (PDFs). Books often set notes, ingredients and method in different sizes. */
+  size?: number
 }
 
 export interface ExtractedRecipe {
@@ -99,6 +101,72 @@ const isProse = (t: string) => t.length > 90 || /[.!?]\s+\S/.test(t) || (STEP_VE
 const isNote = (t: string) => {
   const words = t.trim().split(/\s+/).length
   return words > 9 || (words > 4 && /[.!?"”)]$/.test(t.trim())) || (/^[^:]{2,20}:\s+\S/.test(t) && ingredientLikeness(t) < 0.5)
+}
+
+/** The size most of these blocks are set in, and how many are. */
+function commonSize(blocks: Block[]): { size: number; count: number } | null {
+  const counts = new Map<number, number>()
+  for (const b of blocks) if (b.size != null) counts.set(b.size, (counts.get(b.size) ?? 0) + 1)
+  let best: { size: number; count: number } | null = null
+  for (const [size, count] of counts) if (!best || count > best.count) best = { size, count }
+  return best
+}
+
+/**
+ * A book that sets its ingredient list in its own size (bigger or bolder than the method, with
+ * notes smaller still): the size says what each line is, more surely than its wording. Returns
+ * where the ingredients start and end, or null when the sizes don't separate them.
+ */
+function listBySize(rest: Block[]): { first: number; last: number; size: number } | null {
+  const text = rest.filter((b) => b.kind === 'text')
+  const method = (b: Block) => b.size != null && isProse(b.text) && ingredientLikeness(b.text) < 0.5
+  let list = commonSize(text.filter((b) => ingredientLikeness(b.text) >= 0.5))
+  if (!list || list.count < 2) {
+    // A list with hardly an amount in it ("Salmon fillets", "Olive oil", "Salt and pepper"):
+    // the lines above the method set larger than it.
+    // The method is the size its longest paragraph is set in (a one-line note can read like a step too).
+    const longest = text.filter(method).sort((a, b) => b.text.length - a.text.length)[0]
+    const until = longest ? text.findIndex((b) => b.size === longest.size && method(b)) : -1
+    const above = until > 0 ? text.slice(0, until).filter((b) => b.size != null && b.size > longest.size!) : []
+    list = commonSize(above)
+    if (!list || list.count < 2) return null
+  }
+  const inList = (b: Block) => b.kind === 'text' && b.size === list.size
+  // The method must be in another size, and nothing in the list's size may read like a method sentence.
+  if (text.some((b) => inList(b) && isProse(b.text) && ingredientLikeness(b.text) < 0.5)) return null
+  const first = rest.findIndex(inList)
+  const last = rest.findLastIndex(inList)
+  if (!rest.slice(last + 1).some((b) => b.kind === 'text' && b.size != null && isProse(b.text))) return null
+  return { first, last, size: list.size }
+}
+
+const AMOUNT_FIRST = /^[~≈]?\s*(?:\d|[¼½¾⅓⅔⅛⅜⅝⅞]|an?\s|one\b|two\b|pinch|dash|juice\b)/i
+/** Words a section of an ingredient list is named for ("Frosting", "Meat Mixture", "First Layer"). */
+const GROUP_WORD = /\b(wet|dry|topping|toppings|frosting|filling|crust|glaze|icing|streusel|crumble|layer|mixture|marinade|marinate|batter|dough|base|garnish|assembly)$/i
+/** Never a section name: seasonings and basics listed without an amount. */
+const PLAIN_ITEM = /\b(salt|pepper|oil|butter|water|sugar|flour|seasoning|spray|to taste|optional|of choice)\b/i
+
+/**
+ * Section names printed like ingredients, with no colon ("Marinate", "Meat", "Avocado Lime
+ * Salsa" above their own ingredients). A short line with no amount, followed by a line with
+ * one, counts when the method speaks of it ("combine marinate ingredients"), or its last word
+ * names a part of a dish; and once the list opens with such a name, the list is in sections,
+ * so the other short amount-less lines above amounts are names too. Returns their indexes.
+ */
+export function groupLabels(lines: string[], steps: string[]): Set<number> {
+  const method = steps.join(' ').toLowerCase()
+  const candidate = (i: number) => {
+    const t = lines[i].trim()
+    return i + 1 < lines.length && !AMOUNT_FIRST.test(t) && AMOUNT_FIRST.test(lines[i + 1].trim()) && /^\p{Lu}/u.test(t) && !/[\d(),.;]/.test(t) && t.split(/\s+/).length <= 4 && !PLAIN_ITEM.test(t)
+  }
+  const named = (t: string) => GROUP_WORD.test(t) || method.includes(`${t.toLowerCase()} ingredients`) || method.includes(`for the ${t.toLowerCase()}`)
+  const out = new Set<number>()
+  if (!lines.length) return out
+  const sectioned = candidate(0) && named(lines[0].trim())
+  lines.forEach((l, i) => {
+    if (candidate(i) && (sectioned || named(l.trim()))) out.add(i)
+  })
+  return out
 }
 
 /** Splits blocks into sections that each start at a title candidate. */
@@ -231,11 +299,20 @@ function recipeFrom(section: Block[], chapter: string | null, headingsOnly = fal
         len = 0
       }
     })
+    const sized = listBySize(rest)
+    if (sized) {
+      // Set apart by size: what's above the list is the cook's note, what's below is the method.
+      notes = rest.slice(0, sized.first).filter((b) => b.kind === 'text' && b.text.length <= 300).map((b) => b.text.trim())
+      ingredientBlocks = rest.slice(sized.first, sized.last + 1).filter((b) => b.kind === 'text' && b.size === sized.size)
+      stepBlocks = rest.slice(sized.last + 1)
+      listed = true
+      best = { start: -1, len: 0 }
+    }
     // In a book with styled titles the layout is reliable: the short lines before the first
     // method sentence are the ingredients, even without amounts ("Turkey", "Olive oil").
     let lead0 = 0
     while (lead0 < rest.length && rest[lead0].kind === 'text' && isNote(rest[lead0].text)) lead0++
-    const firstProse = headingsOnly ? rest.findIndex((b, i) => i > lead0 && b.kind === 'text' && isProse(b.text)) : -1
+    const firstProse = headingsOnly && !sized ? rest.findIndex((b, i) => i > lead0 && b.kind === 'text' && isProse(b.text)) : -1
     if (firstProse > 0) {
       const lead = rest.slice(0, firstProse).filter((b) => b.kind === 'text')
       let n = 0
@@ -256,8 +333,6 @@ function recipeFrom(section: Block[], chapter: string | null, headingsOnly = fal
     if (methodLabel >= 0) stepBlocks = rest.slice(methodLabel + 1)
   }
 
-  const ingredientLines = ingredientBlocks.map((b) => b.text.trim()).filter(Boolean)
-  const items = ingredientLines.filter((l) => !(GROUP_LABEL.test(l) && ingredientLikeness(l) < 0.5)).map(parseIngredient)
   const steps = stepsForCooking(
     splitSteps(
       stepBlocks
@@ -265,6 +340,11 @@ function recipeFrom(section: Block[], chapter: string | null, headingsOnly = fal
         .filter((t) => t.length > 12 && !METHOD_LABEL.test(t) && !INGREDIENTS_LABEL.test(t)),
     ),
   )
+  // Section names printed without a colon get one, so they read (and are treated) as names everywhere.
+  const printed0 = ingredientBlocks.map((b) => b.text.trim()).filter(Boolean)
+  const labels = groupLabels(printed0, steps)
+  const ingredientLines = printed0.map((l, i) => (labels.has(i) ? `${l}:` : l))
+  const items = ingredientLines.filter((l) => !(GROUP_LABEL.test(l) && ingredientLikeness(l) < 0.5)).map(parseIngredient)
 
   // Not a recipe (an essay, a chapter intro, a contents page).
   if (items.length < 2 && !(items.length >= 1 && steps.length >= 1 && (ingLabel >= 0 || listed))) return null
@@ -282,10 +362,21 @@ function recipeFrom(section: Block[], chapter: string | null, headingsOnly = fal
     totalMinutes,
     confidence: confidence({ title, items, steps, yieldText, times: [prepMinutes, cookMinutes, totalMinutes], labelled: ingLabel >= 0 }),
     loc: head.loc ?? null,
-    notes: notes.filter(Boolean).slice(0, 5),
+    notes: joinWrapped(notes.filter(Boolean)).slice(0, 5),
     credit,
     chapter,
   }
+}
+
+/** A note printed on two centered lines comes as two pieces: the first has no ending, the second starts small. */
+function joinWrapped(notes: string[]): string[] {
+  const out: string[] = []
+  for (const n of notes) {
+    const prev = out[out.length - 1]
+    if (prev && !/[.!?"”)]$/.test(prev) && /^[\p{Ll}(]/u.test(n)) out[out.length - 1] = `${prev} ${n}`
+    else out.push(n)
+  }
+  return out
 }
 
 /** 0–1. Below 0.6 a recipe goes to "Needs review". */

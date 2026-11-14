@@ -55,9 +55,24 @@ function packageSize(s: string): string {
   return `${m[1]} (${m[2]} ${m[3]}) ${s.slice(m[0].length)}`
 }
 
+/** "~4 C arugula", "about 2 cups", "approx. 1 lb": the amount follows. */
+const ABOUT = /^(?:[~≈]\s*|(?:about|approx(?:imately|\.)?|roughly|around)\s+)(?=[\d¼½¾⅓⅔⅛])/i
+/** "Juice of 2 limes", "Zest from 1 lemon": the thing to buy is the fruit. */
+const PART_OF = /^(juice|zest|rind|peel)\s+(?:of|from)\s+(?=[\d¼½¾⅓⅔⅛]|an?\s|one\s|half\s)/i
+
 export function parseIngredient(raw: string): Ingredient {
   let s = packageSize(cleanLine(raw))
   const notes: string[] = []
+  const part = PART_OF.exec(s)
+  if (part) {
+    notes.push(part[1].toLowerCase())
+    s = s.slice(part[0].length)
+  }
+  const about = ABOUT.exec(s)
+  if (about) {
+    notes.push('about')
+    s = s.slice(about[0].length)
+  }
 
   const q = readQuantity(s)
   let qty: number | null = null
@@ -190,7 +205,7 @@ export function ingredientKey(name: string): { key: string; known: boolean } {
 
 /** How much a line looks like an ingredient (0–1): a quantity or unit up front, short, known food words. */
 export function ingredientLikeness(line: string): number {
-  const s = cleanLine(line)
+  const s = cleanLine(line).replace(ABOUT, '').replace(PART_OF, '')
   if (!s || s.length > 140) return 0
   let score = 0
   const q = readQuantity(s)

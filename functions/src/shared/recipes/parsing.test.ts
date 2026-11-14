@@ -1,8 +1,40 @@
 import { describe, expect, it } from 'vitest'
 import { familyOf, lookupPhrase, singular } from './dictionary.js'
-import { extractRecipes, parseMinutes, sentences, stepsForCooking, type Block } from './extract.js'
+import { extractRecipes, groupLabels, parseMinutes, sentences, stepsForCooking, type Block } from './extract.js'
 import { ingredientLikeness, parseIngredient } from './ingredient.js'
 import { formatQuantity, formatRange, normalizeFractions, readQuantity } from './quantity.js'
+
+describe('sections of an ingredient list named without a colon', () => {
+  const at = (lines: string[], steps: string[] = []) => [...groupLabels(lines, steps)].map((i) => lines[i])
+
+  it('finds names the method speaks of, and the rest once the list opens with one', () => {
+    const lines = ['Marinate', '8 cloves garlic', 'Meat', '3 lb flank steak', 'Salt and pepper to taste', 'Avocado Lime Salsa', '3 avocados', 'Kosher salt']
+    expect(at(lines, ['Combine marinate ingredients.', 'Combine avocado lime salsa ingredients.'])).toEqual(['Marinate', 'Meat', 'Avocado Lime Salsa'])
+    expect(at(['Wet', '1 C pumpkin', 'Dry', '2 C flour', 'Morsels', '1 C chocolate chips', 'Frosting', '4 C powdered sugar'])).toEqual(['Wet', 'Dry', 'Morsels', 'Frosting'])
+    expect(at(['First Layer', '1 - 8oz cream cheese', 'Second Layer', '1 C salsa'])).toEqual(['First Layer', 'Second Layer'])
+  })
+
+  it('leaves ingredients that simply have no amount', () => {
+    expect(at(['Venison tenderloin (mostly thawed)', '2 large onions', 'Black pepper', '1 stick butter'])).toEqual([])
+    expect(at(['Desired protein', '2 C wild rice', 'Salt', 'Pepper'])).toEqual([])
+    expect(at(['1 lb pasta', 'Fresh basil', '2 C tomato sauce', 'Parmesan cheese'])).toEqual([])
+    expect(at(['Salmon fillets', 'Olive oil', 'Salt and pepper'])).toEqual([])
+    // A part of the dish named mid-list still counts on its own.
+    expect(at(['2 C flour', '1 C sugar', 'Topping', '1/2 C brown sugar'])).toEqual(['Topping'])
+  })
+})
+
+describe('amounts written loosely', () => {
+  it('reads "about" amounts and "juice of"', () => {
+    expect(parseIngredient('~4 C fresh arugula')).toMatchObject({ qty: 4, unit: 'cup', key: 'arugula' })
+    expect(parseIngredient('about 2 cups diced mango')).toMatchObject({ qty: 2, unit: 'cup', key: 'mango' })
+    expect(parseIngredient('Juice of 2 limes')).toMatchObject({ qty: 2, key: 'lime', note: 'juice' })
+    expect(parseIngredient('Juice from 1 lime')).toMatchObject({ qty: 1, key: 'lime' })
+    expect(ingredientLikeness('~4 C fresh arugula')).toBeGreaterThanOrEqual(0.5)
+    // Not an amount: stays as written.
+    expect(parseIngredient('Lemon juice to taste')).toMatchObject({ qty: null, key: 'lemon' })
+  })
+})
 
 describe('fractions and quantities', () => {
   it.each([
