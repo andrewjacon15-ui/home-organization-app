@@ -76,7 +76,7 @@ export function tourSteps(household: string, device: Device, platform: Platform)
     {
       title: 'Lists and chores',
       text: 'Add to the grocery or to-do list from any device and it updates everywhere. Chores show who’s doing what today; finishing them earns stars toward rewards.',
-      go: { tab: 'lists', label: 'Open Lists' },
+      go: { tab: 'groceries', label: 'Open Groceries' },
     },
     {
       title: 'Meals and recipes',

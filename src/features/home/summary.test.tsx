@@ -100,7 +100,7 @@ describe('DailySummary', () => {
     fireEvent.click(within(screen.getByRole('region', { name: 'Today' })).getByRole('button', { name: 'Mark done: Trash out' }))
     expect(onToggle).toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: /Grocery list/ }))
-    expect(onNavigate).toHaveBeenCalledWith('lists')
+    expect(onNavigate).toHaveBeenCalledWith('groceries')
     const countdowns = screen.getByRole('region', { name: 'Countdowns' })
     expect(within(countdowns).getByRole('listitem', { name: /^Halloween: 22 days/ })).toBeInTheDocument()
     fireEvent.click(within(countdowns).getByRole('button', { name: 'Edit countdowns' }))

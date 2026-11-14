@@ -22,6 +22,9 @@ export interface Invite {
   email: string
   familyId: string
   invitedBy: string
+  /** Shown to the invited person before they join (absent on older invites). */
+  familyName?: string
+  inviterName?: string
 }
 
 export interface Chore {

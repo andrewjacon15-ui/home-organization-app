@@ -11,7 +11,7 @@ import { WeatherGlyph } from '../weather/WeatherBadges'
 import { useWeatherInfo } from '../weather/WeatherContext'
 import { allDayOn, daySentence, greeting, nextUp, relative, timeline, weatherLine } from './summary'
 
-export type SummaryTarget = 'calendar' | 'chores' | 'lists' | 'weather' | 'meals' | 'countdowns'
+export type SummaryTarget = 'calendar' | 'chores' | 'groceries' | 'lists' | 'weather' | 'meals' | 'countdowns'
 
 interface Props {
   today: string
@@ -264,7 +264,7 @@ export function DailySummary(p: Props) {
               <span className="summary-tile__value">{p.dinner.trim() || 'Not planned yet'}</span>
               {p.tomorrowDinner.trim() && <span className="summary-tile__meta">Tomorrow: {p.tomorrowDinner.trim()}</span>}
             </button>
-            <button type="button" className="summary-card summary-tile" onClick={() => p.onNavigate('lists')}>
+            <button type="button" className="summary-card summary-tile" onClick={() => p.onNavigate('groceries')}>
               <span className="summary-card__label">
                 <CartIcon size={16} aria-hidden /> Grocery list
               </span>

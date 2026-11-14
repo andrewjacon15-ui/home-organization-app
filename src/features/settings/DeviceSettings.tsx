@@ -111,7 +111,7 @@ export function DeviceSettings() {
       <div className="setting-row setting-row--stacked">
         <span className="setting-row__label">
           Side bar
-          <span className="setting-row__hint">Choose the sections each kind of device shows. On phones, the first four go in the bottom bar and the rest under More. Settings always shows.</span>
+          <span className="setting-row__hint">Choose the sections each kind of device shows. On phones, four go in the bottom bar and the rest under More; each phone picks its own four under More → Edit bar. Settings always shows.</span>
         </span>
         <SidebarGrid hidden={settings.hiddenTabs} current={device} onChange={(hiddenTabs) => void update({ hiddenTabs })} />
       </div>

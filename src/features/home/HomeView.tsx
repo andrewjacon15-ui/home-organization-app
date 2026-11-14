@@ -16,7 +16,7 @@ import { DoneIcon, GrabsIcon, NextIcon } from '../../components/Icons'
 import { useOverflowCue } from '../../lib/useOverflowCue'
 import { DEFAULT_HOME, HOME_CALENDAR_DAYS, PANEL_WEIGHT, type HomeCalendarDays, type HomePanel } from './homePanels'
 
-export type HomeTarget = 'calendar' | 'chores' | 'lists' | 'weather' | 'meals' | 'settings'
+export type HomeTarget = 'calendar' | 'chores' | 'groceries' | 'lists' | 'weather' | 'meals' | 'settings'
 
 interface Props {
   today: string

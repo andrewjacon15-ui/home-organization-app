@@ -129,9 +129,13 @@ service cloud.firestore {
       allow list: if isMember(resource.data.familyId);
       allow create: if isOwnerAfter(request.resource.data.familyId)
         && email == email.lower()
-        && onlyKeys(['familyId', 'invitedBy', 'createdAt'])
+        && onlyKeys(['familyId', 'invitedBy', 'createdAt', 'familyName', 'inviterName'])
+        // Shown to the invited person before they join, so they know what they're joining.
+        && (!('familyName' in request.resource.data) || (request.resource.data.familyName is string && request.resource.data.familyName.size() <= 100))
+        && (!('inviterName' in request.resource.data) || (request.resource.data.inviterName is string && request.resource.data.inviterName.size() <= 100))
         && request.resource.data.invitedBy == request.auth.uid;
-      allow delete: if isOwner(resource.data.familyId);
+      // The owner can take an invitation back; the invited person can turn it down.
+      allow delete: if isOwner(resource.data.familyId) || (verifiedEmail() && myEmail() == email);
     }
 
     match /families/{familyId} {
