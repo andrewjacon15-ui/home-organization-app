@@ -199,6 +199,73 @@ describe('cookbook layouts', () => {
     expect(r.steps.join(' ')).toContain('basting with marinade, for 20 minutes.')
   })
 
+  it('family cookbook: the note, list and method each in their own size; sections named without a colon', async () => {
+    const page: PdfLine[] = [
+      ...furniture(11),
+      { x: 210, y: 651, size: 16, text: 'Grilled Flank Steak Wraps' },
+      // A two-line centered note, then a one-line remark that reads like a step.
+      { x: 60, y: 622, size: 8, text: 'We first had these at the lake house one summer and they have been on the table at every' },
+      { x: 270, y: 612, size: 8, text: 'reunion since.' },
+      { x: 240, y: 602, size: 8, text: 'Serve with rice.' },
+      // The list runs down the left column, then the right; section names look like ingredients.
+      { x: 36, y: 576, size: 10, text: 'Marinade' },
+      { x: 36, y: 560, size: 10, text: '6 cloves garlic' },
+      { x: 36, y: 544, size: 10, text: '1/3 C olive oil' },
+      { x: 36, y: 528, size: 10, text: 'Meat' },
+      { x: 36, y: 512, size: 10, text: '3 lb flank steak' },
+      { x: 289, y: 576, size: 10, text: 'Salt and pepper to taste' },
+      { x: 289, y: 560, size: 10, text: 'Mango Salsa' },
+      { x: 289, y: 544, size: 10, text: 'Juice of 2 limes' },
+      { x: 289, y: 528, size: 10, text: '1 - 15oz can (2 C) black beans, low sodium' },
+      { x: 289, y: 512, size: 10, text: '(drained)' },
+      { x: 289, y: 496, size: 10, text: '~2 C diced mango' },
+      { x: 85, y: 468, size: 9, text: 'Combine marinade ingredients; marinate the steak overnight. Grill to medium rare and let' },
+      { x: 85, y: 456, size: 9, text: 'stand ten minutes. Combine mango salsa ingredients. Slice thin and serve in warm tortillas.' },
+      { x: 240, y: 430, size: 9, text: 'Recipe by Karen' },
+      { x: 235, y: 336, size: 16, text: 'Whole Tenderloin' },
+      { x: 225, y: 307, size: 8, text: 'Serve with mushrooms.' },
+      // Hardly an amount in the list: its size still sets it apart.
+      { x: 36, y: 281, size: 10, text: '1 whole beef tenderloin' },
+      { x: 36, y: 265, size: 10, text: 'Olive oil' },
+      { x: 289, y: 281, size: 10, text: 'Salt and pepper' },
+      { x: 85, y: 237, size: 9, text: 'Bring the tenderloin to room temperature. Cover with olive oil, salt, and pepper. Sear on a' },
+      { x: 85, y: 225, size: 9, text: 'hot grill, then roast at 325F for half an hour.' },
+      { x: 240, y: 200, size: 9, text: 'Recipe by Karen' },
+    ]
+    // Another page of the same book, so its styled titles are plain to see.
+    const next: PdfLine[] = [
+      ...furniture(12),
+      { x: 250, y: 651, size: 16, text: 'Beef Dip' },
+      { x: 36, y: 607, size: 10, text: '1 package chipped beef' },
+      { x: 289, y: 607, size: 10, text: '1 tsp horseradish' },
+      { x: 85, y: 579, size: 9, text: 'Mix well and chill for an hour before serving with crackers.' },
+    ]
+    const [wraps, tenderloin] = await recipesOf(makePdf([page, next]))
+
+    expect(wraps.notes).toEqual(['We first had these at the lake house one summer and they have been on the table at every reunion since.', 'Serve with rice.'])
+    expect(wraps.ingredientLines).toEqual([
+      'Marinade:',
+      '6 cloves garlic',
+      '1/3 C olive oil',
+      'Meat:',
+      '3 lb flank steak',
+      'Salt and pepper to taste',
+      'Mango Salsa:',
+      'Juice of 2 limes',
+      '1 - 15oz can (2 C) black beans, low sodium (drained)',
+      '~2 C diced mango',
+    ])
+    // Section names aren't ingredients; "Salt and pepper to taste" is.
+    expect(wraps.items.map((i) => i.key)).toEqual(['garlic', 'olive oil', 'steak', 'pepper', 'lime', 'black bean', 'mango'])
+    expect(wraps.items[4]).toMatchObject({ qty: 2, key: 'lime', note: 'juice' })
+    expect(wraps.items[6]).toMatchObject({ qty: 2, unit: 'cup', key: 'mango' })
+    expect(wraps.steps.join(' ')).toContain('Combine mango salsa ingredients.')
+
+    expect(tenderloin.notes).toEqual(['Serve with mushrooms.'])
+    expect(tenderloin.ingredientLines).toEqual(['1 whole beef tenderloin', 'Olive oil', 'Salt and pepper'])
+    expect(tenderloin.steps.join(' ')).toMatch(/^Bring the tenderloin.*half an hour\.$/)
+  })
+
   it('skips a contents page', async () => {
     const toc: PdfLine[] = [{ x: 200, y: 720, size: 16, text: 'Contents' }]
     ;['Weeknight Chili', 'Cornbread', 'Lemon Bars', 'Iced Tea', 'Roast Chicken', 'Snickerdoodles', 'Pancakes', 'Pot Roast', 'Apple Pie'].forEach((t, i) =>

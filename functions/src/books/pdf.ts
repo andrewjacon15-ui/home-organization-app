@@ -213,6 +213,19 @@ export function linesToBlocks(lines: Line[], loc: string): Block[] {
   // A line was wrapped when the next line's first word wouldn't have fit after it.
   const wrapsInto = (a: Line, b: Line) => a.x + (a.w ?? 0) + 0.55 * a.size * (1 + (b.text.split(' ')[0]?.length ?? 0)) > limit(a)
 
+  // The end of an ingredient that wrapped in a narrow column, where the column's width can't
+  // be measured: "(drained)" under "1 can (2 C) dark red kidney beans", or a lone lowercase
+  // "walnuts". The line above is the longest in its column (that's why it wrapped), and items
+  // in this column otherwise start with a capital or a number.
+  const tail = (a: Line, b: Line) => {
+    if (ingredientLikeness(b.text) >= 0.5 || /[.!?:]$/.test(a.text)) return false
+    const mates = lines.filter((o) => sameCol(o, a))
+    const widest = Math.max(...mates.map((o) => o.w ?? 0))
+    if ((a.w ?? 0) < 0.95 * widest || mates.length < 3) return false
+    if (/^\(/.test(b.text)) return true
+    return /^[a-z]/.test(b.text) && b.text.split(' ').length <= 3 && mates.filter((o) => /^[a-z]/.test(o.text)).length === 1
+  }
+
   const blocks: Block[] = []
   let last: Line | null = null
   for (const l of lines) {
@@ -238,14 +251,14 @@ export function linesToBlocks(lines: Line[], loc: string): Block[] {
         const prose = prevLike < 0.5 && (lineLike < 0.5 || (prev.text.length >= 60 && !/[.!?:;]$/.test(prev.text)))
         // …or an ingredient wrapped onto a second line ("1 whole chicken (washed, cut, ready to" / "grill)").
         const wrappedItem = /^[a-z)]/.test(l.text) && lineLike < 0.5
-        join = continues && wrapped && (prose || wrappedItem)
+        join = continues && ((wrapped && (prose || wrappedItem)) || tail(last, l))
       } else {
         // OCR lines have no positions: join lowercase continuations of prose.
         join = !/[.!?:]$/.test(prev.text) && /^[a-z(]/.test(l.text) && ingredientLikeness(l.text) < 0.5 && ingredientLikeness(prev.text) < 0.5
       }
     }
     if (join) prev.text = `${prev.text.replace(/-$/, '')}${prev.text.endsWith('-') ? '' : ' '}${l.text}`
-    else blocks.push({ kind: 'text', text: l.text, loc })
+    else blocks.push({ kind: 'text', text: l.text, loc, ...(positioned || !last ? { size: Math.round(l.size * 2) / 2 } : {}) })
     last = l
   }
   return blocks
