@@ -45,6 +45,31 @@ describe('NavRail', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
+  it('lets a phone choose its bottom bar from the More sheet', () => {
+    const onPin = vi.fn()
+    render(<NavRail tabs={TABS} current="home" title="The Jacons" onSelect={vi.fn()} onPin={onPin} barSize={2} />)
+    fireEvent.click(rail().getByRole('button', { name: 'More' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Edit bar' }))
+    const sheet = screen.getByRole('dialog', { name: 'Choose the bottom bar' })
+    // Starts from what's in the bar now; a full bar takes no more until one is taken out.
+    expect(within(sheet).getByRole('button', { name: 'Home: in the bottom bar, position 1' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(sheet).getByRole('button', { name: 'Rewards: not in the bottom bar' })).toBeDisabled()
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Home: in the bottom bar, position 1' }))
+    expect(onPin).toHaveBeenLastCalledWith(['calendar'])
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Rewards: not in the bottom bar' }))
+    expect(onPin).toHaveBeenLastCalledWith(['calendar', 'rewards'])
+    expect(within(sheet).getByRole('button', { name: 'Rewards: in the bottom bar, position 2' })).toBeInTheDocument()
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Use the usual sections' }))
+    expect(onPin).toHaveBeenLastCalledWith(null)
+    expect(screen.getByRole('dialog', { name: 'More sections' })).toBeInTheDocument()
+  })
+
+  it('offers no bar editing where there is no bottom bar', () => {
+    render(<NavRail tabs={TABS} current="home" title="The Jacons" onSelect={vi.fn()} />)
+    fireEvent.click(rail().getByRole('button', { name: 'More' }))
+    expect(screen.queryByRole('button', { name: 'Edit bar' })).not.toBeInTheDocument()
+  })
+
   it('names the More button after the section you are in', () => {
     render(<NavRail tabs={TABS} current="rewards" title="The Jacons" onSelect={vi.fn()} />)
     const more = rail().getByRole('button', { name: 'Rewards', expanded: false })

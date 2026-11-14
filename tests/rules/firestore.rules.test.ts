@@ -182,6 +182,17 @@ describe('family creation and joining', () => {
     await assertSucceeds(deleteDoc(doc(dbFor(ALICE), `invites/${CAROL.email}`)))
   })
 
+  it('lets an invitation say who it is from, and lets the invited person turn it down', async () => {
+    await assertSucceeds(setDoc(doc(dbFor(ALICE), 'invites/erin@example.com'), { familyId: FAM_A, invitedBy: ALICE.uid, familyName: 'The A family', inviterName: 'Alice' }))
+    await assertFails(setDoc(doc(dbFor(ALICE), 'invites/frank@example.com'), { familyId: FAM_A, invitedBy: ALICE.uid, familyName: 'x'.repeat(101) }))
+    await assertFails(setDoc(doc(dbFor(ALICE), 'invites/frank@example.com'), { familyId: FAM_A, invitedBy: ALICE.uid, note: 'extra' }))
+    await assertFails(deleteDoc(doc(dbFor(MALLORY), `invites/${CAROL.email}`)))
+    await assertFails(deleteDoc(doc(dbFor(CAROL, false), `invites/${CAROL.email}`)))
+    await assertSucceeds(deleteDoc(doc(dbFor(CAROL), `invites/${CAROL.email}`)))
+    // Turned down: the invitation no longer lets them in.
+    await assertFails(setDoc(doc(dbFor(CAROL), `families/${FAM_A}/members/${CAROL.uid}`), { displayName: 'Carol', email: CAROL.email, color: '#abcdef' }))
+  })
+
   it("does not let another family take over an existing invite", async () => {
     await assertFails(setDoc(doc(dbFor(MALLORY), `invites/${CAROL.email}`), { familyId: FAM_B, invitedBy: MALLORY.uid }))
   })

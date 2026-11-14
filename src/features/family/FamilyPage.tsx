@@ -30,7 +30,7 @@ export function FamilyPage({ family, members, userId }: Props) {
   async function invite(e: FormEvent) {
     e.preventDefault()
     try {
-      await inviteMember(family.id, userId, email)
+      await inviteMember(family.id, userId, email, { familyName: family.name, inviterName: members.find((m) => m.id === userId)?.displayName })
       setEmail('')
     } catch (err) {
       report(err)

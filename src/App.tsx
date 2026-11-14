@@ -4,7 +4,7 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { FamilySetup } from './components/FamilySetup'
 import { OfflineIcon } from './components/Icons'
 import { NavRail } from './components/NavRail'
-import { navFor, TABS, type Tab } from './components/navTabs'
+import { navFor, PHONE_BAR, readPins, savePins, TABS, type Tab } from './components/navTabs'
 import { SignIn } from './components/SignIn'
 import { HomePage } from './features/home/HomePage'
 import { LockProvider } from './features/lock/LockContext'
@@ -20,7 +20,8 @@ import { CurrentWeather } from './features/weather/WeatherBadges'
 import { WeatherProvider } from './features/weather/WeatherContext'
 import { DEFAULT_ACCENT, isHex, mixHex, readableOn, withAlpha } from './lib/colors'
 import { DeviceProvider, useDevice } from './lib/DeviceContext'
-import { markWelcomed, resolveFamily } from './lib/family'
+import { markWelcomed, resolveFamily, type PendingInvite } from './lib/family'
+import { JoinHousehold } from './components/JoinHousehold'
 import { detectPlatform, rememberWelcomed, shouldWelcome, tourSteps } from './features/welcome/welcome'
 import { WelcomeTour } from './features/welcome/WelcomeTour'
 import { useAuthUser, useFamily, useNow, useOffline } from './lib/hooks'
@@ -68,8 +69,8 @@ function Signed() {
 }
 
 function SignedIn({ user }: { user: User }) {
-  // undefined = still looking, null = no family yet
-  const [familyId, setFamilyId] = useState<string | null | undefined>(undefined)
+  // undefined = still looking, null = no family yet, an invitation = invited but not yet joined
+  const [familyId, setFamilyId] = useState<string | PendingInvite | null | undefined>(undefined)
   const [error, setError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
 
@@ -118,6 +119,7 @@ function SignedIn({ user }: { user: User }) {
   }
   if (familyId === undefined) return <Splash />
   if (familyId === null) return <FamilySetup user={user} onCreated={setFamilyId} />
+  if (typeof familyId !== 'string') return <JoinHousehold user={user} invite={familyId} onJoined={setFamilyId} onDeclined={() => setFamilyId(null)} />
   return (
     <SettingsProvider familyId={familyId}>
       <WeatherProvider>
@@ -145,6 +147,7 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
   const { settings } = useSettings()
   const { device } = useDevice()
   const update = useUpdateCheck({ onMount: true })
+  const [pins, setPins] = useState(readPins)
   // Each kind of device can open to a set tab (Settings → Device & side bar). Applied once,
   // when the household's settings first arrive, so changing it later doesn't jump you there.
   const startTab = settings.startTab[device]
@@ -205,13 +208,28 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
   if (!family) return <Splash />
 
   // Each kind of device has its own side bar (Settings → Device & side bar).
-  const visibleTabs = navFor(settings.hiddenTabs[device])
+  // A phone can pin its own bottom bar (More → Edit bar); other devices show every section in order.
+  const visibleTabs = navFor(settings.hiddenTabs[device], device === 'phone' ? pins : null)
   // If the section you were on has been hidden here, fall back to the first one shown.
   const shown: Tab = visibleTabs.some((t) => t.id === tab) ? tab : visibleTabs[0].id
 
   return (
     <div className="shell">
-      <NavRail tabs={visibleTabs} current={shown} title={settings.calendarName || family.name} onSelect={setTab} />
+      <NavRail
+        tabs={visibleTabs}
+        current={shown}
+        title={settings.calendarName || family.name}
+        onSelect={setTab}
+        barSize={PHONE_BAR}
+        onPin={
+          device === 'phone'
+            ? (next) => {
+                setPins(next)
+                savePins(next)
+              }
+            : undefined
+        }
+      />
 
       <div className="app">
         {update.state === 'available' && (
@@ -248,7 +266,8 @@ function Home({ familyId, userId }: { familyId: string; userId: string }) {
           <Suspense fallback={<p className="muted">Loading…</p>}>
           {shown === 'home' && <HomePage familyId={familyId} userId={userId} members={members} onNavigate={setTab} />}
           {shown === 'calendar' && <CalendarPage familyId={familyId} userId={userId} members={members} />}
-          {shown === 'lists' && <ListsPage familyId={familyId} userId={userId} members={members} />}
+          {shown === 'groceries' && <ListsPage key="groceries" show="groceries" familyId={familyId} userId={userId} members={members} />}
+          {shown === 'lists' && <ListsPage key="lists" show="lists" familyId={familyId} userId={userId} members={members} />}
           {shown === 'chores' && <ChoresPage familyId={familyId} userId={userId} members={members} />}
           {shown === 'rewards' && <RewardsPage familyId={familyId} userId={userId} members={members} />}
           {shown === 'meals' && <MealsPage familyId={familyId} userId={userId} />}

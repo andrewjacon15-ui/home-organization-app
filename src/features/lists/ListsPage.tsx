@@ -4,19 +4,25 @@ import { itemOwner, personFor, readPeopleDefault } from '../../lib/peopleView'
 import type { Member } from '../../types'
 import { useSettings } from '../settings/SettingsContext'
 import { addListItem } from './addItem'
-import { addAisles, addCategories, clearCompleted, createList, deleteCategory, deleteItem, deleteList, ensureDefaultLists, learnCategory, moveCategory, moveItem, needsAisles, setAutoSort, renameCategory, setItemDone, updateItem, updateList, watchItems, watchLists, type FamilyList, type ListItem } from './listsApi'
+import { addAisles, addCategories, clearCompleted, createList, deleteCategory, deleteItem, deleteList, ensureDefaultLists, groceryListId, learnCategory, moveCategory, moveItem, needsAisles, setAutoSort, renameCategory, setItemDone, updateItem, updateList, watchItems, watchLists, type FamilyList, type ListItem } from './listsApi'
 import { ListsBoard } from './ListsBoard'
 import { useUndo } from '../../lib/undo'
 
-export function ListsPage({ familyId, userId, members }: { familyId: string; userId: string; members: Member[] }) {
+/**
+ * Two pages share this: Groceries (the grocery list alone, with its store aisles) and Lists
+ * (the to-do list and any lists the household made).
+ */
+export function ListsPage({ familyId, userId, members, show = 'lists' }: { familyId: string; userId: string; members: Member[]; show?: 'lists' | 'groceries' }) {
   const { offer } = useUndo()
-  const [lists, setLists] = useState<FamilyList[]>([])
+  const groceries = show === 'groceries'
+  const [all, setLists] = useState<FamilyList[] | null>(null)
+  const lists = (all ?? []).filter((l) => (l.kind === 'grocery') === groceries)
   const [items, setItems] = useState<Record<string, ListItem[]>>({})
   const [error, setError] = useState<string | null>(null)
   const { settings } = useSettings()
   const report = (e: unknown) => setError(e instanceof Error ? e.message : String(e))
   const [view, setView] = useState(() => readPeopleDefault('lists'))
-  const only = personFor(view, userId, members.map((m) => m.id))
+  const only = groceries ? null : personFor(view, userId, members.map((m) => m.id))
   // One person: just their items (their section, or shared items they added) and just their section.
   const shownItems = only ? Object.fromEntries(Object.entries(items).map(([id, list]) => [id, list.filter((i) => itemOwner(i) === only)])) : items
   const shownMembers = only ? members.filter((m) => m.id === only) : members
@@ -25,6 +31,12 @@ export function ListsPage({ familyId, userId, members }: { familyId: string; use
     ensureDefaultLists(familyId, userId).catch(report)
     return watchLists(familyId, setLists)
   }, [familyId, userId])
+
+  // The Groceries page always has a list to show: one deleted earlier comes back empty.
+  const missing = groceries && all !== null && !lists.length
+  useEffect(() => {
+    if (missing) groceryListId(familyId, userId, []).catch(report)
+  }, [missing, familyId, userId])
 
   const listIds = lists.map((l) => l.id).join(',')
   useEffect(() => {
@@ -51,8 +63,10 @@ export function ListsPage({ familyId, userId, members }: { familyId: string; use
           {error} <button className="link" onClick={() => setError(null)}>Dismiss</button>
         </p>
       )}
-      <PeopleFilter members={members} userId={userId} value={view} onChange={setView} label="Show list items for" />
+      {!groceries && <PeopleFilter members={members} userId={userId} value={view} onChange={setView} label="Show list items for" />}
       <ListsBoard
+        heading={groceries ? 'Groceries' : 'Lists'}
+        canCreate={!groceries}
         lists={lists}
         items={shownItems}
         members={shownMembers}

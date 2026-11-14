@@ -33,20 +33,24 @@ interface Props extends ListActions {
   members: Member[]
   /** Days a checked-off item is kept (0 = until cleared), for the Done note. */
   doneDays?: number
+  /** The page's heading ("Lists", or "Groceries" on the grocery page). */
+  heading?: string
+  /** Whether new lists can be made here (not on the grocery page). */
+  canCreate?: boolean
 }
 
 const byOrder = (a: ListItem, b: ListItem) => a.order - b.order
 
 /** Lists side by side, like Skylight's Lists screen. */
-export function ListsBoard({ lists, items, members, onCreateList, doneDays = 30, ...actions }: Props) {
+export function ListsBoard({ lists, items, members, onCreateList, doneDays = 30, heading = 'Lists', canCreate = true, ...actions }: Props) {
   const [newTitle, setNewTitle] = useState('')
   const [adding, setAdding] = useState(false)
 
   return (
-    <section className="lists" aria-label="Lists">
+    <section className="lists" aria-label={heading}>
       <div className="lists__head">
-        <h1 className="page-title">Lists</h1>
-        {adding ? (
+        <h1 className="page-title">{heading}</h1>
+        {!canCreate ? null : adding ? (
           <form
             className="row"
             onSubmit={(e) => {

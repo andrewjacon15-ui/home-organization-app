@@ -4115,10 +4115,56 @@ letter-spacing: -0.015em;
   animation: sheet-up 180ms ease-out;
 }
 
+.more-sheet__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 40px;
+  margin-bottom: 10px;
+}
+
+.more-sheet__hint {
+  margin: 0 0 10px;
+  font-size: var(--fs-label);
+  color: var(--ink-2);
+}
+
+.more-sheet__item--pick {
+  position: relative;
+}
+
+.more-sheet__item--pick:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* The section's place in the bar. */
+.more-sheet__badge {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.more-sheet__reset {
+  display: block;
+  margin: 12px auto 2px;
+  min-height: 40px;
+}
+
 .more-sheet__title {
   display: block;
   font-size: var(--fs-lead);
-  margin-bottom: 10px;
 font-weight: 600;
 letter-spacing: -0.015em;
 }

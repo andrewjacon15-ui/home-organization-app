@@ -24,27 +24,42 @@ function emailKey(user: User): string {
   return user.email.toLowerCase()
 }
 
+/** An invitation this person hasn't answered yet. Names are missing on invites made before they were recorded. */
+export interface PendingInvite {
+  familyId: string
+  familyName?: string
+  inviterName?: string
+}
+
 /**
- * Finds the family this user was invited to and joins it if they haven't yet.
- * Returns null when there's no invite, meaning they can start a new family.
+ * This user's family: its id when they're in one, the invitation when they've been invited
+ * but haven't joined (they're asked first: see JoinHousehold), or null when there's neither,
+ * meaning they can start a new family.
  */
-export async function resolveFamily(user: User): Promise<string | null> {
+export async function resolveFamily(user: User): Promise<string | PendingInvite | null> {
   const invite = await getDoc(doc(db, 'invites', emailKey(user)))
   if (!invite.exists()) return null
-  const familyId = (invite.data() as Invite).familyId
+  const { familyId, familyName, inviterName } = invite.data() as Invite
+  const member = await getDoc(doc(db, 'families', familyId, 'members', user.uid))
+  if (member.exists()) return familyId
+  return { familyId, ...(familyName ? { familyName } : {}), ...(inviterName ? { inviterName } : {}) }
+}
 
-  const memberRef = doc(db, 'families', familyId, 'members', user.uid)
-  const member = await getDoc(memberRef)
-  if (!member.exists()) {
-    await setDoc(memberRef, {
-      displayName: user.displayName ?? user.email ?? 'Someone',
-      email: emailKey(user),
-      color: MEMBER_COLORS[Math.floor(Math.random() * MEMBER_COLORS.length)],
-      photoURL: user.photoURL ?? '',
-      joinedAt: serverTimestamp(),
-    })
-  }
+/** Accepts an invitation: adds this person to the household. */
+export async function joinFamily(user: User, familyId: string): Promise<string> {
+  await setDoc(doc(db, 'families', familyId, 'members', user.uid), {
+    displayName: (user.displayName ?? user.email ?? 'Someone').slice(0, 100),
+    email: emailKey(user),
+    color: MEMBER_COLORS[Math.floor(Math.random() * MEMBER_COLORS.length)],
+    photoURL: user.photoURL ?? '',
+    joinedAt: serverTimestamp(),
+  })
   return familyId
+}
+
+/** Turns an invitation down: it's removed, so this account can be invited elsewhere or start its own household. */
+export async function declineInvite(user: User) {
+  await deleteDoc(doc(db, 'invites', emailKey(user)))
 }
 
 /**
@@ -124,11 +139,14 @@ export function watchInvites(familyId: string, onChange: (invites: Invite[]) => 
   })
 }
 
-export async function inviteMember(familyId: string, invitedBy: string, email: string) {
+/** Invites someone by email. The household's and inviter's names go with it, so the person can see what they're joining. */
+export async function inviteMember(familyId: string, invitedBy: string, email: string, names: { familyName?: string; inviterName?: string } = {}) {
   const key = email.trim().toLowerCase()
   const existing = await getDoc(doc(db, 'invites', key)).catch(() => null)
   if (existing?.exists()) throw new Error(`${key} is already invited.`)
-  await setDoc(doc(db, 'invites', key), { familyId, invitedBy, createdAt: serverTimestamp() })
+  const familyName = names.familyName?.trim().slice(0, 100)
+  const inviterName = names.inviterName?.trim().slice(0, 100)
+  await setDoc(doc(db, 'invites', key), { familyId, invitedBy, createdAt: serverTimestamp(), ...(familyName ? { familyName } : {}), ...(inviterName ? { inviterName } : {}) })
 }
 
 export async function removeInvite(email: string) {
