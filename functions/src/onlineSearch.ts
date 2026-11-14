@@ -148,7 +148,7 @@ export function reasonsFor(r: { rating: OnlineResult['rating']; searchRank: numb
 export async function findOnlineRecipes(deps: SearchDeps, uid: string | undefined, data: { familyId?: unknown; have?: unknown; query?: unknown }) {
   if (!uid) throw new SearchError('permission-denied', 'Sign in first.')
   const familyId = data.familyId
-  if (typeof familyId !== 'string' || !familyId || familyId.length > 100) throw new SearchError('invalid-argument', 'familyId is required.')
+  if (typeof familyId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(familyId)) throw new SearchError('invalid-argument', 'familyId is required.')
   if (!(await deps.store.isMember(familyId, uid))) throw new SearchError('permission-denied', 'Not a member of this family.')
   if (!deps.search) throw new SearchError('failed-precondition', "Online search isn't set up yet.")
   const dish = typeof data.query === 'string' ? data.query.replace(/[^\p{L}\p{N}' -]/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, 100) : ''

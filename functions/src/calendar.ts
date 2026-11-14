@@ -173,7 +173,7 @@ export function sameEvent(stored: EventDoc | undefined, next: EventDoc): boolean
 
 async function requireMember(store: CalendarStore, familyId: unknown, uid: string | undefined): Promise<string> {
   if (!uid) throw new CalendarError('permission-denied', 'Sign in first.')
-  if (typeof familyId !== 'string' || !familyId) throw new CalendarError('invalid-argument', 'familyId is required.')
+  if (typeof familyId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(familyId)) throw new CalendarError('invalid-argument', 'familyId is required.')
   if (!(await store.isMember(familyId, uid))) throw new CalendarError('permission-denied', 'Not a member of this family.')
   return familyId
 }
@@ -220,29 +220,40 @@ export async function syncMine(deps: { store: CalendarStore; google: GoogleApi; 
 /** Handles "Disconnect": revoke at Google, forget the token, remove this person's synced events. */
 export async function disconnectCalendar(deps: { store: CalendarStore; google: GoogleApi }, uid: string | undefined, data: { familyId?: unknown }) {
   const familyId = await requireMember(deps.store, data.familyId, uid)
-  const tokens = await deps.store.getTokens(familyId, uid!)
-  if (tokens) {
-    // Best effort: a token that's already dead can't be revoked, and that's fine.
-    await deps.google.revoke(tokens.refreshToken).catch(() => undefined)
-  }
-  await deps.store.deleteTokens(familyId, uid!)
-  await deps.store.deleteEvents(familyId, await deps.store.listGoogleEventIds(familyId, uid!))
-  await deps.store.deleteCalendars(familyId, (await deps.store.listCalendars(familyId, uid!)).filter((c) => c.kind !== 'ics').map((c) => c.key))
+  await forgetConnection(deps, familyId, uid!, await deps.store.getTokens(familyId, uid!))
   await deps.store.setCalendarStatus(familyId, uid!, null)
   return { ok: true }
+}
+
+/** Revokes a person's Google access and removes their saved token, synced events and calendars. */
+export async function forgetConnection(deps: { store: CalendarStore; google: GoogleApi }, familyId: string, uid: string, tokens: StoredTokens | null) {
+  // Best effort: a token that's already dead can't be revoked, and that's fine.
+  if (tokens) await deps.google.revoke(tokens.refreshToken).catch(() => undefined)
+  await deps.store.deleteTokens(familyId, uid)
+  await deps.store.deleteEvents(familyId, await deps.store.listGoogleEventIds(familyId, uid))
+  await deps.store.deleteCalendars(familyId, (await deps.store.listCalendars(familyId, uid)).filter((c) => c.kind !== 'ics').map((c) => c.key))
 }
 
 /** Scheduled job: sync everyone. One person's failure doesn't stop the rest. */
 export async function syncAll(deps: { store: CalendarStore; google: GoogleApi; now?: Date; log?: (msg: string, extra?: object) => void }) {
   const log = deps.log ?? (() => undefined)
   const members = await deps.store.listConnected()
-  const results = { synced: 0, needsReconnect: 0, failed: 0 }
+  const results = { synced: 0, needsReconnect: 0, failed: 0, removed: 0 }
   for (const m of members) {
     try {
       const r = await syncMember(deps, m.familyId, m.uid, m.tokens)
       if (r.status === 'connected') results.synced++
       else results.needsReconnect++
     } catch (err) {
+      // Someone who has left the household (or was removed) may leave a saved Google connection
+      // behind. Their calendar must stop arriving: forget the connection and what it brought in.
+      // Checked only after a failure (saving the status fails once the person is gone), so a
+      // normal run costs no extra reads.
+      if (!(await deps.store.isMember(m.familyId, m.uid).catch(() => true))) {
+        await forgetConnection(deps, m.familyId, m.uid, m.tokens).catch((e) => log('calendar cleanup failed', { familyId: m.familyId, uid: m.uid, error: String(e) }))
+        results.removed++
+        continue
+      }
       results.failed++
       log('calendar sync failed', { familyId: m.familyId, uid: m.uid, error: String(err) })
     }

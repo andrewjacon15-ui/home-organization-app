@@ -314,6 +314,7 @@ describe('syncAll', () => {
     store.tokens.set(`${FAM}/bob`, { refreshToken: 'rt-bob', email: 'b@x.com', scope: SCOPES })
     store.tokens.set(`${FAM}/alice`, { refreshToken: 'rt-alice', email: 'a@x.com', scope: SCOPES })
     store.tokens.set(`fam2/carol`, { refreshToken: 'rt-carol', email: 'c@x.com', scope: SCOPES })
+    for (const k of [`${FAM}/bob`, `${FAM}/alice`, 'fam2/carol']) store.members.add(k)
     const google = stubGoogle({
       listCalendars: vi.fn(async (rt: string) => {
         if (rt === 'rt-alice') throw invalidGrant()
@@ -324,8 +325,31 @@ describe('syncAll', () => {
     })
     const log = vi.fn()
 
-    expect(await syncAll({ store, google, now: NOW, log })).toEqual({ synced: 1, needsReconnect: 1, failed: 1 })
+    expect(await syncAll({ store, google, now: NOW, log })).toEqual({ synced: 1, needsReconnect: 1, failed: 1, removed: 0 })
     expect(log).toHaveBeenCalledWith('calendar sync failed', expect.objectContaining({ uid: 'carol' }))
+  })
+
+  it("stops bringing in the calendar of someone who has left the household", async () => {
+    store.members.add(`${FAM}/bob`)
+    store.tokens.set(`${FAM}/bob`, { refreshToken: 'rt-bob', email: 'b@x.com', scope: SCOPES })
+    store.tokens.set(`${FAM}/gone`, { refreshToken: 'rt-gone', email: 'g@x.com', scope: SCOPES })
+    store.events.set('old', { source: 'google', sourceUserId: 'gone' } as EventDoc)
+    store.events.set('typed', { source: 'manual', sourceUserId: 'gone' } as EventDoc)
+    // As in Firestore: the status lives on the member record, which is gone.
+    const save = store.setCalendarStatus.bind(store)
+    store.setCalendarStatus = async (f, u, s) => {
+      if (!(await store.isMember(f, u))) throw new Error('NOT_FOUND')
+      return save(f, u, s)
+    }
+    const google = stubGoogle({ listCalendars: vi.fn(async () => [PRIMARY]), listEvents: vi.fn(async () => [timed('e1')]) })
+
+    expect(await syncAll({ store, google, now: NOW })).toEqual({ synced: 1, needsReconnect: 0, failed: 0, removed: 1 })
+    expect(google.revoke).toHaveBeenCalledWith('rt-gone')
+    expect(store.tokens.has(`${FAM}/gone`)).toBe(false)
+    expect([...store.events.values()].filter((e) => e.sourceUserId === 'gone').map((e) => e.source)).toEqual(['manual'])
+    expect([...store.calendars.values()].some((c) => c.ownerId === 'gone')).toBe(false)
+    // Next run: nothing left to do for them.
+    expect(await syncAll({ store, google, now: NOW })).toMatchObject({ removed: 0, failed: 0 })
   })
 })
 

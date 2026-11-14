@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { CalendarError } from './calendar.js'
-import { addFeed, feedUrl, parseFeed, removeFeed, syncAllFeeds, zonedToUtc, type FeedCalendar, type FeedStore } from './feeds.js'
+import { addFeed, feedUrl, httpFeedFetch, MAX_FEEDS, parseFeed, removeFeed, syncAllFeeds, zonedToUtc, type FeedCalendar, type FeedStore } from './feeds.js'
 import type { EventDoc } from './types.js'
 
 const ics = (...lines: string[]) => ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Test//EN', ...lines, 'END:VCALENDAR'].join('\r\n')
@@ -138,6 +138,26 @@ describe('parseFeed', () => {
   })
 })
 
+describe('fetching a calendar link', () => {
+  it('refuses private addresses before connecting, however they are written', async () => {
+    for (const url of ['http://127.0.0.1/cal.ics', 'http://169.254.169.254/computeMetadata/v1/', 'http://localhost/cal.ics', 'https://user:pw@example.org/cal.ics', 'http://example.org:8080/cal.ics']) {
+      await expect(httpFeedFetch(url), url).rejects.toThrow(/private address/)
+    }
+  })
+
+  it('stops at a sensible number of links per household', async () => {
+    const s = fakeStore()
+    for (let i = 0; i < MAX_FEEDS; i++) await addFeed({ store: s.store, fetchFeed: async () => APPLE }, 'andrew', { familyId: 'f', url: `https://school.example.org/${i}.ics` })
+    await expect(addFeed({ store: s.store, fetchFeed: async () => APPLE }, 'andrew', { familyId: 'f', url: 'https://school.example.org/more.ics' })).rejects.toThrow(/up to 20/)
+  })
+
+  it('takes only real household and link ids', async () => {
+    const s = fakeStore()
+    await expect(addFeed({ store: s.store, fetchFeed: async () => APPLE }, 'andrew', { familyId: 'f/lists/x', url: 'https://school.example.org/a.ics' })).rejects.toThrow(/familyId/)
+    await expect(removeFeed({ store: s.store }, 'andrew', { familyId: 'f', key: 'ics_a/b' })).rejects.toThrow(/Unknown calendar link/)
+  })
+})
+
 function fakeStore() {
   const feeds = new Map<string, FeedCalendar>()
   const events = new Map<string, EventDoc>()
@@ -146,6 +166,7 @@ function fakeStore() {
     isMember: async (_f, uid) => uid !== 'stranger',
     familyTimezone: async () => 'America/New_York',
     listFeeds: async () => [...feeds.values()].map((feed) => ({ familyId: 'f', feed })),
+    countFeeds: async () => feeds.size,
     getFeed: async (_f, key) => feeds.get(key) ?? null,
     saveFeed: async (_f, feed) => void feeds.set(feed.key, feed),
     setFeedStatus: async (_f, key, s) => void feeds.set(key, { ...feeds.get(key)!, ...s }),

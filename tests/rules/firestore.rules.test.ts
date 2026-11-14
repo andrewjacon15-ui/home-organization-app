@@ -197,6 +197,16 @@ describe('family creation and joining', () => {
     await assertSucceeds(updateDoc(doc(dbFor(ALICE), `families/${FAM_A}`), { timezone: 'America/Chicago' }))
   })
 
+  it('keeps household and people names to text of a sensible length', async () => {
+    const long = 'x'.repeat(101)
+    await assertFails(updateDoc(doc(dbFor(ALICE), `families/${FAM_A}`), { name: long }))
+    await assertFails(updateDoc(doc(dbFor(ALICE), `families/${FAM_A}`), { name: { not: 'text' } }))
+    await assertSucceeds(updateDoc(doc(dbFor(ALICE), `families/${FAM_A}`), { name: 'The A family' }))
+    await assertFails(updateDoc(doc(dbFor(BOB), `families/${FAM_A}/members/${BOB.uid}`), { displayName: long }))
+    await assertFails(updateDoc(doc(dbFor(BOB), `families/${FAM_A}/members/${BOB.uid}`), { photoURL: 'x'.repeat(2001) }))
+    await assertSucceeds(updateDoc(doc(dbFor(BOB), `families/${FAM_A}/members/${BOB.uid}`), { displayName: 'Bobby' }))
+  })
+
   it('lets members edit only their own profile, and not their email', async () => {
     await assertSucceeds(updateDoc(doc(dbFor(BOB), `families/${FAM_A}/members/${BOB.uid}`), { color: '#111111' }))
     await assertFails(updateDoc(doc(dbFor(BOB), `families/${FAM_A}/members/${ALICE.uid}`), { color: '#111111' }))

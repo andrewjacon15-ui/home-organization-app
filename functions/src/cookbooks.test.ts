@@ -240,6 +240,28 @@ describe('cookbook parsing', () => {
     await drain('b1')
     expect(store.books.get('b1')?.status).toBe('done')
   })
+
+  it('gives up on a book that keeps killing its instance, instead of retrying forever', async () => {
+    await addBook('b1', 'epub', await makeEpub())
+    await startParse(deps, ME, { familyId: FAM, bookId: 'b1' })
+    for (let round = 0; round < 3; round++) {
+      const s = store.states.get('b1')!
+      if (s.phase !== 'parsing') break
+      await store.claim(FAM, 'b1', s.runId, s.next, clock + 60_000, clock) // claimed, then the instance crashed
+      clock += 15 * 60_000
+      await kickStalled(deps)
+    }
+    expect(store.states.get('b1')?.phase).toBe('error')
+    expect(store.books.get('b1')?.status).toBe('error')
+    expect(store.books.get('b1')?.error).toMatch(/too large or too complex/)
+    clock += 15 * 60_000
+    expect(await kickStalled(deps)).toBe(0)
+  })
+
+  it('takes only real ids', async () => {
+    await expect(startParse(deps, ME, { familyId: FAM, bookId: 'b1/work/state' })).rejects.toThrow(/bookId/)
+    await expect(deleteCookbook(deps, ME, { familyId: `${FAM}/x/y`, bookId: 'b1' })).rejects.toThrow(/familyId/)
+  })
 })
 
 describe('cookbook callables', () => {

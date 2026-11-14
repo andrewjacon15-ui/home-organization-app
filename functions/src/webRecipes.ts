@@ -86,7 +86,7 @@ export function webRecipeDoc(r: WebRecipe, uid: string): { id: string; data: Rec
 export async function importRecipeUrl(deps: ImportDeps, uid: string | undefined, data: { familyId?: unknown; url?: unknown }) {
   if (!uid) throw new ImportError('permission-denied', 'Sign in first.')
   const familyId = data.familyId
-  if (typeof familyId !== 'string' || !familyId || familyId.length > 100) throw new ImportError('invalid-argument', 'familyId is required.')
+  if (typeof familyId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(familyId)) throw new ImportError('invalid-argument', 'familyId is required.')
   if (!(await deps.store.isMember(familyId, uid))) throw new ImportError('permission-denied', 'Not a member of this family.')
   const url = typeof data.url === 'string' ? data.url.trim() : ''
   if (!url || url.length > 2000) throw new ImportError('invalid-argument', 'Paste a link to a recipe page.')
