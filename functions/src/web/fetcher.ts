@@ -65,6 +65,12 @@ export function isPrivateAddress(ip: string): boolean {
     const v = ip.toLowerCase()
     const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/.exec(v)
     if (mapped) return isPrivateAddress(mapped[1])
+    // The same IPv4-mapped address written in hex ("::ffff:7f00:1" is 127.0.0.1).
+    const hex = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/.exec(v)
+    if (hex) {
+      const n = ((parseInt(hex[1], 16) << 16) | parseInt(hex[2], 16)) >>> 0
+      return isPrivateAddress([(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join('.'))
+    }
     return v === '::' || v === '::1' || /^f[cd]/.test(v) || /^fe[89ab]/.test(v) || /^ff/.test(v) || v.startsWith('64:ff9b:') || v.startsWith('2001:db8')
   }
   return true
@@ -165,13 +171,20 @@ export interface RawResponse {
   body: string
 }
 
-/** One GET with redirects followed by hand (each hop re-checked), decompressed and size-capped. */
-export type HttpGet = (url: string, accept: string) => Promise<RawResponse>
+/** Limits for one GET; the defaults suit recipe pages. */
+export interface GetOptions {
+  userAgent?: string
+  maxBytes?: number
+  timeoutMs?: number
+}
 
-export const nodeHttpGet: HttpGet = async (start, accept) => {
+/** One GET with redirects followed by hand (each hop re-checked), decompressed and size-capped. */
+export type HttpGet = (url: string, accept: string, options?: GetOptions) => Promise<RawResponse>
+
+export const nodeHttpGet: HttpGet = async (start, accept, options = {}) => {
   let url = checkUrl(start)
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    const res = await once(url, accept)
+    const res = await once(url, accept, options)
     if (res.status >= 300 && res.status < 400 && res.location) {
       url = checkUrl(new URL(res.location, url).toString())
       continue
@@ -181,15 +194,16 @@ export const nodeHttpGet: HttpGet = async (start, accept) => {
   throw new FetchError('http', 'That page redirects too many times.')
 }
 
-function once(url: URL, accept: string): Promise<{ status: number; location?: string; contentType: string; body: string }> {
+function once(url: URL, accept: string, options: GetOptions): Promise<{ status: number; location?: string; contentType: string; body: string }> {
   const lib = url.protocol === 'https:' ? https : http
+  const maxBytes = options.maxBytes ?? MAX_BYTES
   return new Promise((resolve, reject) => {
     const req = lib.get(
       url,
       {
         lookup: safeLookup,
-        timeout: TIMEOUT_MS,
-        headers: { 'User-Agent': USER_AGENT, Accept: accept, 'Accept-Encoding': 'gzip, deflate, br', 'Accept-Language': 'en-US,en;q=0.8' },
+        timeout: options.timeoutMs ?? TIMEOUT_MS,
+        headers: { 'User-Agent': options.userAgent ?? USER_AGENT, Accept: accept, 'Accept-Encoding': 'gzip, deflate, br', 'Accept-Language': 'en-US,en;q=0.8' },
       },
       (res) => {
         const status = res.statusCode ?? 0
@@ -204,7 +218,7 @@ function once(url: URL, accept: string): Promise<{ status: number; location?: st
         let size = 0
         stream.on('data', (c: Buffer) => {
           size += c.length
-          if (size > MAX_BYTES) {
+          if (size > maxBytes) {
             req.destroy()
             reject(new FetchError('too-large', 'That page is too large to read.'))
             return

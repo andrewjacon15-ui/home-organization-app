@@ -101,13 +101,14 @@ const MAX_ATTEMPTS = 3
 
 async function requireMember(store: CookbookStore, familyId: unknown, uid: string | undefined): Promise<string> {
   if (!uid) throw new CookbookError('permission-denied', 'Sign in first.')
-  if (typeof familyId !== 'string' || !familyId) throw new CookbookError('invalid-argument', 'familyId is required.')
+  if (typeof familyId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(familyId)) throw new CookbookError('invalid-argument', 'familyId is required.')
   if (!(await store.isMember(familyId, uid))) throw new CookbookError('permission-denied', 'Not a member of this family.')
   return familyId
 }
 
+/** A document id as the app makes them: no slashes, so it can't point at another path. */
 const str = (v: unknown, name: string): string => {
-  if (typeof v !== 'string' || !v || v.length > 100) throw new CookbookError('invalid-argument', `${name} is required.`)
+  if (typeof v !== 'string' || !/^[A-Za-z0-9_-]{1,100}$/.test(v)) throw new CookbookError('invalid-argument', `${name} is required.`)
   return v
 }
 
@@ -328,7 +329,16 @@ export async function kickStalled(deps: CookbookDeps): Promise<number> {
   const stalled = await deps.store.listParsing(now - 12 * 60_000)
   for (const { familyId, bookId, state } of stalled) {
     if (state.lease && state.lease.until > now) continue
-    await deps.store.setState(familyId, bookId, { ...state, kick: state.kick + 1, lease: null, updatedAt: now })
+    // A chunk that kills its instance (out of memory, or out of time) never reaches the retry
+    // count in processChunk, so count it here: otherwise such a file would be retried every
+    // 15 minutes forever, each time on the largest instance the app uses.
+    const attempts = state.attempts + 1
+    if (attempts >= MAX_ATTEMPTS) {
+      await deps.store.updateBook(familyId, bookId, { status: 'error', error: 'This book couldn’t be read: it is too large or too complex for the reader.' })
+      await deps.store.setState(familyId, bookId, { ...state, attempts, phase: 'error', lease: null, updatedAt: now })
+      continue
+    }
+    await deps.store.setState(familyId, bookId, { ...state, attempts, kick: state.kick + 1, lease: null, updatedAt: now })
   }
   return stalled.length
 }

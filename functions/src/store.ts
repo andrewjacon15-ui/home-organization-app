@@ -130,6 +130,9 @@ export function firestoreFeedStore(db: Firestore): FeedStore {
       // families/{familyId}/calendars/{key}
       return snap.docs.map((d) => ({ familyId: d.ref.path.split('/')[1], feed: asFeed(d) }))
     },
+    async countFeeds(familyId) {
+      return (await calendarsCol(familyId).where('kind', '==', 'ics').count().get()).data().count
+    },
     async getFeed(familyId, key) {
       const snap = await calendarsCol(familyId).doc(key).get()
       return snap.exists && snap.get('kind') === 'ics' ? asFeed(snap) : null
@@ -257,7 +260,13 @@ export function firestoreAdminStore(db: Firestore, files: AdminFiles): AdminStor
         const invite = db.doc(`invites/${email}`)
         if ((await invite.get()).get('familyId') === id) await invite.delete()
       }
+      // Their member record and saved Google token go, and so does what their calendar brought in.
       await db.recursiveDelete(db.doc(`families/${id}/members/${uid}`))
+      const events = await db.collection(`families/${id}/events`).where('sourceUserId', '==', uid).where('source', '==', 'google').select().get()
+      await inBatches(db, events.docs, (batch, d) => batch.delete(d.ref))
+      const calendars = await db.collection(`families/${id}/calendars`).where('ownerId', '==', uid).get()
+      await inBatches(db, calendars.docs.filter((d) => d.get('kind') !== 'ics'), (batch, d) => batch.delete(d.ref))
+      await db.doc(`families/${id}/reminderPrefs/${uid}`).delete()
     },
     async householdName(id) {
       const snap = await family(id).get()

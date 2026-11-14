@@ -212,7 +212,7 @@ export const recipeIndexRebuild = onCall({ invoker: 'public', timeoutSeconds: 12
   const uid = req.auth?.uid
   const familyId = (req.data ?? {}).familyId
   if (!uid) throw new HttpsError('permission-denied', 'Sign in first.')
-  if (typeof familyId !== 'string' || !familyId || familyId.length > 100) throw new HttpsError('invalid-argument', 'familyId is required.')
+  if (typeof familyId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(familyId)) throw new HttpsError('invalid-argument', 'familyId is required.')
   if (!(await db.doc(`families/${familyId}/members/${uid}`).get()).exists) throw new HttpsError('permission-denied', 'Not a member of this family.')
   const meta = await db.doc(`families/${familyId}/recipeIndex/meta`).get()
   if ((meta.get('v') ?? 0) >= INDEX_VERSION) return { rebuilt: false }

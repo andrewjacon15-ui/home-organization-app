@@ -4,6 +4,7 @@
 import ICAL from 'ical.js'
 import { SYNC_FUTURE_DAYS, SYNC_PAST_DAYS, CalendarError, eventsDigest, sameEvent } from './calendar.js'
 import { hash } from './normalize.js'
+import { FetchError, nodeHttpGet } from './web/fetcher.js'
 import type { EventDoc, StoredCalendar } from './types.js'
 
 const DAY_MS = 86_400_000
@@ -13,6 +14,8 @@ const MAX_BYTES = 5 * 1024 * 1024
 const MAX_EVENTS = 3000
 /** Occurrences walked per repeating event (a daily series from years ago still finishes quickly). */
 const MAX_STEPS = 6000
+/** Calendar links per household: every link is re-read each hour by one job all households share. */
+export const MAX_FEEDS = 20
 const HEX = /^#[0-9a-f]{6}$/i
 
 export interface FeedCalendar extends StoredCalendar {
@@ -29,6 +32,7 @@ export interface FeedStore {
   isMember(familyId: string, uid: string): Promise<boolean>
   familyTimezone(familyId: string): Promise<string | null>
   listFeeds(): Promise<{ familyId: string; feed: FeedCalendar }[]>
+  countFeeds(familyId: string): Promise<number>
   getFeed(familyId: string, key: string): Promise<FeedCalendar | null>
   saveFeed(familyId: string, feed: FeedCalendar): Promise<void>
   /** Only the sync result, so it never overwrites a color or name changed in Settings meanwhile. */
@@ -75,20 +79,24 @@ export function feedUrl(raw: unknown): string {
 
 export const feedKey = (url: string) => `ics_${hash(url)}`
 
-/** Fetches a calendar file: 20 s timeout, 5 MB cap, a clear User-Agent. */
+/**
+ * Fetches a calendar file: 20 s timeout, 5 MB cap (counted as it arrives), a clear User-Agent.
+ * It goes through the recipe importer's guarded GET, so the address is checked where the
+ * connection is made: a public-looking name that points at a private network, or a redirect
+ * to one, is refused before anything is sent.
+ */
 export const httpFeedFetch: FeedFetch = async (url) => {
-  const res = await fetch(url, {
-    headers: { 'User-Agent': 'FamilyOrganizer/1.0 (calendar subscription)', Accept: 'text/calendar, */*;q=0.5' },
-    redirect: 'follow',
-    signal: AbortSignal.timeout(20_000),
-  })
-  if (!res.ok) throw new CalendarError('failed-precondition', `The calendar link answered ${res.status}${res.status === 404 ? ' (not found). Check the link is still shared.' : '.'}`)
-  feedUrl(res.url || url) // a redirect must not land on a private address either
-  const length = Number(res.headers.get('content-length') ?? 0)
-  if (length > MAX_BYTES) throw new CalendarError('failed-precondition', 'That calendar file is too large (over 5 MB).')
-  const text = await res.text()
-  if (text.length > MAX_BYTES) throw new CalendarError('failed-precondition', 'That calendar file is too large (over 5 MB).')
-  return text
+  let res: Awaited<ReturnType<typeof nodeHttpGet>>
+  try {
+    res = await nodeHttpGet(url, 'text/calendar, */*;q=0.5', { userAgent: 'FamilyOrganizer/1.0 (calendar subscription)', maxBytes: MAX_BYTES, timeoutMs: 20_000 })
+  } catch (err) {
+    if (!(err instanceof FetchError)) throw err
+    if (err.reason === 'too-large') throw new CalendarError('failed-precondition', 'That calendar file is too large (over 5 MB).')
+    if (err.reason === 'blocked-address' || err.reason === 'bad-url') throw new CalendarError('invalid-argument', 'That link points to a private address the server can’t reach.')
+    throw new CalendarError('failed-precondition', 'Couldn’t reach that calendar link. Check it opens in a browser, then try again.')
+  }
+  if (res.status < 200 || res.status >= 300) throw new CalendarError('failed-precondition', `The calendar link answered ${res.status}${res.status === 404 ? ' (not found). Check the link is still shared.' : '.'}`)
+  return res.body
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -269,7 +277,7 @@ export async function syncFeed(deps: { store: FeedStore; fetchFeed: FeedFetch; n
 
 async function requireMember(store: FeedStore, familyId: unknown, uid: string | undefined): Promise<string> {
   if (!uid) throw new CalendarError('permission-denied', 'Sign in first.')
-  if (typeof familyId !== 'string' || !familyId) throw new CalendarError('invalid-argument', 'familyId is required.')
+  if (typeof familyId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(familyId)) throw new CalendarError('invalid-argument', 'familyId is required.')
   if (!(await store.isMember(familyId, uid))) throw new CalendarError('permission-denied', 'Not a member of this family.')
   return familyId
 }
@@ -284,6 +292,7 @@ export async function addFeed(
   const url = feedUrl(data.url)
   const key = feedKey(url)
   if (await deps.store.getFeed(familyId, key)) throw new CalendarError('already-exists', 'That calendar link is already added.')
+  if ((await deps.store.countFeeds(familyId)) >= MAX_FEEDS) throw new CalendarError('failed-precondition', `A household can have up to ${MAX_FEEDS} calendar links. Remove one first.`)
   const color = typeof data.color === 'string' && HEX.test(data.color) ? data.color.toLowerCase() : '#0f766e'
   const memberIds = Array.isArray(data.memberIds) ? data.memberIds.filter((x): x is string => typeof x === 'string').slice(0, 20) : []
   const typed = typeof data.name === 'string' ? data.name.trim().slice(0, 60) : ''
@@ -313,14 +322,14 @@ export async function addFeed(
 
 export async function refreshFeed(deps: { store: FeedStore; fetchFeed: FeedFetch; now?: Date }, uid: string | undefined, data: { familyId?: unknown; key?: unknown }) {
   const familyId = await requireMember(deps.store, data.familyId, uid)
-  const feed = typeof data.key === 'string' ? await deps.store.getFeed(familyId, data.key) : null
+  const feed = typeof data.key === 'string' && /^ics_[A-Za-z0-9_-]{1,100}$/.test(data.key) ? await deps.store.getFeed(familyId, data.key) : null
   if (!feed) throw new CalendarError('not-found', 'That calendar link was removed.')
   return syncFeed(deps, familyId, feed)
 }
 
 export async function removeFeed(deps: { store: FeedStore }, uid: string | undefined, data: { familyId?: unknown; key?: unknown }) {
   const familyId = await requireMember(deps.store, data.familyId, uid)
-  if (typeof data.key !== 'string' || !data.key.startsWith('ics_')) throw new CalendarError('invalid-argument', 'Unknown calendar link.')
+  if (typeof data.key !== 'string' || !/^ics_[A-Za-z0-9_-]{1,100}$/.test(data.key)) throw new CalendarError('invalid-argument', 'Unknown calendar link.')
   await deps.store.deleteEvents(familyId, [...(await deps.store.listFeedEvents(familyId, data.key)).keys()])
   await deps.store.deleteFeed(familyId, data.key)
   return { ok: true }

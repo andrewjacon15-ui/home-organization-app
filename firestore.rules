@@ -83,6 +83,19 @@ service cloud.firestore {
         && getAfter(householdInvite(code)).data.familyId == familyId;
     }
 
+    // Names people type: text of a sensible length (a document may be up to 1 MB otherwise).
+    function validFamilyFields() {
+      let d = request.resource.data;
+      return d.name is string && d.name.size() > 0 && d.name.size() <= 100
+        && d.timezone is string && d.timezone.size() <= 64;
+    }
+
+    function validPersonFields() {
+      let d = request.resource.data;
+      return d.displayName is string && d.displayName.size() <= 100
+        && (!('photoURL' in d) || (d.photoURL is string && d.photoURL.size() <= 2000));
+    }
+
     match /config/{doc} {
       allow read, write: if false;
     }
@@ -127,9 +140,11 @@ service cloud.firestore {
       // Stops any Google account from using this project (storage, calendar sync, email).
       // Allowlisted accounts, or anyone holding an unused household invite link.
       allow create: if request.resource.data.ownerId == request.auth.uid
+        && validFamilyFields()
         && ((canCreateFamily() && onlyKeys(['name', 'ownerId', 'timezone', 'createdAt']))
           || (onlyKeys(['name', 'ownerId', 'timezone', 'createdAt', 'inviteCode']) && redeemsInvite(familyId)));
       allow update: if isOwner(familyId)
+        && validFamilyFields()
         && request.resource.data.ownerId == resource.data.ownerId
         && request.resource.data.get('inviteCode', null) == resource.data.get('inviteCode', null)
         && onlyKeys(['name', 'ownerId', 'timezone', 'createdAt', 'inviteCode']);
@@ -142,10 +157,12 @@ service cloud.firestore {
           && (isOwnerAfter(familyId) || isInvitedTo(familyId))
           && request.resource.data.email == myEmail()
           && onlyKeys(['displayName', 'email', 'color', 'photoURL', 'joinedAt'])
+          && validPersonFields()
           && isHexColor(request.resource.data.color);
         // `calendar` (connection status) is written by Cloud Functions only.
         allow update: if request.auth.uid == userId
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'color', 'photoURL', 'welcomedAt'])
+          && validPersonFields()
           && isHexColor(request.resource.data.color)
           && (request.resource.data.get('welcomedAt', null) == null || request.resource.data.welcomedAt is timestamp);
         allow delete: if request.auth.uid == userId || isOwner(familyId);

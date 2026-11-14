@@ -170,8 +170,8 @@ describe('catalog index', () => {
 
 describe('addresses', () => {
   it('blocks private, loopback, link-local and metadata addresses', () => {
-    for (const ip of ['127.0.0.1', '10.1.2.3', '172.16.0.1', '192.168.1.1', '169.254.169.254', '0.0.0.0', '100.64.0.1', '::1', 'fd00::1', 'fe80::1', '::ffff:10.0.0.1']) expect(isPrivateAddress(ip), ip).toBe(true)
-    for (const ip of ['8.8.8.8', '151.101.1.69', '2606:4700::1111']) expect(isPrivateAddress(ip), ip).toBe(false)
+    for (const ip of ['127.0.0.1', '10.1.2.3', '172.16.0.1', '192.168.1.1', '169.254.169.254', '0.0.0.0', '100.64.0.1', '::1', 'fd00::1', 'fe80::1', '::ffff:10.0.0.1', '::ffff:7f00:1', '::ffff:a9fe:a9fe']) expect(isPrivateAddress(ip), ip).toBe(true)
+    for (const ip of ['8.8.8.8', '151.101.1.69', '2606:4700::1111', '::ffff:808:808']) expect(isPrivateAddress(ip), ip).toBe(false)
   })
 
   it('refuses non-web and internal URLs', () => {
